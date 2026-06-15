@@ -584,18 +584,20 @@ class _CajeroAdministrativoScreenState extends ConsumerState<CajeroAdministrativ
   }
 
   Widget _buildSkeletonGrid() {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const SizedBox(height: 100),
-          const SkeletonCard(lines: 2),
-          const SizedBox(height: 16),
-          const SkeletonCard(lines: 5),
-          const SizedBox(height: 16),
-          ...List.generate(5, (i) => const SkeletonCard(showAvatar: true, lines: 2)),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 100),
+            const SkeletonCard(lines: 2),
+            const SizedBox(height: 16),
+            const SkeletonCard(lines: 5),
+            const SizedBox(height: 16),
+            ...List.generate(5, (i) => const SkeletonCard(showAvatar: true, lines: 2)),
+          ],
+        ),
       ),
     );
   }
@@ -622,9 +624,10 @@ class _CajeroAdministrativoScreenState extends ConsumerState<CajeroAdministrativ
 
     return Scaffold(
       backgroundColor: AppTheme.darkBgColor,
-      body: _loading
-          ? _buildSkeletonGrid()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonGrid(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
               color: AppTheme.primaryColor,
               child: SingleChildScrollView(
@@ -889,6 +892,7 @@ class _CajeroAdministrativoScreenState extends ConsumerState<CajeroAdministrativ
                 ),
               ),
             ),
+      ),
       bottomNavigationBar: _selectedDates.isNotEmpty
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme.dart';
-import '../../../core/timer_service.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -791,9 +790,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? _buildSkeletonList()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonList(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
               color: AppTheme.primaryColor,
               child: SingleChildScrollView(
@@ -1036,6 +1036,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                 ),
               ),
             ),
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
@@ -1086,24 +1087,26 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   }
 
   Widget _buildSkeletonList() {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Summary cards skeleton
-          Row(
-            children: [
-              const Expanded(child: SkeletonCard(lines: 2)),
-              const SizedBox(width: 12),
-              const Expanded(child: SkeletonCard(lines: 2)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // List skeleton
-          ...List.generate(5, (i) => const SkeletonCard(lines: 4)),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Summary cards skeleton
+            Row(
+              children: [
+                const Expanded(child: SkeletonCard(lines: 2)),
+                const SizedBox(width: 12),
+                const Expanded(child: SkeletonCard(lines: 2)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // List skeleton
+            ...List.generate(5, (i) => const SkeletonCard(lines: 4)),
+          ],
+        ),
       ),
     );
   }

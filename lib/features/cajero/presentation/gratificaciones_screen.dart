@@ -468,9 +468,10 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
 
     return Scaffold(
       backgroundColor: AppTheme.darkBgColor,
-      body: _loading
-          ? _buildSkeletonGrid()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonGrid(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
               color: AppTheme.primaryColor,
               child: SingleChildScrollView(
@@ -747,6 +748,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                 ),
               ),
             ),
+        ),
       floatingActionButton: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
@@ -785,16 +787,18 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
   }
 
   Widget _buildSkeletonGrid() {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const SizedBox(height: 100),
-          const SkeletonCard(lines: 3),
-          const SizedBox(height: 16),
-          ...List.generate(4, (i) => const SkeletonCard(lines: 4)),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 100),
+            const SkeletonCard(lines: 3),
+            const SizedBox(height: 16),
+            ...List.generate(4, (i) => const SkeletonCard(lines: 4)),
+          ],
+        ),
       ),
     );
   }

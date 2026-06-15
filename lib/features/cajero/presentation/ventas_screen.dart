@@ -21,7 +21,6 @@ class VentasScreen extends ConsumerStatefulWidget {
 
 class _VentasScreenState extends ConsumerState<VentasScreen> {
   bool _loading = true;
-  String _error = '';
   List<dynamic> _ventas = [];
   Map<String, dynamic> _resumen = {};
   String _activeTab = 'historial'; // 'historial' or 'proceso'
@@ -61,7 +60,6 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     if (!mounted) return;
     setState(() {
       if (!isManual) _loading = true;
-      _error = '';
     });
 
     try {
@@ -100,7 +98,6 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Error al cargar el historial de ventas';
         _loading = false;
       });
     }
@@ -330,6 +327,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
       final client = ref.read(apiClientProvider);
       final response = await client.dio.put('/ventas/$ventaId',
           data: {'estado': 1});
+      if (!mounted) return;
       if (response.data != null && response.data['success'] == true) {
         AppSnackBar.showSuccess(context, 'Venta finalizada con éxito');
         _fetchData();
@@ -339,6 +337,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
             response.data?['message'] ?? 'No se pudo finalizar la venta');
       }
     } catch (_) {
+      if (!mounted) return;
       AppSnackBar.showError(context, 'Error al finalizar la venta');
     }
   }
@@ -373,7 +372,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     final ventaId =
         int.tryParse(_activeVenta['id_venta']?.toString() ?? '') ?? 0;
     final monto = double.tryParse(
-            _montoAnulacion.replaceAll(RegExp(r'[^\d]'), '') ?? '0') ??
+            _montoAnulacion.replaceAll(RegExp(r'[^\d]'), '')) ??
         0;
     final motivo = _motivoController.text.trim();
 
@@ -404,6 +403,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
         'monto': monto,
       });
 
+      if (!mounted) return;
       if (response.data != null && response.data['success'] == true) {
         setState(() => _anulacionModalVisible = false);
         AppSnackBar.showSuccess(context, 
@@ -414,6 +414,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
             response.data?['message'] ?? 'No se pudo solicitar la anulación');
       }
     } catch (_) {
+      if (!mounted) return;
       AppSnackBar.showError(context, 'Error al procesar la solicitud de anulación');
     } finally {
       setState(() => _anulandoVenta = false);
@@ -456,7 +457,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
 
     final filteredList = _filteredVentas;
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
       appBar: AppBar(
         backgroundColor:
@@ -477,9 +478,10 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? _buildSkeletonList()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonList(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
               color: AppTheme.primaryColor,
               child: Column(
@@ -591,18 +593,21 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                 ],
               ),
             ),
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
         onPressed: () => context.push('/cajero/ventas/nueva'),
       ),
+    );
 
-      // Detail Modal
-      if (_modalVisible) _buildDetailModal(isDark),
-
-      // Anulacion Modal
-      if (_anulacionModalVisible) _buildAnulacionModal(isDark),
+    return Stack(
+      children: [
+        content,
+        if (_modalVisible) _buildDetailModal(isDark),
+        if (_anulacionModalVisible) _buildAnulacionModal(isDark),
+      ],
     );
   }
 
@@ -951,7 +956,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                       fontWeight: FontWeight.w800,
                       color: textColor.withValues(alpha: 0.7))),
               Text(text,
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: textColor,
@@ -1003,7 +1008,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                         color: Colors.redAccent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: const Icon(Icons.alert_circle_outline,
+                      child: const Icon(Icons.error_outline,
                           color: Colors.redAccent, size: 28),
                     ),
                     const SizedBox(height: 12),
@@ -1239,8 +1244,6 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
         double.tryParse(venta['descuento']?.toString() ?? '0') ?? 0.0;
     final double total =
         double.tryParse(venta['total']?.toString() ?? '0') ?? 0.0;
-    final int estado =
-        int.tryParse(venta['estado']?.toString() ?? '1') ?? 1;
     final double propina =
         double.tryParse(venta['propina']?.toString() ?? '0') ?? 0.0;
 
@@ -1583,12 +1586,14 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
   }
 
   Widget _buildSkeletonList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 4,
-      itemBuilder: (context, index) => const Padding(
-        padding: EdgeInsets.only(bottom: 12),
-        child: SkeletonCard(lines: 4),
+    return ShimmerWrapper(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 4,
+        itemBuilder: (context, index) => const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: SkeletonCard(lines: 4),
+        ),
       ),
     );
   }

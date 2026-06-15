@@ -744,9 +744,10 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
           style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
-      body: _loadingInitial
-          ? _buildSkeletonForm()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loadingInitial,
+        skeleton: _buildSkeletonForm(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchInitialData(),
               color: AppTheme.primaryColor,
               child: SingleChildScrollView(
@@ -1187,24 +1188,27 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                 ),
               ),
             ),
+      ),
     );
   }
 
   Widget _buildSkeletonForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: const [
-          SkeletonCard(lines: 2),
-          SizedBox(height: 12),
-          SkeletonCard(lines: 2),
-          SizedBox(height: 12),
-          SkeletonCard(lines: 2),
-          SizedBox(height: 12),
-          SkeletonCard(lines: 2),
-          SizedBox(height: 24),
-          SkeletonCard(lines: 5),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: const [
+            SkeletonCard(lines: 2),
+            SizedBox(height: 12),
+            SkeletonCard(lines: 2),
+            SizedBox(height: 12),
+            SkeletonCard(lines: 2),
+            SizedBox(height: 12),
+            SkeletonCard(lines: 2),
+            SizedBox(height: 24),
+            SkeletonCard(lines: 5),
+          ],
+        ),
       ),
     );
   }

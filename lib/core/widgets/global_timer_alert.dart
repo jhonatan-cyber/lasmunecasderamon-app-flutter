@@ -136,7 +136,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
                         ),
                         Text(
                           '#${timer.servicioCode}',
-                          style: GoogleFonts.inter(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
                             fontFamily: 'monospace',

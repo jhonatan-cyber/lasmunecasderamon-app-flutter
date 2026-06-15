@@ -576,15 +576,17 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
   }
 
   Widget _buildSkeletonForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          ...List.generate(4, (i) => const Padding(
-            padding: EdgeInsets.only(bottom: 24.0),
-            child: SkeletonCard(lines: 2),
-          )),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            ...List.generate(4, (i) => const Padding(
+              padding: EdgeInsets.only(bottom: 24.0),
+              child: SkeletonCard(lines: 2),
+            )),
+          ],
+        ),
       ),
     );
   }

@@ -326,9 +326,10 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
 
     return Scaffold(
       backgroundColor: AppTheme.darkBgColor,
-      body: _loading
-          ? _buildSkeletonGrid()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonGrid(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
               color: AppTheme.primaryColor,
               child: SingleChildScrollView(
@@ -644,6 +645,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                 ),
               ),
             ),
+        ),
     );
   }
 
@@ -709,25 +711,27 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
   }
 
   Widget _buildSkeletonGrid() {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const SizedBox(height: 100),
-          // Stats row skeleton
-          Row(
-            children: const [
-              Expanded(child: SkeletonCard(lines: 2)),
-              SizedBox(width: 8),
-              Expanded(child: SkeletonCard(lines: 2)),
-              SizedBox(width: 8),
-              Expanded(child: SkeletonCard(lines: 2)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...List.generate(5, (i) => const SkeletonCard(showAvatar: true, lines: 2)),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 100),
+            // Stats row skeleton
+            Row(
+              children: const [
+                Expanded(child: SkeletonCard(lines: 2)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonCard(lines: 2)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonCard(lines: 2)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...List.generate(5, (i) => const SkeletonCard(showAvatar: true, lines: 2)),
+          ],
+        ),
       ),
     );
   }

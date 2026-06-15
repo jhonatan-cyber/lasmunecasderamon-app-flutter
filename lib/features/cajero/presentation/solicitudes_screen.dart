@@ -253,16 +253,13 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
     }
   }
 
-
-
   Future<void> _handleAprobarAnticipo(SolicitudItem item) async {
     final stateAdminVal = item.estado;
     final requiereAprobacionAdmin = stateAdminVal == 2;
-
     showDialog(
       context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
         return AlertDialog(
           backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
           title: Text(
@@ -270,12 +267,12 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           content: Text(
-            '¿Confirmas que has entregado el efectivo de ${formatCurrency(item.monto)} a ${item.solicitadoPor}?',
+            'Confirmas que has entregado el efectivo de ${formatCurrency(item.monto)} a ${item.solicitadoPor}?',
             style: GoogleFonts.inter(fontSize: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancelar',
                 style: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
@@ -284,13 +281,14 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
               onPressed: () async {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 try {
                   final client = ref.read(apiClientProvider);
 
                   // If requires admin approval first
                   if (requiereAprobacionAdmin) {
                     final approveRes = await client.dio.put('/anticipos/${item.id}', data: {'estado': 1});
+                    if (!mounted) return;
                     if (approveRes.data == null || approveRes.data['success'] != true) {
                       AppSnackBar.showError(context, approveRes.data?['message'] ?? 'No se pudo autorizar el anticipo.');
                       _loadData(isManual: true);
@@ -300,6 +298,7 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
 
                   // Disburse advance (mark paid, estado = 0)
                   final payRes = await client.dio.put('/anticipos/${item.id}', data: {'estado': 0});
+                  if (!mounted) return;
                   if (payRes.data != null && payRes.data['success'] == true) {
                     AppSnackBar.showSuccess(context, 'Anticipo entregado y registrado.');
                     _loadData(isManual: true);
@@ -308,6 +307,7 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
                     _loadData(isManual: true);
                   }
                 } catch (e) {
+                  if (!mounted) return;
                   AppSnackBar.showError(context, 'Error de conexión al procesar anticipo.');
                 }
               },
@@ -322,25 +322,25 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
   Future<void> _handleRechazar(SolicitudItem item) async {
     showDialog(
       context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
         final nameStr = item.tipoItem == 'solicitud' ? 'servicio' : 'pedido';
         return AlertDialog(
           backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
           title: Text('Rechazar Solicitud', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           content: Text(
-            '¿Seguro que deseas rechazar este $nameStr?',
+            'Seguro que deseas rechazar este $nameStr?',
             style: GoogleFonts.inter(fontSize: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text('Cancelar', style: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
               onPressed: () async {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 try {
                   final client = ref.read(apiClientProvider);
                   final isSrv = item.tipoItem == 'solicitud';
@@ -350,6 +350,7 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
                       ? await client.dio.patch(endpoint, data: {'motivo_rechazo': 'Rechazado por Caja'})
                       : await client.dio.put(endpoint, data: {'estado': 2});
 
+                  if (!mounted) return;
                   if (response.data != null && response.data['success'] == true) {
                     AppSnackBar.showSuccess(context, 'Solicitud rechazada correctamente.');
                     _loadData(isManual: true);
@@ -358,6 +359,7 @@ class _CajeroSolicitudesScreenState extends ConsumerState<CajeroSolicitudesScree
                     _loadData(isManual: true);
                   }
                 } catch (e) {
+                  if (!mounted) return;
                   AppSnackBar.showError(context, 'Error de conexión al rechazar solicitud.');
                 }
               },

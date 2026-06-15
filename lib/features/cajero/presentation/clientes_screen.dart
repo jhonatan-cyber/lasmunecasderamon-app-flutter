@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/premium_header.dart';
@@ -88,6 +89,18 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   bool _loading = true;
   bool _refreshing = false;
   String _searchTerm = '';
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      AppSnackBar.showError(context, message);
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      AppSnackBar.showSuccess(context, message);
+    }
+  }
 
   // Form controllers
   final _formKey = GlobalKey<FormState>();
@@ -1267,9 +1280,10 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
 
           // Main list
           Expanded(
-            child: _loading
-                ? _buildSkeletonGrid()
-                : RefreshIndicator(
+            child: FadeLoadingSwitcher(
+              isLoading: _loading,
+              skeleton: _buildSkeletonGrid(),
+              content: RefreshIndicator(
                     color: AppTheme.primaryColor,
                     onRefresh: () => _fetchClients(isManual: true),
                     child: filteredClients.isEmpty
@@ -1464,6 +1478,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                             },
                           ),
                   ),
+            ),
           ),
         ],
       ),
@@ -1479,17 +1494,19 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   }
 
   Widget _buildSkeletonGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: MediaQuery.of(context).size.width >= 768 ? 2 : 1,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: MediaQuery.of(context).size.width >= 768 ? 1.6 : 1.7,
+    return ShimmerWrapper(
+      child: GridView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: MediaQuery.of(context).size.width >= 768 ? 2 : 1,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: MediaQuery.of(context).size.width >= 768 ? 1.6 : 1.7,
+        ),
+        itemCount: 5,
+        itemBuilder: (context, index) => const SkeletonCard(showAvatar: true, lines: 4),
       ),
-      itemCount: 5,
-      itemBuilder: (context, index) => const SkeletonCard(showAvatar: true, lines: 4),
     );
   }
 }

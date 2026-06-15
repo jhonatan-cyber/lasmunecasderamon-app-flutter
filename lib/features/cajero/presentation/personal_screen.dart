@@ -478,7 +478,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
   }
 
   Widget _buildSkeletonGrid() {
-    return GridView.builder(
+    return ShimmerWrapper(child: GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -489,7 +489,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
       ),
       itemCount: 6,
       itemBuilder: (context, index) => const SkeletonCard(showAvatar: true, lines: 2),
-    );
+    ));
   }
 
   @override
@@ -560,9 +560,10 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
 
           // Contenido principal (Listado)
           Expanded(
-            child: _loading
-                ? _buildSkeletonGrid()
-                : RefreshIndicator(
+            child: FadeLoadingSwitcher(
+              isLoading: _loading,
+              skeleton: _buildSkeletonGrid(),
+              content: RefreshIndicator(
                     color: AppTheme.primaryColor,
                     onRefresh: () => _fetchUsers(isManual: true),
                     child: filteredUsers.isEmpty
@@ -734,6 +735,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                             },
                           ),
                   ),
+              ),
           ),
         ],
       ),

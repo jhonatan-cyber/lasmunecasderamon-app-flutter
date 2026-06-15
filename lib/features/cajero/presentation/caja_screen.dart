@@ -647,9 +647,10 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? _buildSkeletonGrid()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonGrid(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
               color: AppTheme.primaryColor,
               child: SingleChildScrollView(
@@ -657,7 +658,8 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: [StaggeredFadeIn(
+                    children: [
                     if (_error.isNotEmpty) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -925,31 +927,35 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                     ],
                     const SizedBox(height: 32),
                   ],
+                  )],
                 ),
               ),
             ),
+      ),
     );
   }
 
   Widget _buildSkeletonGrid() {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const SkeletonCard(lines: 3),
-          const SizedBox(height: 20),
-          GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.5,
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const SkeletonCard(lines: 3),
+            const SizedBox(height: 20),
+            GridView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.5,
+              ),
+              children: List.generate(6, (i) => const SkeletonCard(lines: 2)),
             ),
-            children: List.generate(6, (i) => const SkeletonCard(lines: 2)),
-          ),
-          const SizedBox(height: 20),
-          const SkeletonCard(lines: 5),
-        ],
+            const SizedBox(height: 20),
+            const SkeletonCard(lines: 5),
+          ],
+        ),
       ),
     );
   }

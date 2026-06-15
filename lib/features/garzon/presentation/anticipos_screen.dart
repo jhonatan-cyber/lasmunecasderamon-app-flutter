@@ -450,9 +450,10 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
         elevation: 0,
         centerTitle: false,
       ),
-      body: _loading
-          ? _buildSkeletonGrid()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonGrid(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
               color: AppTheme.primaryColor,
               child: ListView(
@@ -570,6 +571,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                 ],
               ),
             ),
+        ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openSolicitarModal,
         backgroundColor: AppTheme.primaryColor,
@@ -579,35 +581,37 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
   }
 
   Widget _buildSkeletonGrid() {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Row(
-            children: const [
-              Expanded(child: SkeletonCard(lines: 1)),
-              SizedBox(width: 12),
-              Expanded(child: SkeletonCard(lines: 1)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const SkeletonCard(lines: 3),
-          const SizedBox(height: 16),
-          Row(
-            children: const [
-              Expanded(child: SkeletonCard(lines: 1)),
-              SizedBox(width: 8),
-              Expanded(child: SkeletonCard(lines: 1)),
-              SizedBox(width: 8),
-              Expanded(child: SkeletonCard(lines: 1)),
-              SizedBox(width: 8),
-              Expanded(child: SkeletonCard(lines: 1)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...List.generate(4, (i) => const SkeletonCard(lines: 3)),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              children: const [
+                Expanded(child: SkeletonCard(lines: 1)),
+                SizedBox(width: 12),
+                Expanded(child: SkeletonCard(lines: 1)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const SkeletonCard(lines: 3),
+            const SizedBox(height: 16),
+            Row(
+              children: const [
+                Expanded(child: SkeletonCard(lines: 1)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonCard(lines: 1)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonCard(lines: 1)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonCard(lines: 1)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...List.generate(4, (i) => const SkeletonCard(lines: 3)),
+          ],
+        ),
       ),
     );
   }

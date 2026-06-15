@@ -165,13 +165,15 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
   }
 
   Widget _buildSkeletonList() {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          ...List.generate(5, (i) => const SkeletonCard(lines: 4)),
-        ],
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            ...List.generate(5, (i) => const SkeletonCard(lines: 4)),
+          ],
+        ),
       ),
     );
   }
@@ -200,9 +202,10 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? _buildSkeletonList()
-          : RefreshIndicator(
+      body: FadeLoadingSwitcher(
+        isLoading: _loading,
+        skeleton: _buildSkeletonList(),
+        content: RefreshIndicator(
               onRefresh: () => _fetchServicios(isManual: true),
               color: AppTheme.primaryColor,
               child: SingleChildScrollView(
@@ -350,6 +353,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                 ),
               ),
             ),
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,

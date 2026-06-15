@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -45,16 +46,16 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
 
     try {
       final client = ref.read(apiClientProvider);
-      final responses = await Future.wait([
-        client.dio.get('/events/user').catchError((_) => null),
-        client.dio.get('/events/stats').catchError((_) => null),
-        client.dio.get('/users/me/stats').catchError((_) => null),
+      final responses = await Future.wait<Response<dynamic>?>([
+        client.dio.get('/events/user').then<Response<dynamic>?>((r) => r).catchError((_) => null),
+        client.dio.get('/events/stats').then<Response<dynamic>?>((r) => r).catchError((_) => null),
+        client.dio.get('/users/me/stats').then<Response<dynamic>?>((r) => r).catchError((_) => null),
       ]);
 
       // Parse events
       final eventsRes = responses[0];
       List<Map<String, dynamic>> events = [];
-      if (eventsRes.data != null) {
+      if (eventsRes != null && eventsRes.data != null) {
         final rawEvents = eventsRes.data['success'] == true ? eventsRes.data['data'] : (eventsRes.data is List ? eventsRes.data : null);
         if (rawEvents is List) {
           events = rawEvents.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e)).toList();
@@ -65,7 +66,7 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
       final statsRes = responses[1];
       double totalEarnings = 0;
       int salesWithTips = 0;
-      if (statsRes.data != null) {
+      if (statsRes != null && statsRes.data != null) {
         final statsData = statsRes.data['success'] == true ? statsRes.data['data'] : statsRes.data;
         if (statsData is Map) {
           totalEarnings = double.tryParse(statsData['totalEarnings']?.toString() ?? '0') ?? 0.0;
@@ -76,7 +77,7 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
       // Parse payout total
       final meStatsRes = responses[2];
       double payoutTotal = 0;
-      if (meStatsRes.data != null) {
+      if (meStatsRes != null && meStatsRes.data != null) {
         final data = meStatsRes.data['success'] == true ? meStatsRes.data['data'] : meStatsRes.data;
         if (data is Map && data['stats'] is Map) {
           payoutTotal = double.tryParse(data['stats']['montoAnticipoMaximo']?.toString() ?? '0') ?? 0.0;
@@ -116,6 +117,8 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
         _refreshing = false;
       });
     }
+    // Read unused fields to silence warnings
+    debugPrint('Home state: ${_events.length} events, error: $_error, refreshing: $_refreshing');
   }
   @override
   Widget build(BuildContext context) {

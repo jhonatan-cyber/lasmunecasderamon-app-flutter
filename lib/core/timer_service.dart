@@ -211,7 +211,7 @@ class TimerState {
 /// Notifier managing the timer state
 class TimerNotifier extends StateNotifier<TimerState> {
   TimerNotifier() : super(TimerState()) {
-    _fetchActiveTimers();
+    fetchActiveTimers();
     _startCountdown();
   }
 

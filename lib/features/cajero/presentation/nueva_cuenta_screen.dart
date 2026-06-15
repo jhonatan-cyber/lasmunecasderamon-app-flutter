@@ -262,9 +262,10 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
           style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
-      body: _loadingAssets
-          ? _buildSkeletonGrid()
-          : LayoutBuilder(
+      body: FadeLoadingSwitcher(
+        isLoading: _loadingAssets,
+        skeleton: _buildSkeletonGrid(),
+        content: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 800;
 
@@ -351,28 +352,31 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                 );
               },
             ),
+      ),
     );
   }
 
   Widget _buildSkeletonGrid() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const SkeletonCard(lines: 2),
-          const SizedBox(height: 16),
-          SkeletonCard(lines: 1),
-          const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.3,
+    return ShimmerWrapper(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const SkeletonCard(lines: 2),
+            const SizedBox(height: 16),
+            SkeletonCard(lines: 1),
+            const SizedBox(height: 16),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.3,
+              ),
+              itemCount: 6,
+              itemBuilder: (context, i) => const SkeletonCard(lines: 2),
             ),
-            itemCount: 6,
-            itemBuilder: (context, i) => const SkeletonCard(lines: 2),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

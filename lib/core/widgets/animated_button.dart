@@ -82,7 +82,6 @@ class _AnimatedButtonState extends State<AnimatedButton>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final radius = widget.borderRadius ?? BorderRadius.circular(12);
     final bgColor = widget.backgroundColor ?? AppTheme.primaryColor;
 
@@ -106,7 +105,7 @@ class _AnimatedButtonState extends State<AnimatedButton>
             color: widget.gradient == null ? bgColor : null,
             gradient: widget.gradient,
             borderRadius: radius,
-            border: widget.border,
+            border: widget.border != null ? Border.fromBorderSide(widget.border!) : null,
             boxShadow: widget.onPressed != null && !widget.isLoading
                 ? [
                     BoxShadow(
