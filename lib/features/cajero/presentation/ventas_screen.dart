@@ -1,0 +1,1595 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
+import '../../../core/theme.dart';
+import '../../../core/timer_service.dart';
+import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/currency_text.dart';
+import '../../../core/widgets/skeleton_loader.dart';
+import '../../auth/data/auth_notifier.dart';
+
+class VentasScreen extends ConsumerStatefulWidget {
+  const VentasScreen({super.key});
+
+  @override
+  ConsumerState<VentasScreen> createState() => _VentasScreenState();
+}
+
+class _VentasScreenState extends ConsumerState<VentasScreen> {
+  bool _loading = true;
+  String _error = '';
+  List<dynamic> _ventas = [];
+  Map<String, dynamic> _resumen = {};
+  String _activeTab = 'historial'; // 'historial' or 'proceso'
+  Timer? _tickTimer;
+  bool _anulacionModalVisible = false;
+  dynamic _activeVenta;
+  // Anulacion state
+  String _montoAnulacion = '';
+  bool _anulandoVenta = false;
+
+  // Detail modal state
+  bool _modalVisible = false;
+  dynamic _selectedVenta;
+  bool _loadingDetail = false;
+
+  final _motivoController = TextEditingController();
+  final _montoAnulacionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _motivoController.dispose();
+    _montoAnulacionController.dispose();
+    _tickTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchData({bool isManual = false}) async {
+    if (!mounted) return;
+    setState(() {
+      if (!isManual) _loading = true;
+      _error = '';
+    });
+
+    try {
+      final client = ref.read(apiClientProvider);
+
+      final responses = await Future.wait([
+        client.dio.get('/sales?limit=50').catchError((_) =>
+            Response(requestOptions: RequestOptions(), data: {'success': false})),
+        client.dio.get('/sales?tipo=resumen').catchError((_) =>
+            Response(requestOptions: RequestOptions(), data: {'success': false})),
+      ]);
+
+      final salesRes = responses[0];
+      final summaryRes = responses[1];
+
+      List<dynamic> salesList = [];
+      if (salesRes.data != null && salesRes.data['success'] == true) {
+        salesList = salesRes.data['data'] ?? [];
+      }
+
+      Map<String, dynamic> summaryMap = {};
+      if (summaryRes.data != null && summaryRes.data['success'] == true) {
+        summaryMap = summaryRes.data['data'] ?? {};
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _ventas = salesList;
+        _resumen = summaryMap;
+        _loading = false;
+      });
+
+      if (isManual) {
+        AppSnackBar.showSuccess(context, 'Ventas actualizadas');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Error al cargar el historial de ventas';
+        _loading = false;
+      });
+    }
+  }
+
+
+
+  String _formatDateTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return 'Sin fecha';
+    try {
+      final parsed = DateTime.parse(dateStr).toLocal();
+      final formatter = DateFormat('dd MMM, HH:mm', 'es_CL');
+      return formatter.format(parsed);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+
+
+  // --- Venta filtering ---
+  List<dynamic> get _filteredVentas {
+    final timerState = ref.read(timerProvider);
+    if (_activeTab == 'historial') {
+      return _ventas;
+    }
+    // Proceso tab: show ventas with estado=2 or active timers
+    return _ventas.where((v) {
+      final estado = int.tryParse(v['estado']?.toString() ?? '1') ?? 1;
+      if (estado == 2) return true;
+      // Also show if there's an active timer for this venta
+      final ventaId = v['id_venta']?.toString() ?? '';
+      return timerState.timers.any((t) =>
+          t.tipoTransaccion == 'venta' &&
+          (t.servicioId == ventaId ||
+              (t.roomId == (v['habitacion_id']?.toString() ?? '') &&
+                  estado == 2)));
+    }).toList();
+  }
+
+  int get _activeTimerCount {
+    final timerState = ref.read(timerProvider);
+    return timerState.timers
+        .where((t) => t.tipoTransaccion == 'venta')
+        .length;
+  }
+
+  // --- Action Sheet ---
+  void _showActionSheet(dynamic venta) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final int estado = int.tryParse(venta['estado']?.toString() ?? '1') ?? 1;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(
+                color: isDark
+                    ? AppTheme.darkBorderColor
+                    : AppTheme.lightBorderColor),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Opciones de Venta',
+                  style: GoogleFonts.inter(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  'Código: ${venta['codigo'] ?? venta['id_venta'] ?? ''}',
+                  style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.visibility_outlined,
+                      color: AppTheme.primaryColor, size: 20),
+                ),
+                title: Text('Ver Detalles',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showVentaDetailModal(venta);
+                },
+              ),
+              if (estado == 2 || estado == 3)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.stop_circle_outlined,
+                        color: Colors.green, size: 20),
+                  ),
+                  title: Text('Finalizar Venta',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600, color: Colors.green)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleFinalizarVenta(venta);
+                  },
+                ),
+              if (estado != 0 && estado != 3)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.cancel_outlined,
+                        color: Colors.redAccent, size: 20),
+                  ),
+                  title: Text('Solicitar Anulación',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.redAccent)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _openAnulacionModal(venta);
+                  },
+                ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('Cancelar',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- Finalize ---
+  void _handleFinalizarVenta(dynamic venta) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor:
+            isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+        title: Text('Finalizar Venta',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Text(
+          '¿Estás seguro de que deseas finalizar esta venta? Esto liberará la habitación y detendrá el temporizador.',
+          style: GoogleFonts.inter(
+              fontSize: 14,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancelar',
+                style: GoogleFonts.inter(
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _executeFinalizarVenta(venta);
+            },
+            child: Text('Finalizar',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _executeFinalizarVenta(dynamic venta) async {
+    final ventaId =
+        int.tryParse(venta['id_venta']?.toString() ?? '') ?? 0;
+    if (ventaId == 0) return;
+
+    try {
+      final client = ref.read(apiClientProvider);
+      final response = await client.dio.put('/ventas/$ventaId',
+          data: {'estado': 1});
+      if (response.data != null && response.data['success'] == true) {
+        AppSnackBar.showSuccess(context, 'Venta finalizada con éxito');
+        _fetchData();
+        ref.read(timerProvider.notifier).fetchActiveTimers();
+      } else {
+        AppSnackBar.showError(context, 
+            response.data?['message'] ?? 'No se pudo finalizar la venta');
+      }
+    } catch (_) {
+      AppSnackBar.showError(context, 'Error al finalizar la venta');
+    }
+  }
+
+  // --- Anulacion ---
+  void _openAnulacionModal(dynamic venta) {
+    final double total =
+        double.tryParse(venta['total']?.toString() ?? '0') ?? 0.0;
+    _motivoController.clear();
+    setState(() {
+      _activeVenta = venta;
+      _montoAnulacion = NumberFormat.currency(
+              locale: 'es_CL', symbol: '', decimalDigits: 0)
+          .format(total)
+          .trim();
+      _montoAnulacionController.text = _montoAnulacion;
+      _anulacionModalVisible = true;
+    });
+  }
+
+  String _formatMontoInput(String value) {
+    final digits = value.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.isEmpty) return '';
+    return NumberFormat.currency(
+            locale: 'es_CL', symbol: '', decimalDigits: 0)
+        .format(int.parse(digits))
+        .trim();
+  }
+
+  Future<void> _handleAnularVenta() async {
+    if (_activeVenta == null) return;
+    final ventaId =
+        int.tryParse(_activeVenta['id_venta']?.toString() ?? '') ?? 0;
+    final monto = double.tryParse(
+            _montoAnulacion.replaceAll(RegExp(r'[^\d]'), '') ?? '0') ??
+        0;
+    final motivo = _motivoController.text.trim();
+
+    if (ventaId == 0) {
+      AppSnackBar.showError(context, 'No se pudo identificar la venta');
+      return;
+    }
+    if (monto <= 0) {
+      AppSnackBar.showError(context, 'Debes ingresar un monto mayor a 0');
+      return;
+    }
+    if (monto >
+        (double.tryParse(_activeVenta['total']?.toString() ?? '0') ?? 0)) {
+      AppSnackBar.showError(context, 'El monto no puede ser mayor al total de la venta');
+      return;
+    }
+    if (motivo.isEmpty) {
+      AppSnackBar.showError(context, 'Debes ingresar el motivo de la anulación');
+      return;
+    }
+
+    setState(() => _anulandoVenta = true);
+    try {
+      final client = ref.read(apiClientProvider);
+      final response = await client.dio.post('/ventas/anulacion', data: {
+        'ventaId': ventaId,
+        'motivo': motivo,
+        'monto': monto,
+      });
+
+      if (response.data != null && response.data['success'] == true) {
+        setState(() => _anulacionModalVisible = false);
+        AppSnackBar.showSuccess(context, 
+            'La anulación ha sido solicitada al administrador por WhatsApp');
+        _fetchData();
+      } else {
+        AppSnackBar.showError(context, 
+            response.data?['message'] ?? 'No se pudo solicitar la anulación');
+      }
+    } catch (_) {
+      AppSnackBar.showError(context, 'Error al procesar la solicitud de anulación');
+    } finally {
+      setState(() => _anulandoVenta = false);
+    }
+  }
+
+  // --- Detail Modal ---
+  Future<void> _showVentaDetailModal(dynamic ventaShort) async {
+    final int ventaId =
+        int.tryParse(ventaShort['id_venta']?.toString() ?? '') ?? 0;
+    if (ventaId == 0) return;
+
+    setState(() {
+      _selectedVenta = ventaShort;
+      _loadingDetail = true;
+      _modalVisible = true;
+    });
+
+    try {
+      final client = ref.read(apiClientProvider);
+      final response = await client.dio.get('/ventas/$ventaId');
+      if (response.data != null && response.data['success'] == true) {
+        setState(() => _selectedVenta = response.data['data']);
+      }
+    } catch (_) {}
+    setState(() => _loadingDetail = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final timerState = ref.watch(timerProvider);
+
+    final double totalVentas =
+        double.tryParse(_resumen['total_ventas']?.toString() ?? '0') ?? 0.0;
+    final int cantidadVentas =
+        int.tryParse(_resumen['cantidad_ventas']?.toString() ?? '0') ?? 0;
+    final int cantidadAnuladas =
+        int.tryParse(_resumen['cantidad_anuladas']?.toString() ?? '0') ?? 0;
+
+    final filteredList = _filteredVentas;
+
+    return Scaffold(
+      backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
+      appBar: AppBar(
+        backgroundColor:
+            isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(
+          'Ventas',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryColor),
+            onPressed: () => _fetchData(isManual: true),
+          ),
+        ],
+      ),
+      body: _loading
+          ? _buildSkeletonList()
+          : RefreshIndicator(
+              onRefresh: () => _fetchData(isManual: true),
+              color: AppTheme.primaryColor,
+              child: Column(
+                children: [
+                  // Tab bar
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildTabButton(
+                            isDark: isDark,
+                            label: 'Historial',
+                            isActive: _activeTab == 'historial',
+                            onTap: () =>
+                                setState(() => _activeTab = 'historial'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTabButton(
+                            isDark: isDark,
+                            label: 'Ventas con Habitación',
+                            isActive: _activeTab == 'proceso',
+                            badge: _activeTimerCount > 0
+                                ? _activeTimerCount
+                                : null,
+                            onTap: () =>
+                                setState(() => _activeTab = 'proceso'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Stats row (only on historial)
+                  if (_activeTab == 'historial')
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildMiniStat(
+                              isDark: isDark,
+                              label: 'TOTAL HOY',
+                              value: formatCurrency(totalVentas),
+                              color: Colors.green,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildMiniStat(
+                              isDark: isDark,
+                              label: 'CANTIDAD',
+                              value: '$cantidadVentas',
+                              color: Colors.orange,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildMiniStat(
+                              isDark: isDark,
+                              label: 'ANULADAS',
+                              value: '$cantidadAnuladas',
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  // List
+                  Expanded(
+                    child: filteredList.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.receipt_rounded,
+                                    size: 48,
+                                    color: isDark
+                                        ? AppTheme.darkBorderColor
+                                        : AppTheme.lightBorderColor),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _activeTab == 'historial'
+                                      ? 'No hay ventas directas hoy'
+                                      : 'No hay ventas con habitación activas',
+                                  style: GoogleFonts.inter(
+                                      color: isDark
+                                          ? AppTheme.darkTextSecondary
+                                          : AppTheme.lightTextSecondary),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            itemCount: filteredList.length,
+                            itemBuilder: (context, index) {
+                              return _buildVentaCard(
+                                  filteredList[index], isDark, timerState);
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
+        onPressed: () => context.push('/cajero/ventas/nueva'),
+      ),
+
+      // Detail Modal
+      if (_modalVisible) _buildDetailModal(isDark),
+
+      // Anulacion Modal
+      if (_anulacionModalVisible) _buildAnulacionModal(isDark),
+    );
+  }
+
+  Widget _buildTabButton({
+    required bool isDark,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+    int? badge,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: isActive
+              ? null
+              : Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (badge != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.white.withValues(alpha: 0.2) : Colors.redAccent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$badge',
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isActive
+                    ? Colors.white
+                    : (isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVentaCard(
+      dynamic venta, bool isDark, TimerState timerState) {
+    final int estado =
+        int.tryParse(venta['estado']?.toString() ?? '1') ?? 1;
+    final double total =
+        double.tryParse(venta['total']?.toString() ?? '0') ?? 0.0;
+    final method = venta['metodo_pago']?.toString().toUpperCase() ?? 'EFECTIVO';
+    final ventaId = venta['id_venta']?.toString() ?? '';
+    final isProceso = estado == 2;
+
+    // Find active timer for this venta
+    ActiveTimer? activeTimer;
+    try {
+      activeTimer = timerState.timers.firstWhere((t) =>
+          t.tipoTransaccion == 'venta' && t.servicioId == ventaId);
+    } catch (_) {}
+
+    // Status colors
+    Color statusColor;
+    String statusLabel;
+    switch (estado) {
+      case 2:
+        statusColor = Colors.orange;
+        statusLabel = 'En proceso';
+        break;
+      case 3:
+        statusColor = Colors.redAccent;
+        statusLabel = 'Pdte. Anulación';
+        break;
+      case 0:
+        statusColor = Colors.redAccent;
+        statusLabel = 'Anulada';
+        break;
+      default:
+        statusColor = Colors.green;
+        statusLabel = 'Completado';
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
+        // Left accent border
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _showActionSheet(venta),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Left accent bar
+              Container(
+                width: 5,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(20)),
+                ),
+              ),
+              // Main content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Venta #${venta['id_venta']}',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isProceso)
+                            SizedBox(
+                              height: 32,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(8)),
+                                ),
+                                icon: const Icon(Icons.stop_circle_outlined,
+                                    size: 14),
+                                label: Text('Finalizar',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold)),
+                                onPressed: () =>
+                                    _handleFinalizarVenta(venta),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildInfoRow(Icons.person_outline_rounded,
+                          venta['cliente_nombre'] ?? 'Cliente General', isDark),
+                      const SizedBox(height: 4),
+                      _buildInfoRow(Icons.business_outlined,
+                          venta['habitacion_nombre'] ?? 'Barra / General',
+                          isDark),
+                      const SizedBox(height: 4),
+                      _buildInfoRow(Icons.access_time_rounded,
+                          '${_formatDateTime(venta['fecha_crea'])} • $method',
+                          isDark,
+                          small: true),
+                      if (activeTimer != null) ...[
+                        const SizedBox(height: 8),
+                        _buildTimerPill(activeTimer, timerState, isDark),
+                      ],
+                      // Bottom row with total
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (venta['usuarios_nicks'] != null)
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${venta['usuarios_nicks']}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          const Spacer(),
+                          Text(
+                            formatCurrency(total),
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                              color: estado == 0
+                                  ? Colors.redAccent
+                                  : (isDark
+                                      ? Colors.white
+                                      : Colors.black),
+                              decoration: estado == 0
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text, bool isDark,
+      {bool small = false}) {
+    return Row(
+      children: [
+        Icon(icon,
+            size: 14,
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: small ? 11 : 13,
+              fontWeight: FontWeight.w500,
+              color: small
+                  ? (isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary)
+                  : (isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimerPill(
+      ActiveTimer timer, TimerState timerState, bool isDark) {
+    final remaining = timer.calculateRemaining(timerState.serverOffset);
+    final isOverdue = timer.isOverdue(timerState.serverOffset);
+    final isPaused = timer.isPaused;
+
+    Color bgColor;
+    Color textColor;
+    String text;
+
+    if (isOverdue) {
+      bgColor = Colors.redAccent.withValues(alpha: 0.15);
+      textColor = Colors.redAccent;
+      text = 'AGOTADO';
+    } else if (isPaused) {
+      bgColor = Colors.orange.withValues(alpha: 0.15);
+      textColor = Colors.orange;
+      text =
+          'PAUSADO ${timer.formatRemaining(timerState.serverOffset)}';
+    } else if (remaining <= 300) {
+      bgColor = Colors.redAccent.withValues(alpha: 0.12);
+      textColor = Colors.redAccent;
+      text = timer.formatRemaining(timerState.serverOffset);
+    } else {
+      bgColor = Colors.green.withValues(alpha: 0.12);
+      textColor = Colors.green;
+      text = timer.formatRemaining(timerState.serverOffset);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isOverdue
+                ? Icons.timer_off_rounded
+                : isPaused
+                    ? Icons.pause_circle_outline
+                    : Icons.timer_outlined,
+            size: 14,
+            color: textColor,
+          ),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('RESTANTE',
+                  style: GoogleFonts.inter(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                      color: textColor.withValues(alpha: 0.7))),
+              Text(text,
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      fontFamily: 'monospace')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Anulacion Modal ---
+  Widget _buildAnulacionModal(bool isDark) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () {
+            if (!_anulandoVenta) {
+              setState(() => _anulacionModalVisible = false);
+            }
+          },
+          child: Container(
+            color: Colors.black54,
+          ),
+        ),
+        Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.9,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppTheme.darkSurfaceColor
+                    : AppTheme.lightSurfaceColor,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Icon
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Icon(Icons.alert_circle_outline,
+                          color: Colors.redAccent, size: 28),
+                    ),
+                    const SizedBox(height: 12),
+                    Text('Solicitar Anulación',
+                        style: GoogleFonts.inter(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Completa el monto y el motivo para enviar la solicitud al administrador.',
+                      style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Info card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.03)
+                            : Colors.black.withValues(alpha: 0.02),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildInfoText(
+                              'Código',
+                              _activeVenta?['codigo'] ?? '-',
+                              isDark),
+                          const SizedBox(height: 4),
+                          _buildInfoText(
+                              'Cliente',
+                              _activeVenta?['cliente_nombre'] ??
+                                  'Sin cliente',
+                              isDark),
+                          const SizedBox(height: 4),
+                          _buildInfoText(
+                              'Total referencia',
+                              formatCurrency(
+                                  double.tryParse(_activeVenta?['total']
+                                          ?.toString() ??
+                                      '0') ??
+                                      0),
+                              isDark,
+                              valueColor: AppTheme.primaryColor),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Monto field
+                    Text('Monto solicitado *',
+                        style: GoogleFonts.inter(
+                            fontSize: 14, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _montoAnulacionController,
+                      onChanged: (v) {
+                        _montoAnulacion = _formatMontoInput(v);
+                      },
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Ingresa el monto',
+                        filled: true,
+                        fillColor: isDark
+                            ? AppTheme.darkBgColor
+                            : Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Motivo field
+                    Text('Motivo de la anulación *',
+                        style: GoogleFonts.inter(
+                            fontSize: 14, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _motivoController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Describe el motivo...',
+                        filled: true,
+                        fillColor: isDark
+                            ? AppTheme.darkBgColor
+                            : Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Action buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(12)),
+                            ),
+                            onPressed: _anulandoVenta
+                                ? null
+                                : () => setState(
+                                    () => _anulacionModalVisible = false),
+                            child: Text('Cancelar',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(12)),
+                            ),
+                            onPressed:
+                                _anulandoVenta ? null : _handleAnularVenta,
+                            child: _anulandoVenta
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2))
+                                : Text('Enviar Solicitud',
+                                    style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoText(String label, String value, bool isDark,
+      {Color? valueColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 13,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary)),
+        Text(value,
+            style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: valueColor ??
+                    (isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary))),
+      ],
+    );
+  }
+
+  // --- Detail Modal ---
+  Widget _buildDetailModal(bool isDark) {
+    return GestureDetector(
+      onTap: () => setState(() => _modalVisible = false),
+      child: Container(
+        color: Colors.black54,
+        child: GestureDetector(
+          onTap: () {}, // Prevent tap-through
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (_, scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.darkSurfaceColor
+                      : AppTheme.lightSurfaceColor,
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28)),
+                  border: Border.all(
+                      color: isDark
+                          ? AppTheme.darkBorderColor
+                          : AppTheme.lightBorderColor),
+                ),
+                child: _loadingDetail
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                            color: AppTheme.primaryColor))
+                    : _selectedVenta != null
+                        ? _buildDetailContent(
+                            scrollController, isDark)
+                        : const Center(
+                            child: Text('Error al cargar detalle')),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailContent(
+      ScrollController scrollController, bool isDark) {
+    final venta = _selectedVenta;
+    final listItems = (venta['items'] as List<dynamic>?) ?? [];
+    final double subtotal =
+        double.tryParse(venta['subtotal']?.toString() ?? '0') ?? 0.0;
+    final double descuento =
+        double.tryParse(venta['descuento']?.toString() ?? '0') ?? 0.0;
+    final double total =
+        double.tryParse(venta['total']?.toString() ?? '0') ?? 0.0;
+    final int estado =
+        int.tryParse(venta['estado']?.toString() ?? '1') ?? 1;
+    final double propina =
+        double.tryParse(venta['propina']?.toString() ?? '0') ?? 0.0;
+
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Detalle de Venta',
+                        style: GoogleFonts.inter(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('Código: ${venta['codigo'] ?? ''}',
+                        style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary)),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() => _modalVisible = false),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+        ),
+
+        // Scrollable content
+        Expanded(
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            children: [
+              // Info grid
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailInfoBox(
+                        'Fecha/Hora',
+                        _formatDateTime(venta['fecha_crea']),
+                        isDark),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildDetailInfoBox(
+                        'Método Pago',
+                        (venta['metodo_pago']?.toString().toUpperCase() ??
+                            'EFECTIVO'),
+                        isDark),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildDetailInfoBox(
+                  'Cliente', venta['cliente_nombre'] ?? 'Sin Cliente', isDark),
+              if (venta['habitacion_nombre'] != null) ...[
+                const SizedBox(height: 12),
+                _buildDetailInfoBox(
+                    'Habitación', venta['habitacion_nombre'], isDark),
+              ],
+              if (venta['tiempo'] != null) ...[
+                const SizedBox(height: 12),
+                _buildDetailInfoBox(
+                    'Tiempo', '${venta['tiempo']} min', isDark),
+              ],
+              const SizedBox(height: 20),
+
+              // Origin
+              if (venta['pedido_id'] != null)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color:
+                            AppTheme.primaryColor.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.receipt_outlined,
+                          color: AppTheme.primaryColor, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('VENTA DESDE PEDIDO',
+                                style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppTheme.primaryColor)),
+                            if (venta['garzon_nombre'] != null)
+                              Text(
+                                  'Garzón: ${venta['garzon_nombre']}',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? AppTheme.darkTextSecondary
+                                          : AppTheme.lightTextSecondary)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Products
+              const SizedBox(height: 20),
+              Text('PRODUCTOS',
+                  style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                      letterSpacing: 0.5)),
+              const SizedBox(height: 10),
+              ...listItems.map((item) {
+                final double precio =
+                    double.tryParse(item['precio']?.toString() ?? '0') ??
+                        0.0;
+                final int qty =
+                    int.tryParse(item['cantidad']?.toString() ?? '1') ?? 1;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : Colors.black.withValues(alpha: 0.02),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: isDark
+                            ? AppTheme.darkBorderColor
+                            : AppTheme.lightBorderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('CANT: $qty',
+                            style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.primaryColor)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                            item['producto_nombre'] ?? 'Producto',
+                            style: GoogleFonts.inter(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                      ),
+                      Text(formatCurrency(precio * qty),
+                          style: GoogleFonts.inter(
+                              fontSize: 14, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                );
+              }),
+
+              // Totals
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.black.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                      color: isDark
+                          ? AppTheme.darkBorderColor
+                          : AppTheme.lightBorderColor),
+                ),
+                child: Column(
+                  children: [
+                    _buildPriceRow('Subtotal', formatCurrency(subtotal)),
+                    if (propina > 0) ...[
+                      const SizedBox(height: 4),
+                      _buildPriceRow('Propina', '+${formatCurrency(propina)}',
+                          color: Colors.green),
+                    ],
+                    if (descuento > 0) ...[
+                      const SizedBox(height: 4),
+                      _buildPriceRow('Descuento',
+                          '- ${formatCurrency(descuento)}',
+                          color: Colors.redAccent),
+                    ],
+                    const Divider(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('TOTAL',
+                            style: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w900)),
+                        Text(formatCurrency(total),
+                            style: GoogleFonts.inter(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.primaryColor)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+
+        // Close button
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999)),
+              ),
+              onPressed: () => setState(() => _modalVisible = false),
+              child: Text('Cerrar Detalles',
+                  style: GoogleFonts.inter(
+                      fontSize: 16, fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailInfoBox(String label, String value, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkBgColor
+            : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(),
+              style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: GoogleFonts.inter(
+                  fontSize: 13, fontWeight: FontWeight.w700),
+              overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, String value,
+      {bool isTotal = false, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: GoogleFonts.inter(
+                  fontSize: isTotal ? 16 : 13,
+                  fontWeight:
+                      isTotal ? FontWeight.bold : FontWeight.normal)),
+          Text(value,
+              style: GoogleFonts.inter(
+                  fontSize: isTotal ? 18 : 13,
+                  fontWeight: FontWeight.bold,
+                  color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniStat({
+    required bool isDark,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:
+            isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color:
+              isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: GoogleFonts.inter(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: GoogleFonts.inter(
+                  fontSize: 15, fontWeight: FontWeight.w900, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      itemBuilder: (context, index) => const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: SkeletonCard(lines: 4),
+      ),
+    );
+  }
+}

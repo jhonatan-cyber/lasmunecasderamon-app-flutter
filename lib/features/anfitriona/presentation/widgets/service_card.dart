@@ -1,0 +1,322 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+
+class ServiceCard extends StatelessWidget {
+  final dynamic item;
+  final int index;
+  final ValueChanged<dynamic> onPress;
+  final Function(String, String, String) onAssistance;
+
+  const ServiceCard({
+    super.key,
+    required this.item,
+    required this.index,
+    required this.onPress,
+    required this.onAssistance,
+  });
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return 'Sin fecha';
+    try {
+      final date = DateTime.parse(dateStr).toUtc();
+      return DateFormat('d MMM y', 'es_ES').format(date);
+    } catch (_) {
+      return 'Error';
+    }
+  }
+
+  String _formatTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final date = DateTime.parse(dateStr).toUtc();
+      return DateFormat('HH:mm').format(date);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const accentColor = Color(0xFFD84315);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
+    final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final borderColor = isDark ? accentColor.withValues(alpha: 0.25) : Colors.grey.shade200;
+
+    final estadoNum = int.tryParse(item['estado']?.toString() ?? '0') ?? 0;
+    final isProceso = estadoNum == 2;
+
+    final statusMap = {
+      0: _StatusInfo(
+        bg: isDark ? const Color(0xFF450A0A) : const Color(0xFFFEE2E2),
+        text: isDark ? const Color(0xFFF87171) : const Color(0xFF991B1B),
+        label: 'Anulado',
+      ),
+      1: _StatusInfo(
+        bg: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFDBEAFE),
+        text: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E40AF),
+        label: 'Por Cobrar',
+      ),
+      2: _StatusInfo(
+        bg: isDark ? const Color(0xFF7C2D12) : const Color(0xFFFEF3C7),
+        text: isDark ? const Color(0xFFFDBA74) : const Color(0xFF92400E),
+        label: 'En Proceso',
+      ),
+      3: _StatusInfo(
+        bg: isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0),
+        text: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+        label: 'Pausado',
+      ),
+      4: _StatusInfo(
+        bg: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
+        text: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E40AF),
+        label: 'Solicitud Anul.',
+      ),
+    };
+
+    final status = statusMap[estadoNum] ??
+        _StatusInfo(bg: Colors.grey, text: Colors.white, label: 'Desconocido');
+
+    final String habitacion = item['habitacion']?.toString() ?? 'Sin Habitación';
+    final String codigo = item['codigo']?.toString() ?? '----';
+    final double comision = double.tryParse(item['comision_usuario']?.toString() ?? '0') ?? 0.0;
+    final String idServicio = item['id_servicio']?.toString() ?? '';
+    final String fechaCrea = item['fecha_crea']?.toString() ?? '';
+
+    final formatter = NumberFormat.decimalPattern('es_ES');
+
+    return Card(
+      color: cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: borderColor, width: 1.2),
+      ),
+      margin: const EdgeInsets.only(top: 10, left: 16, right: 16),
+      elevation: 0,
+      child: InkWell(
+        onTap: () => onPress(item),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${index + 1}',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        habitacion,
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: status.bg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      status.label,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: status.text,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined, size: 12, color: textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDate(fechaCrea),
+                    style: GoogleFonts.inter(fontSize: 11, color: textSecondary),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.access_time_outlined, size: 12, color: textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatTime(fechaCrea),
+                    style: GoogleFonts.inter(fontSize: 11, color: textSecondary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Código:',
+                        style: GoogleFonts.inter(fontSize: 12, color: textSecondary),
+                      ),
+                      Text(
+                        codigo,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Mi Comisión:',
+                        style: GoogleFonts.inter(fontSize: 12, color: textSecondary),
+                      ),
+                      Text(
+                        '\$${formatter.format(comision)}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: accentColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              if (isProceso) ...[
+                const SizedBox(height: 15),
+                Container(
+                  height: 1,
+                  color: Colors.grey.withValues(alpha: 0.1),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'SILENT ASSISTANCE:',
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: textSecondary.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildAssistanceButton(
+                        context: context,
+                        icon: Icons.local_bar_outlined,
+                        label: 'Tragos',
+                        btnBg: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFE0E7FF),
+                        textColor: accentColor,
+                        onPressed: () => onAssistance(idServicio, habitacion, 'Tragos'),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildAssistanceButton(
+                        context: context,
+                        icon: Icons.clean_hands_outlined,
+                        label: 'Servicio',
+                        btnBg: isDark ? const Color(0xFF065F46).withValues(alpha: 0.3) : const Color(0xFFD1FAE5),
+                        textColor: const Color(0xFF10B981),
+                        onPressed: () => onAssistance(idServicio, habitacion, 'Limpieza/Hielo'),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildAssistanceButton(
+                        context: context,
+                        icon: Icons.warning_amber_rounded,
+                        label: 'ALERTA',
+                        btnBg: isDark ? const Color(0xFF450A0A) : const Color(0xFFFEE2E2),
+                        textColor: const Color(0xFFEF4444),
+                        onPressed: () => onAssistance(idServicio, habitacion, 'Seguridad'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssistanceButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color btnBg,
+    required Color textColor,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: btnBg,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 12, color: textColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusInfo {
+  final Color bg;
+  final Color text;
+  final String label;
+
+  _StatusInfo({
+    required this.bg,
+    required this.text,
+    required this.label,
+  });
+}
