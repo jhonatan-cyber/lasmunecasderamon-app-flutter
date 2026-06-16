@@ -281,8 +281,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final borderColor = isDark ? const Color(0xFF262629) : const Color(0xFFD1D5DB);
 
     // Dynamic duration and curve for theme transition
-    const transitionDuration = Duration(milliseconds: 500);
-    const transitionCurve = Curves.easeInOut;
+    const transitionDuration = Duration(milliseconds: 250);
+    const transitionCurve = Curves.easeOutCubic;
 
     return AnimatedTheme(
       data: isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
@@ -290,28 +290,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       child: Scaffold(
         body: Stack(
           children: [
-            // Background Gradient (AnimatedContainer for smooth color shifting)
-            AnimatedContainer(
-              duration: transitionDuration,
-              curve: transitionCurve,
-              decoration: BoxDecoration(
+            // Dark Background Gradient (base layer)
+            Container(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: isDark 
-                    ? [
-                        const Color(0xFF2E0C04), // Terracotta shadow
-                        const Color(0xFF0F0F10), // Obsidian
-                        const Color(0xFF0F0F10),
-                        const Color(0xFF140D0B), // Warm wood accent
-                      ]
-                    : [
-                        const Color(0xFFFFF3F0),
-                        const Color(0xFFF9FAFB),
-                        const Color(0xFFF9FAFB),
-                        const Color(0xFFFFECE5),
-                      ],
-                  stops: const [0.0, 0.4, 0.8, 1.0],
+                  colors: [
+                    Color(0xFF2E0C04), // Terracotta shadow
+                    Color(0xFF0F0F10), // Obsidian
+                    Color(0xFF0F0F10),
+                    Color(0xFF140D0B), // Warm wood accent
+                  ],
+                  stops: [0.0, 0.4, 0.8, 1.0],
+                ),
+              ),
+            ),
+            // Light Background Gradient (fades in/out over dark layer)
+            AnimatedOpacity(
+              opacity: isDark ? 0.0 : 1.0,
+              duration: transitionDuration,
+              curve: transitionCurve,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFFF3F0),
+                      Color(0xFFF9FAFB),
+                      Color(0xFFF9FAFB),
+                      Color(0xFFFFECE5),
+                    ],
+                    stops: [0.0, 0.4, 0.8, 1.0],
+                  ),
                 ),
               ),
             ),
@@ -404,7 +416,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
-                                    child: const Text('Usuario o Email'),
+                                    child: const Text('Nick'),
                                   ),
                                 ),
                                 TextFormField(
@@ -414,7 +426,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   textInputAction: TextInputAction.next,
                                   decoration: InputDecoration(
                                     prefixIcon: Icon(Icons.person_outline_rounded, color: labelColor),
-                                    hintText: 'ej: juan.perez',
+                                    hintText: 'Nick',
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                                     enabledBorder: OutlineInputBorder(
                                       borderSide: BorderSide(color: borderColor, width: 1.5),
@@ -435,7 +447,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.trim().isEmpty) {
-                                      return 'Por favor ingresa tu usuario';
+                                      return 'Por favor ingresa tu nick';
                                     }
                                     return null;
                                   },
@@ -644,39 +656,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final borderColor = isDark ? const Color(0xFF262629) : const Color(0xFFD1D5DB);
     final textColor = isDark ? Colors.white : Colors.black;
     
-    const transitionDuration = Duration(milliseconds: 500);
-    const transitionCurve = Curves.easeInOut;
+    const transitionDuration = Duration(milliseconds: 250);
+    const transitionCurve = Curves.easeOutCubic;
 
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: transitionDuration,
-        curve: transitionCurve,
-        width: 100,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: btnBg,
-          border: Border.all(color: borderColor, width: 1.5),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: accentColor, size: 32),
-            const SizedBox(height: 6),
-            AnimatedDefaultTextStyle(
-              duration: transitionDuration,
-              curve: transitionCurve,
-              style: GoogleFonts.inter(
-                color: textColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-              child: Text(label),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onPressed,
+          customBorder: const CircleBorder(),
+          child: AnimatedContainer(
+            duration: transitionDuration,
+            curve: transitionCurve,
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: btnBg,
+              shape: BoxShape.circle,
+              border: Border.all(color: borderColor, width: 1.5),
             ),
-          ],
+            child: Center(
+              child: Icon(icon, color: accentColor, size: 28),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        AnimatedDefaultTextStyle(
+          duration: transitionDuration,
+          curve: transitionCurve,
+          style: GoogleFonts.inter(
+            color: textColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+          child: Text(label),
+        ),
+      ],
     );
   }
 }
