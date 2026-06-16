@@ -137,7 +137,7 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
     final int cantidadServicios = int.tryParse(_stats['cantidad_servicios']?.toString() ?? '0') ?? 0;
 
     final fullName = user?.nombre ?? "Cajero";
-    final nick = user?.nombre.toLowerCase().replaceAll(' ', '') ?? "cajero";
+    final nick = (user?.nick.isNotEmpty == true) ? user!.nick : (user?.nombre.toLowerCase().replaceAll(' ', '') ?? "cajero");
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,

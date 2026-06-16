@@ -374,7 +374,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  '@${user?.nombre.toLowerCase().replaceAll(' ', '') ?? 'anfitriona'}',
+                                  '@${(user?.nick.isNotEmpty == true) ? user!.nick : 'anfitriona'}',
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(
                                     fontSize: 18,
