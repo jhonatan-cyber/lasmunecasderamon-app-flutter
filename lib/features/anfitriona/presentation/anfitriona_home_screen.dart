@@ -345,7 +345,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                                   image: NetworkImage(
                                     user!.foto.startsWith('http')
                                         ? user.foto
-                                        : '${ApiClient.baseUrl}/img/users/${user.foto}',
+                                        : '${ApiClient.baseDomain}/img/users/${user.foto}',
                                   ),
                                   fit: BoxFit.cover,
                                 )

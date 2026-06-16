@@ -183,7 +183,7 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                     ? NetworkImage(
                         user!.foto.startsWith('http')
                             ? user.foto
-                            : '${ApiClient.baseUrl}/img/users/${user.foto}',
+                            : '${ApiClient.baseDomain}/img/users/${user.foto}',
                       )
                     : null,
                 child: user?.foto.isNotEmpty == true

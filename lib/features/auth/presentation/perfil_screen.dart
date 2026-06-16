@@ -389,7 +389,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                                       child: Image.network(
                                         user.foto.startsWith('http')
                                             ? user.foto
-                                            : '${ApiClient.baseUrl}/img/users/${user.foto}',
+                                            : '${ApiClient.baseDomain}/img/users/${user.foto}',
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, err, st) => Center(
                                           child: Text(

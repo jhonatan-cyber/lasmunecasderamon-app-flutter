@@ -2,7 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
-  static const String baseUrl = 'https://dashboard.xn--lasmuecasderamon-bub.com/api';
+  static const String baseDomain = 'https://dashboard.xn--lasmuecasderamon-bub.com';
+  static const String baseUrl = '$baseDomain/api';
   final Dio _dio;
   final _secureStorage = const FlutterSecureStorage();
 
