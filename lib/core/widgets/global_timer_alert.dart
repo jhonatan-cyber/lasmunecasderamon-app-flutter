@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/timer_service.dart';
 
-/// Global overlay that shows an alert dialog when a timer expires.
-/// This should be placed at the top of the widget tree (like in the app's main scaffold).
 class GlobalTimerAlert extends ConsumerStatefulWidget {
   const GlobalTimerAlert({super.key});
 
@@ -19,7 +17,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
 
-    // Check for overdue timers that haven't been notified yet
+   
     for (final timer in timerState.timers) {
       if (timer.isOverdue(timerState.serverOffset) &&
           timer.isActive &&
@@ -49,7 +47,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Red header
+           
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
