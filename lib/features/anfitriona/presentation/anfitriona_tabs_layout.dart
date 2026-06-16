@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
 import 'package:go_router/go_router.dart';
@@ -102,76 +103,87 @@ class AnfitrionaTabsLayout extends ConsumerWidget {
     // Gradiente premium alineado a la marca
     final accentTheme = ref.watch(accentColorProvider);
     final gradientColors = accentTheme.gradient;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          child,
-          const StaffCallOverlay(),
-        ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: gradientColors.last,
+        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarDividerColor: Colors.transparent,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            child,
+            const StaffCallOverlay(),
           ],
         ),
-        child: ClipRRect(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
               ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                height: 64,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildTabItem(
-                      index: 0,
-                      selectedIndex: selectedIndex,
-                      icon: Icons.favorite_rounded,
-                      label: 'Servicios',
-                      context: context,
-                    ),
-                    _buildTabItem(
-                      index: 1,
-                      selectedIndex: selectedIndex,
-                      icon: Icons.wallet_rounded,
-                      label: 'Ventas',
-                      context: context,
-                    ),
-                    _buildTabItem(
-                      index: 2,
-                      selectedIndex: selectedIndex,
-                      icon: Icons.home_rounded,
-                      label: 'Inicio',
-                      context: context,
-                    ),
-                    _buildTabItem(
-                      index: 3,
-                      selectedIndex: selectedIndex,
-                      icon: Icons.calendar_today_rounded,
-                      label: 'Asistencia',
-                      context: context,
-                    ),
-                    _buildTabItem(
-                      index: 4,
-                      selectedIndex: selectedIndex,
-                      icon: Icons.credit_card_rounded,
-                      label: 'Anticipos',
-                      context: context,
-                    ),
-                  ],
+            ],
+          ),
+          child: ClipRRect(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SizedBox(
+                  height: 64,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildTabItem(
+                        index: 0,
+                        selectedIndex: selectedIndex,
+                        icon: Icons.favorite_rounded,
+                        label: 'Servicios',
+                        context: context,
+                      ),
+                      _buildTabItem(
+                        index: 1,
+                        selectedIndex: selectedIndex,
+                        icon: Icons.wallet_rounded,
+                        label: 'Ventas',
+                        context: context,
+                      ),
+                      _buildTabItem(
+                        index: 2,
+                        selectedIndex: selectedIndex,
+                        icon: Icons.home_rounded,
+                        label: 'Inicio',
+                        context: context,
+                      ),
+                      _buildTabItem(
+                        index: 3,
+                        selectedIndex: selectedIndex,
+                        icon: Icons.calendar_today_rounded,
+                        label: 'Asistencia',
+                        context: context,
+                      ),
+                      _buildTabItem(
+                        index: 4,
+                        selectedIndex: selectedIndex,
+                        icon: Icons.credit_card_rounded,
+                        label: 'Anticipos',
+                        context: context,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

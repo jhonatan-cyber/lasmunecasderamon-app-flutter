@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/global_timer_alert.dart';
@@ -44,56 +45,67 @@ class CajeroTabsLayout extends StatelessWidget {
     final selectedIndex = _getSelectedIndex(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final navBarColor = isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          child,
-          const StaffCallOverlay(),
-          const GlobalTimerAlert(),
-        ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: navBarColor,
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarDividerColor: Colors.transparent,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-              width: 1.0,
+      child: Scaffold(
+        body: Stack(
+          children: [
+            child,
+            const StaffCallOverlay(),
+            const GlobalTimerAlert(),
+          ],
+        ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+                width: 1.0,
+              ),
             ),
           ),
-        ),
-        child: NavigationBar(
-          selectedIndex: selectedIndex,
-          onDestinationSelected: (index) => _onItemTapped(index, context),
-          backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-          indicatorColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.calendar_today_rounded, color: AppTheme.darkTextSecondary),
-              selectedIcon: Icon(Icons.calendar_today_rounded, color: AppTheme.primaryColor),
-              label: 'Asistencia',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.wallet_rounded, color: AppTheme.darkTextSecondary),
-              selectedIcon: Icon(Icons.wallet_rounded, color: AppTheme.primaryColor),
-              label: 'Anticipos',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.home_rounded, color: AppTheme.darkTextSecondary),
-              selectedIcon: Icon(Icons.home_rounded, color: AppTheme.primaryColor),
-              label: 'Inicio',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.monetization_on_rounded, color: AppTheme.darkTextSecondary),
-              selectedIcon: Icon(Icons.monetization_on_rounded, color: AppTheme.primaryColor),
-              label: 'Propinas',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.more_time_rounded, color: AppTheme.darkTextSecondary),
-              selectedIcon: Icon(Icons.more_time_rounded, color: AppTheme.primaryColor),
-              label: 'Extras',
-            ),
-          ],
+          child: NavigationBar(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (index) => _onItemTapped(index, context),
+            backgroundColor: navBarColor,
+            indicatorColor: AppTheme.primaryColor.withValues(alpha: 0.15),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.calendar_today_rounded, color: AppTheme.darkTextSecondary),
+                selectedIcon: Icon(Icons.calendar_today_rounded, color: AppTheme.primaryColor),
+                label: 'Asistencia',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.wallet_rounded, color: AppTheme.darkTextSecondary),
+                selectedIcon: Icon(Icons.wallet_rounded, color: AppTheme.primaryColor),
+                label: 'Anticipos',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.home_rounded, color: AppTheme.darkTextSecondary),
+                selectedIcon: Icon(Icons.home_rounded, color: AppTheme.primaryColor),
+                label: 'Inicio',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.monetization_on_rounded, color: AppTheme.darkTextSecondary),
+                selectedIcon: Icon(Icons.monetization_on_rounded, color: AppTheme.primaryColor),
+                label: 'Propinas',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.more_time_rounded, color: AppTheme.darkTextSecondary),
+                selectedIcon: Icon(Icons.more_time_rounded, color: AppTheme.primaryColor),
+                label: 'Extras',
+              ),
+            ],
+          ),
         ),
       ),
     );

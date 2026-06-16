@@ -167,7 +167,6 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
                 ),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  // Refresh timers after dismissing
                   ref.read(timerProvider.notifier).fetchActiveTimers();
                 },
                 child: Text(
