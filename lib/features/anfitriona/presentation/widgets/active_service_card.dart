@@ -43,7 +43,7 @@ class _ActiveServiceCardState extends State<ActiveServiceCard>
 
   @override
   Widget build(BuildContext context) {
-    const accentColor = Color(0xFFD84315);
+    final accentColor = Theme.of(context).colorScheme.primary;
     
     return Card(
       elevation: 12,

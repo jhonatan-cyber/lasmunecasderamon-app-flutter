@@ -65,7 +65,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
               content: Text(alreadyReg
                   ? 'Ya tienes asistencia registrada hoy'
                   : '¡Asistencia registrada correctamente!'),
-              backgroundColor: alreadyReg ? Colors.orangeAccent : const Color(0xFF10B981),
+              backgroundColor: alreadyReg ? Colors.orangeAccent : AppTheme.successColor,
             ),
           );
           Navigator.of(context).pop(); // Cerrar modal de asistencia
@@ -104,7 +104,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return Dialog(
-          backgroundColor: isDark ? const Color(0xFF18181A) : Colors.white,
+          backgroundColor: isDark ? AppTheme.darkSurfaceColor : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -133,7 +133,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
                       width: 220,
                       height: 220,
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFD84315), width: 3),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary, width: 3),
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
@@ -170,9 +170,9 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
     final accentColor = accentTheme.color;
     
     final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
-    final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
-    final borderColor = isDark ? const Color(0xFF27272A) : Colors.grey.shade200;
+    final textPrimary = isDark ? Colors.white : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.gray500Color;
+    final borderColor = isDark ? AppTheme.darkSurfaceAltColor : Colors.grey.shade200;
 
     final authState = ref.watch(authProvider);
     final user = authState.user;
@@ -261,7 +261,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF18181A) : const Color(0xFFF9FAFB),
+              color: isDark ? AppTheme.darkSurfaceColor : const Color(0xFFF9FAFB),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: borderColor, width: 1),
             ),

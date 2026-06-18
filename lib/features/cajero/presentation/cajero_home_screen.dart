@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../../core/api_client.dart';
+import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -15,26 +16,22 @@ class CajeroHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
-  bool _loading = true;
-  String _error = '';
   Map<String, dynamic> _stats = {};
   int _pendingCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    Future.microtask(() => _fetchData());
   }
 
-  Future<void> _fetchData() async {
-    setState(() {
-      _loading = true;
-      _error = '';
-    });
+  Future<void> _fetchData({bool isManual = false}) async {
+    final notifier = ref.read(refreshProvider('cajero_home').notifier);
+    notifier.startRefresh(isManual: isManual);
 
     try {
       final client = ref.read(apiClientProvider);
-      
+
       dynamic statsRes;
       try {
         statsRes = await client.dio.get('/caja/stats');
@@ -42,11 +39,15 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
 
       dynamic pendingRes;
       try {
-        pendingRes = await client.dio.get('/solicitudes-servicios/pending-count');
+        pendingRes = await client.dio.get(
+          '/solicitudes-servicios/pending-count',
+        );
       } catch (_) {}
 
       Map<String, dynamic> statsData = {};
-      if (statsRes != null && statsRes.data != null && statsRes.data['success'] == true) {
+      if (statsRes != null &&
+          statsRes.data != null &&
+          statsRes.data['success'] == true) {
         statsData = statsRes.data['data'] ?? {};
       }
 
@@ -55,39 +56,55 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
         pendingVal = pendingRes.data['count'] ?? 0;
       }
 
+      if (!mounted) return;
       setState(() {
         _stats = statsData;
         _pendingCount = pendingVal;
-        _loading = false;
       });
+      notifier.endRefresh();
     } catch (e) {
-      setState(() {
-        _error = 'Error al cargar datos del panel';
-        _loading = false;
-      });
+      if (!mounted) return;
+      notifier.endRefresh(error: 'Error al cargar datos del panel');
     }
   }
-
-
 
   void _showLogoutConfirmation(BuildContext context, bool isDark) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        title: Text('Cerrar sesión', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('¿Estás seguro que deseas salir del sistema?', style: GoogleFonts.inter()),
+        backgroundColor: isDark
+            ? AppTheme.darkSurfaceColor
+            : AppTheme.lightSurfaceColor,
+        title: Text(
+          'Cerrar sesiÃ³n',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Â¿EstÃ¡s seguro que deseas salir del sistema?',
+          style: GoogleFonts.inter(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar', style: GoogleFonts.inter(color: isDark ? Colors.white70 : Colors.black87)),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.inter(
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
-            child: Text('Cerrar Sesión', style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Cerrar SesiÃ³n',
+              style: GoogleFonts.inter(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -106,18 +123,18 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.2),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.12)
+              : Colors.white.withValues(alpha: 0.2),
           shape: BoxShape.circle,
           border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.white.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
-        child: Icon(
-          icon,
-          color: color,
-          size: 19,
-        ),
+        child: Icon(icon, color: color, size: 19),
       ),
     );
   }
@@ -129,30 +146,43 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode == ThemeMode.dark;
 
-    final double balanceTotal = double.tryParse(_stats['balance_total']?.toString() ?? '0') ?? 0.0;
-    final double totalVentas = double.tryParse(_stats['total_ventas']?.toString() ?? '0') ?? 0.0;
-    final double totalServicios = double.tryParse(_stats['total_servicios']?.toString() ?? '0') ?? 0.0;
-    final double montoApertura = double.tryParse(_stats['monto_apertura']?.toString() ?? '0') ?? 0.0;
-    final int cantidadVentas = int.tryParse(_stats['cantidad_ventas']?.toString() ?? '0') ?? 0;
-    final int cantidadServicios = int.tryParse(_stats['cantidad_servicios']?.toString() ?? '0') ?? 0;
+    final double balanceTotal =
+        double.tryParse(_stats['balance_total']?.toString() ?? '0') ?? 0.0;
+    final double totalVentas =
+        double.tryParse(_stats['total_ventas']?.toString() ?? '0') ?? 0.0;
+    final double totalServicios =
+        double.tryParse(_stats['total_servicios']?.toString() ?? '0') ?? 0.0;
+    final double montoApertura =
+        double.tryParse(_stats['monto_apertura']?.toString() ?? '0') ?? 0.0;
+    final int cantidadVentas =
+        int.tryParse(_stats['cantidad_ventas']?.toString() ?? '0') ?? 0;
+    final int cantidadServicios =
+        int.tryParse(_stats['cantidad_servicios']?.toString() ?? '0') ?? 0;
 
     final fullName = user?.nombre ?? "Cajero";
-    final nick = (user?.nick.isNotEmpty == true) ? user!.nick : (user?.nombre.toLowerCase().replaceAll(' ', '') ?? "cajero");
+    final nick = (user?.nick.isNotEmpty == true)
+        ? user!.nick
+        : (user?.nombre.toLowerCase().replaceAll(' ', '') ?? "cajero");
+
+    final refresh = ref.watch(refreshProvider('cajero_home'));
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
       body: RefreshIndicator(
-        onRefresh: _fetchData,
-        color: AppTheme.primaryColor,
-        child: _loading
-            ? const Center(
+        onRefresh: () => _fetchData(isManual: true),
+        color: Theme.of(context).colorScheme.primary,
+        child: refresh.isLoading
+            ? Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               )
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.zero, // Quitamos el padding global para que el Header vaya de borde a borde
+                padding: EdgeInsets
+                    .zero, // Quitamos el padding global para que el Header vaya de borde a borde
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -162,9 +192,9 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppTheme.primaryColor,
+                            Theme.of(context).colorScheme.primary,
                             const Color(0xFF881337), // Rosa/rojo muy oscuro
-                            const Color(0xFF1A0B10), // Aún más oscuro
+                            const Color(0xFF1A0B10), // AÃºn mÃ¡s oscuro
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -175,7 +205,9 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.2),
                             blurRadius: 15,
                             offset: const Offset(0, 5),
                           ),
@@ -184,17 +216,20 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                       child: SafeArea(
                         bottom: false,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0,
+                            vertical: 20.0,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Nivel Superior: Acciones Rápidas
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   _buildHeaderButton(
                                     icon: Icons.people_outline_rounded,
-                                    onPressed: () => context.push('/cajero/personal'),
+                                    onPressed: () =>
+                                        context.push('/cajero/personal'),
                                     isDark: isDark,
                                   ),
                                   const SizedBox(width: 12),
@@ -203,7 +238,8 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                                     children: [
                                       _buildHeaderButton(
                                         icon: Icons.notifications_none_rounded,
-                                        onPressed: () => context.push('/cajero/solicitudes'),
+                                        onPressed: () =>
+                                            context.push('/cajero/solicitudes'),
                                         isDark: isDark,
                                       ),
                                       if (_pendingCount > 0)
@@ -236,31 +272,39 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                                   const SizedBox(width: 12),
                                   _buildHeaderButton(
                                     icon: Icons.settings_outlined,
-                                    onPressed: () => context.push('/cajero/perfil'),
+                                    onPressed: () =>
+                                        context.push('/cajero/perfil'),
                                     isDark: isDark,
                                   ),
                                   const SizedBox(width: 12),
                                   _buildHeaderButton(
-                                    icon: isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round_outlined,
+                                    icon: isDark
+                                        ? Icons.wb_sunny_rounded
+                                        : Icons.nightlight_round_outlined,
                                     onPressed: () {
-                                      ref.read(themeModeProvider.notifier).state = isDark ? ThemeMode.light : ThemeMode.dark;
+                                      ref
+                                          .read(themeModeProvider.notifier)
+                                          .state = isDark
+                                          ? ThemeMode.light
+                                          : ThemeMode.dark;
                                     },
                                     isDark: isDark,
                                   ),
                                   const SizedBox(width: 12),
                                   _buildHeaderButton(
                                     icon: Icons.logout_rounded,
-                                    onPressed: () => _showLogoutConfirmation(context, isDark),
+                                    onPressed: () => _showLogoutConfirmation(
+                                      context,
+                                      isDark,
+                                    ),
                                     isDark: isDark,
                                     color: Colors.redAccent,
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 25),
-                              // Nivel Inferior: Perfil del Usuario
                               Row(
                                 children: [
-                                  // Avatar circular premium
                                   GestureDetector(
                                     onTap: () => context.push('/cajero/perfil'),
                                     child: Container(
@@ -268,14 +312,23 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                                       height: 60,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: Colors.white.withValues(alpha: 0.12),
-                                        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          width: 1.5,
+                                        ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.2),
+                                            color: Colors.black.withValues(
+                                              alpha: 0.2,
+                                            ),
                                             blurRadius: 8,
                                             offset: const Offset(0, 3),
-                                          )
+                                          ),
                                         ],
                                         image: user?.foto.isNotEmpty == true
                                             ? DecorationImage(
@@ -292,7 +345,10 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                                           ? null
                                           : Center(
                                               child: Text(
-                                                user?.nombre.isNotEmpty == true ? user!.nombre[0].toUpperCase() : 'C',
+                                                user?.nombre.isNotEmpty == true
+                                                    ? user!.nombre[0]
+                                                          .toUpperCase()
+                                                    : 'C',
                                                 style: GoogleFonts.inter(
                                                   fontSize: 24,
                                                   fontWeight: FontWeight.w900,
@@ -303,10 +359,10 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 16),
-                                  // Nombre y Estado del Cajero
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           '@$nick',
@@ -338,12 +394,14 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                                               height: 8,
                                               decoration: const BoxDecoration(
                                                 shape: BoxShape.circle,
-                                                color: Color(0xFF10B981), // Disponible / Verde
+                                                color: Color(
+                                                  0xFF10B981,
+                                                ), // Disponible / Verde
                                               ),
                                             ),
                                             const SizedBox(width: 6),
                                             Text(
-                                              'Disponible • Cajero',
+                                              'Cajero',
                                               style: GoogleFonts.inter(
                                                 fontSize: 12,
                                                 color: Colors.white70,
@@ -362,29 +420,38 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                         ),
                       ),
                     ),
-                    
-                    // Cuerpo de la pantalla con padding consistente de 16
+
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (_error.isNotEmpty) ...[
+                          if (refresh.error.isNotEmpty) ...[
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Colors.redAccent.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+                                border: Border.all(
+                                  color: Colors.redAccent.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    color: Colors.redAccent,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      _error,
-                                      style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13),
+                                      refresh.error,
+                                      style: GoogleFonts.inter(
+                                        color: Colors.redAccent,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -395,12 +462,18 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
 
                           Text(
                             'Resumen de Caja',
-                            style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 12),
 
-                          // Metrics list
-                          _buildBalanceCard(isDark, balanceTotal, montoApertura),
+                          _buildBalanceCard(
+                            isDark,
+                            balanceTotal,
+                            montoApertura,
+                          ),
                           const SizedBox(height: 12),
                           Row(
                             children: [
@@ -431,7 +504,10 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
 
                           Text(
                             'Operaciones de Caja',
-                            style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           _buildActionGrid(),
@@ -469,7 +545,9 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
                 ),
               ),
               Container(
@@ -480,7 +558,11 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                 ),
                 child: Text(
                   'Activo',
-                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
                 ),
               ),
             ],
@@ -500,7 +582,9 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
           ),
         ],
@@ -543,7 +627,9 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 4),
@@ -557,7 +643,9 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
           ),
         ],
@@ -567,17 +655,62 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
 
   Widget _buildActionGrid() {
     final actions = [
-      _ActionData(title: 'VENTAS', desc: 'Nueva venta', icon: Icons.shopping_cart_rounded, route: '/cajero/ventas', color: AppTheme.primaryColor),
-      _ActionData(title: 'CUENTAS', desc: 'Cuentas activas', icon: Icons.receipt_long_rounded, route: '/cajero/cuentas', color: AppTheme.primaryColor),
-      _ActionData(title: 'SERVICIOS', desc: 'Gestión privados', icon: Icons.hotel_rounded, route: '/cajero/servicios', color: AppTheme.primaryColor),
-      _ActionData(title: 'CAJA', desc: 'Apertura y cierres', icon: Icons.point_of_sale_rounded, route: '/cajero/caja', color: AppTheme.primaryColor),
-      _ActionData(title: 'SOLICITUDES', desc: 'Mozos y anticipos', icon: Icons.notifications_active_rounded, route: '/cajero/solicitudes', color: AppTheme.primaryColor),
-      _ActionData(title: 'CLIENTES', desc: 'Saldos prepago', icon: Icons.person_search_rounded, route: '/cajero/clientes', color: AppTheme.primaryColor),
-      _ActionData(title: 'PERSONAL', desc: 'Liquidación', icon: Icons.groups_rounded, route: '/cajero/administrativo', color: AppTheme.primaryColor),
-      _ActionData(title: 'GRATIFICACIONES', desc: 'Bonos admin', icon: Icons.card_giftcard_rounded, route: '/cajero/gratificaciones', color: AppTheme.primaryColor),
-      _ActionData(title: 'ASISTENCIAS', desc: 'Control de entrada', icon: Icons.event_available_rounded, route: '/cajero/asistencias', color: AppTheme.primaryColor),
-      _ActionData(title: 'HORAS EXTRAS', desc: 'Horas extras personal', icon: Icons.alarm_on_rounded, route: '/cajero/horas-extras', color: AppTheme.primaryColor),
-      _ActionData(title: 'CALENDARIO', desc: 'Registro eventos', icon: Icons.calendar_month_rounded, route: '/cajero/calendario', color: AppTheme.primaryColor),
+      _ActionData(
+        title: 'VENTAS',
+        desc: 'Nueva venta',
+        icon: Icons.shopping_cart_rounded,
+        route: '/cajero/ventas',
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _ActionData(
+        title: 'CUENTAS',
+        desc: 'Cuentas activas',
+        icon: Icons.receipt_long_rounded,
+        route: '/cajero/cuentas',
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _ActionData(
+        title: 'SERVICIOS',
+        desc: 'GestiÃ³n privados',
+        icon: Icons.hotel_rounded,
+        route: '/cajero/servicios',
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _ActionData(
+        title: 'CAJA',
+        desc: 'Apertura y cierres',
+        icon: Icons.point_of_sale_rounded,
+        route: '/cajero/caja',
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _ActionData(
+        title: 'SOLICITUDES',
+        desc: 'Mozos y anticipos',
+        icon: Icons.notifications_active_rounded,
+        route: '/cajero/solicitudes',
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _ActionData(
+        title: 'CLIENTES',
+        desc: 'Saldos prepago',
+        icon: Icons.person_search_rounded,
+        route: '/cajero/clientes',
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _ActionData(
+        title: 'PERSONAL',
+        desc: 'LiquidaciÃ³n',
+        icon: Icons.groups_rounded,
+        route: '/cajero/administrativo',
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _ActionData(
+        title: 'GRATIFICACIONES',
+        desc: 'Bonos admin',
+        icon: Icons.card_giftcard_rounded,
+        route: '/cajero/gratificaciones',
+        color: Theme.of(context).colorScheme.primary,
+      ),
     ];
 
     return GridView.builder(
@@ -600,10 +733,14 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+              color: isDark
+                  ? AppTheme.darkSurfaceColor
+                  : AppTheme.lightSurfaceColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+                color: isDark
+                    ? AppTheme.darkBorderColor
+                    : AppTheme.lightBorderColor,
               ),
             ),
             child: Column(
@@ -636,7 +773,9 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                       action.desc,
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

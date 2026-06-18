@@ -1,9 +1,10 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../auth/data/auth_notifier.dart';
+import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
@@ -65,8 +66,6 @@ class CajeroPersonalScreen extends ConsumerStatefulWidget {
 
 class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
   List<UserStaff> _users = [];
-  bool _loading = true;
-  bool _refreshing = false;
   String _searchTerm = '';
   UserStaff? _selectedUser;
   bool _isGenerating = false;
@@ -76,8 +75,10 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUsers();
-    _fetchCodigoAsistencia();
+    Future.microtask(() {
+      _fetchUsers();
+      _fetchCodigoAsistencia();
+    });
   }
 
   @override
@@ -87,8 +88,11 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
   }
 
   Future<void> _fetchUsers({bool isManual = false}) async {
+    final notifier = ref.read(refreshProvider('personal').notifier);
     if (!isManual && _users.isEmpty) {
-      setState(() => _loading = true);
+      notifier.startRefresh(isManual: false);
+    } else if (isManual) {
+      notifier.startRefresh(isManual: true);
     }
     try {
       final client = ref.read(apiClientProvider);
@@ -102,20 +106,18 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
               final r = u.role.toLowerCase();
               if (r.contains('admin') || r.contains('administrador')) return false;
               return r.contains('garzon') ||
-                  r.contains('garzón') ||
+                  r.contains('garzÃ³n') ||
                   r.contains('mesero') ||
                   r.contains('cajero') ||
                   r.contains('anfitriona');
             })
             .toList();
 
-        setState(() {
-          _users = staff;
-          _loading = false;
-          _refreshing = false;
-        });
+        if (!mounted) return;
+        setState(() => _users = staff);
+        notifier.endRefresh();
 
-        // Actualizar el usuario seleccionado en caso de que esté abierto para reflejar cambios
+        // Actualizar el usuario seleccionado en caso de que estÃ© abierto para reflejar cambios
         if (_selectedUser != null) {
           final updatedSelected = staff.firstWhere(
             (u) => u.id == _selectedUser!.id,
@@ -126,7 +128,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
             setState(() {
               _selectedUser = updatedSelected;
             });
-            // Si el QR ya no está o cambió a null, significa que fue usado
+            // Si el QR ya no estÃ¡ o cambiÃ³ a null, significa que fue usado
             if (oldToken != null && updatedSelected.qrToken == null) {
               _closeQrModal();
               if (mounted) AppSnackBar.showSuccess(context, 'Asistencia registrada correctamente.');
@@ -135,11 +137,8 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
         }
       }
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _refreshing = false;
-      });
-      if (mounted) AppSnackBar.showError(context, 'No se pudo cargar el personal');
+      if (!mounted) return;
+      notifier.endRefresh(error: 'No se pudo cargar el personal');
     }
   }
 
@@ -174,7 +173,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
           }
           _isGenerating = false;
         });
-        if (mounted) AppSnackBar.showSuccess(context, 'Código QR generado con éxito');
+        if (mounted) AppSnackBar.showSuccess(context, 'CÃ³digo QR generado con Ã©xito');
         _startPolling(userId);
       } else {
         setState(() => _isGenerating = false);
@@ -197,7 +196,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
           if (updatedRaw != null) {
             final updatedUser = UserStaff.fromJson(updatedRaw);
             
-            // Si el token QR se limpió en el servidor, significa que fue escaneado/usado
+            // Si el token QR se limpiÃ³ en el servidor, significa que fue escaneado/usado
             if (_selectedUser?.id == userId && _selectedUser?.qrToken != null && updatedUser.qrToken == null) {
               _pollingTimer?.cancel();
               setState(() {
@@ -243,7 +242,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header del modal con botón de cierre
+                      // Header del modal con botÃ³n de cierre
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -271,7 +270,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                         height: 70,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3), width: 2),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), width: 2),
                         ),
                         child: ClipOval(
                           child: photoUrl != null
@@ -288,23 +287,23 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                       const SizedBox(height: 2),
                       Text(
                         '@${userLocal.nick}',
-                        style: GoogleFonts.inter(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 13),
+                        style: GoogleFonts.inter(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           userLocal.role.toUpperCase(),
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.primaryColor, letterSpacing: 0.5),
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary, letterSpacing: 0.5),
                         ),
                       ),
                       const SizedBox(height: 24),
 
-                      // Cuerpo dinámico (Código QR o botón de generar)
+                      // Cuerpo dinÃ¡mico (CÃ³digo QR o botÃ³n de generar)
                       if (hasQR) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -325,10 +324,10 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                             height: 180,
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
-                              return const SizedBox(
+                              return SizedBox(
                                 width: 180,
                                 height: 180,
-                                child: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+                                child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
                               );
                             },
                           ),
@@ -350,26 +349,26 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Código: ', style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.white70 : Colors.black54)),
-                                Text(_codigoAsistencia, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                                Text('CÃ³digo: ', style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.white70 : Colors.black54)),
+                                Text(_codigoAsistencia, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
                               ],
                             ),
                           ),
                         ],
                         const SizedBox(height: 24),
-                        // Botón regenerar
+                        // BotÃ³n regenerar
                         SizedBox(
                           width: double.infinity,
                           height: 46,
                           child: OutlinedButton(
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                              side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
                             onPressed: _isGenerating
@@ -380,13 +379,13 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                                     setModalState(() => _isGenerating = false);
                                   },
                             child: _isGenerating
-                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor))
+                                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary))
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.refresh_rounded, size: 18, color: AppTheme.primaryColor),
+                                      Icon(Icons.refresh_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
                                       const SizedBox(width: 8),
-                                      Text('Regenerar QR', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                                      Text('Regenerar QR', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
                                     ],
                                   ),
                           ),
@@ -396,19 +395,19 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.qr_code_scanner_rounded, size: 48, color: AppTheme.primaryColor),
+                          child: Icon(Icons.qr_code_scanner_rounded, size: 48, color: Theme.of(context).colorScheme.primary),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Sin Código QR',
+                          'Sin CÃ³digo QR',
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Este usuario no tiene un código de asistencia asignado.',
+                          'Este usuario no tiene un cÃ³digo de asistencia asignado.',
                           style: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary, fontSize: 12),
                           textAlign: TextAlign.center,
                         ),
@@ -467,11 +466,11 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
   Widget _buildAvatarPlaceholder(UserStaff u) {
     final initials = '${u.name.isNotEmpty ? u.name[0] : ''}${u.lastName.isNotEmpty ? u.lastName[0] : ''}'.toUpperCase();
     return Container(
-      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
       child: Center(
         child: Text(
           initials.isNotEmpty ? initials : 'U',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.primaryColor, fontSize: 22),
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, fontSize: 22),
         ),
       ),
     );
@@ -513,13 +512,12 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
             showBackButton: true,
             onBack: () => Navigator.pop(context),
             showRefreshButton: true,
-            isRefreshing: _refreshing,
+            isRefreshing: ref.watch(refreshProvider('personal')).isRefreshing,
             onRefresh: () {
-              setState(() => _refreshing = true);
               _fetchUsers(isManual: true);
               _fetchCodigoAsistencia();
             },
-            subtitle: 'Asistencias de Personal',
+
           ),
 
           // Buscador
@@ -561,10 +559,10 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
           // Contenido principal (Listado)
           Expanded(
             child: FadeLoadingSwitcher(
-              isLoading: _loading,
+              isLoading: ref.watch(refreshProvider('personal')).isLoading,
               skeleton: _buildSkeletonGrid(),
               content: RefreshIndicator(
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                     onRefresh: () => _fetchUsers(isManual: true),
                     child: filteredUsers.isEmpty
                         ? ListView(
@@ -619,8 +617,8 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                                       Container(
                                         width: double.infinity,
                                         padding: const EdgeInsets.symmetric(vertical: 4),
-                                        decoration: const BoxDecoration(
-                                          color: AppTheme.primaryColor,
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.primary,
                                           borderRadius: BorderRadius.only(
                                             topLeft: Radius.circular(19),
                                             topRight: Radius.circular(19),
@@ -651,7 +649,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                                             height: 54,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2), width: 1.5),
+                                              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2), width: 1.5),
                                             ),
                                             child: ClipOval(
                                               child: photoUrl != null

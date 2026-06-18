@@ -108,7 +108,7 @@ class CuentaTimerWidget extends ConsumerWidget {
       isOverdue ? 'AGOTADO' : formatted,
       style: GoogleFonts.inter(
         fontWeight: FontWeight.w900,
-        color: isOverdue ? Colors.redAccent : const Color(0xFFD84315),
+        color: isOverdue ? Colors.redAccent : Theme.of(context).colorScheme.primary,
         fontSize: fontSize,
       ),
     );

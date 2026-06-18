@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,8 +6,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/premium_fab.dart';
+import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
+import '../data/cuentas_notifier.dart';
 
 class CuentasScreen extends ConsumerStatefulWidget {
   const CuentasScreen({super.key});
@@ -17,10 +20,6 @@ class CuentasScreen extends ConsumerStatefulWidget {
 }
 
 class _CuentasScreenState extends ConsumerState<CuentasScreen> {
-  bool _loading = true;
-  String _error = '';
-  List<dynamic> _cuentas = [];
-  Map<String, dynamic> _resumen = {};
   Timer? _timer;
   String _searchQuery = '';
   String _activeTab = 'todas'; // 'todas' or 'pendientes'
@@ -34,7 +33,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    // Use microtask to avoid assertion '!_dirty' during montaje
+    Future.microtask(
+      () => ref.read(cuentasListProvider.notifier).fetchData(),
+    );
     // Refresh UI every second to update active timers in real time
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
@@ -53,76 +55,34 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   }
 
   List<dynamic> get _filteredCuentas {
+    final state = ref.read(cuentasListProvider);
     var list = _activeTab == 'pendientes'
-        ? _cuentas.where((c) => (c['estado']?.toString() ?? '') == '1').toList()
-        : _cuentas;
+        ? state.cuentas
+            .where((c) => (c['estado']?.toString() ?? '') == '1')
+            .toList()
+        : state.cuentas;
     if (_searchQuery.trim().isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       list = list.where((c) {
         final codigo = (c['codigo']?.toString() ?? '').toLowerCase();
-        final cliente = (c['cliente_nombre']?.toString() ?? '').toLowerCase();
-        final room = (c['room_name']?.toString() ?? c['room_number']?.toString() ?? '').toLowerCase();
-        return codigo.contains(query) || cliente.contains(query) || room.contains(query);
+        final cliente = (c['cliente_nombre'] ?? '').toString().toLowerCase();
+        final room =
+            (c['room_name']?.toString() ?? c['room_number']?.toString() ?? '')
+                .toLowerCase();
+        return codigo.contains(query) ||
+            cliente.contains(query) ||
+            room.contains(query);
       }).toList();
     }
     return list;
   }
 
-  Future<void> _fetchData({bool isManual = false}) async {
-    if (!mounted) return;
-    setState(() {
-      _loading = !isManual;
-      _error = '';
-    });
-
-    try {
-      final client = ref.read(apiClientProvider);
-
-      final responses = await Future.wait([
-        client.dio.get('/cuentas?limit=50').catchError((_) => Response(requestOptions: RequestOptions(), data: {'success': false})),
-        client.dio.get('/cuentas?tipo=resumen').catchError((_) => Response(requestOptions: RequestOptions(), data: {'success': false})),
-      ]);
-
-      final accountsRes = responses[0];
-      final summaryRes = responses[1];
-
-      List<dynamic> accountsList = [];
-      if (accountsRes.data != null && accountsRes.data['success'] == true) {
-        accountsList = accountsRes.data['data'] ?? [];
-      }
-
-      Map<String, dynamic> summaryMap = {};
-      if (summaryRes.data != null && summaryRes.data['success'] == true) {
-        summaryMap = summaryRes.data['data'] ?? {};
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _cuentas = accountsList;
-        _resumen = summaryMap;
-        _loading = false;
-      });
-
-      if (isManual) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cuentas actualizadas'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Error al cargar las cuentas activas';
-        _loading = false;
-      });
-    }
-  }
-
   String _formatCurrency(double amount) {
-    final format = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    final format = NumberFormat.currency(
+      locale: 'es_CL',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
     return format.format(amount);
   }
 
@@ -142,35 +102,88 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Mutations
+  // ─────────────────────────────────────────────────────────────────────────
+
   Future<void> _detenerTiempo(int idCuenta) async {
-    final client = ref.read(apiClientProvider);
-    try {
-      final response = await client.dio.post('/cuentas/$idCuenta/stop');
-      if (response.data != null && response.data['success'] == true) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tiempo de estancia detenido'), backgroundColor: Colors.green),
-        );
-        _fetchData();
-      } else {
-        final msg = response.data?['message'] ?? 'Error al detener tiempo';
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $msg'), backgroundColor: Colors.redAccent),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
+    final ok = await ref.read(cuentasListProvider.notifier).detenerTiempo(idCuenta);
+    if (!mounted) return;
+    if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error de conexión al detener tiempo'), backgroundColor: Colors.redAccent),
+        const SnackBar(
+          content: Text('Tiempo de estancia detenido'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al detener tiempo'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
 
+  Future<void> _cobrarCuenta(
+    int idCuenta,
+    String metodoPago,
+    double propina,
+    double cargoTarjeta,
+  ) async {
+    final ok = await ref.read(cuentasListProvider.notifier).cobrarCuenta(
+          idCuenta: idCuenta,
+          metodoPago: metodoPago,
+          propina: propina,
+          cargoTarjeta: cargoTarjeta,
+          usuarioId: 1,
+        );
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cuenta cobrada correctamente. Mesa liberada.'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al cobrar cuenta'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _anularCuenta(int idCuenta, String motivo) async {
+    final ok = await ref.read(cuentasListProvider.notifier).anularCuenta(idCuenta, motivo);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cuenta anulada correctamente'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      // error ya lo maneja el notifier
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Modals
+  // ─────────────────────────────────────────────────────────────────────────
+
   void _showCuentaActionSheet(dynamic cuenta) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final int idCuenta = int.tryParse(cuenta['id_cuenta']?.toString() ?? '') ??
-        int.tryParse(cuenta['id']?.toString() ?? '') ?? 0;
+    final int idCuenta =
+        int.tryParse(cuenta['id_cuenta']?.toString() ?? '') ??
+        int.tryParse(cuenta['id']?.toString() ?? '') ??
+        0;
 
     if (idCuenta == 0) return;
 
@@ -180,9 +193,15 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
       builder: (context) {
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+            color: isDark
+                ? AppTheme.darkSurfaceColor
+                : AppTheme.lightSurfaceColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+            border: Border.all(
+              color: isDark
+                  ? AppTheme.darkBorderColor
+                  : AppTheme.lightBorderColor,
+            ),
           ),
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -190,16 +209,27 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Mesa / Habitación: ${cuenta['room_name'] ?? cuenta['room_number'] ?? 'Sin número'}',
-                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
+                'Mesa / HabitaciÃ³n: ${cuenta['room_name'] ?? cuenta['room_number'] ?? 'Sin nÃºmero'}',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
-                'Anfitriona: ${cuenta['anfitriona_nombre'] ?? 'Ninguna'} • Garzón: ${cuenta['garzon_nombre'] ?? 'Ninguno'}',
-                style: GoogleFonts.inter(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                'Anfitriona: ${cuenta['anfitriona_nombre'] ?? 'Ninguna'} â€¢ GarzÃ³n: ${cuenta['garzon_nombre'] ?? 'Ninguno'}',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.receipt_long_rounded, color: Colors.blueAccent),
+                leading: Icon(
+                  Icons.receipt_long_rounded,
+                  color: Colors.blueAccent,
+                ),
                 title: const Text('Ver Consumos y Detalles'),
                 onTap: () {
                   Navigator.pop(context);
@@ -207,7 +237,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.add_shopping_cart_rounded, color: AppTheme.primaryColor),
+                leading: Icon(
+                  Icons.add_shopping_cart_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 title: const Text('Agregar Productos'),
                 onTap: () {
                   Navigator.pop(context);
@@ -215,7 +248,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.timer_off_outlined, color: Colors.orange),
+                leading: Icon(
+                  Icons.timer_off_outlined,
+                  color: Colors.orange,
+                ),
                 title: const Text('Detener Tiempo / Parar Reloj'),
                 onTap: () {
                   Navigator.pop(context);
@@ -223,7 +259,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.point_of_sale_rounded, color: Colors.green),
+                leading: Icon(
+                  Icons.point_of_sale_rounded,
+                  color: Colors.green,
+                ),
                 title: const Text('Cobrar / Facturar Cuenta'),
                 onTap: () {
                   Navigator.pop(context);
@@ -231,7 +270,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.cancel_outlined, color: Colors.redAccent),
+                leading: Icon(
+                  Icons.cancel_outlined,
+                  color: Colors.redAccent,
+                ),
                 title: const Text('Anular / Cancelar Cuenta'),
                 onTap: () {
                   Navigator.pop(context);
@@ -260,17 +302,23 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
             return Consumer(
               builder: (context, ref, child) {
                 final client = ref.read(apiClientProvider);
-                return FutureBuilder(
+                return FutureBuilder<Response>(
                   future: client.dio.get('/cuentas/$idCuenta'),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Container(
                         decoration: BoxDecoration(
-                          color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                          color: isDark
+                              ? AppTheme.darkSurfaceColor
+                              : AppTheme.lightSurfaceColor,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
                         ),
-                        child: const Center(
-                          child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       );
                     }
@@ -278,30 +326,58 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                     if (snapshot.hasError || snapshot.data == null) {
                       return Container(
                         decoration: BoxDecoration(
-                          color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                          color: isDark
+                              ? AppTheme.darkSurfaceColor
+                              : AppTheme.lightSurfaceColor,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
                         ),
-                        child: const Center(
-                          child: Text('Error al cargar detalles de la cuenta'),
+                        child: Center(
+                          child: Text(
+                            'Error al cargar detalles de la cuenta',
+                          ),
                         ),
                       );
                     }
 
                     final res = snapshot.data!;
-                    final cuenta = res.data != null && res.data['success'] == true
+                    final cuenta =
+                        res.data != null && res.data['success'] == true
                         ? res.data['data']
                         : cuentaShort;
 
-                    final listItems = (cuenta['items'] as List<dynamic>?) ?? [];
-                    final double subtotal = double.tryParse(cuenta['subtotal']?.toString() ?? '0') ?? 0.0;
-                    final double descuento = double.tryParse(cuenta['descuento']?.toString() ?? '0') ?? 0.0;
-                    final double total = double.tryParse(cuenta['total']?.toString() ?? '0') ?? 0.0;
+                    final listItems =
+                        (cuenta['items'] as List<dynamic>?) ?? [];
+                    final double subtotal =
+                        double.tryParse(
+                              cuenta['subtotal']?.toString() ?? '0',
+                            ) ??
+                            0.0;
+                    final double descuento =
+                        double.tryParse(
+                              cuenta['descuento']?.toString() ?? '0',
+                            ) ??
+                            0.0;
+                    final double total =
+                        double.tryParse(
+                              cuenta['total']?.toString() ?? '0',
+                            ) ??
+                            0.0;
 
                     return Container(
                       decoration: BoxDecoration(
-                        color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                        border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                        color: isDark
+                            ? AppTheme.darkSurfaceColor
+                            : AppTheme.lightSurfaceColor,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                        border: Border.all(
+                          color: isDark
+                              ? AppTheme.darkBorderColor
+                              : AppTheme.lightBorderColor,
+                        ),
                       ),
                       padding: const EdgeInsets.all(24),
                       child: ListView(
@@ -312,7 +388,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                             children: [
                               Text(
                                 'Consumo Mesa ${cuenta['room_name'] ?? ''}',
-                                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold),
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close),
@@ -321,48 +400,90 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          _buildDetailRow(isDark, 'Apertura', _formatElapsedTime(cuenta['fecha_apertura'])),
-                          _buildDetailRow(isDark, 'Garzón', cuenta['garzon_nombre'] ?? 'Ninguno'),
-                          _buildDetailRow(isDark, 'Anfitriona', cuenta['anfitriona_nombre'] ?? 'Ninguna'),
-                          _buildDetailRow(isDark, 'Cliente', cuenta['cliente_nombre'] ?? 'Cliente General'),
-                          
+                          _buildDetailRow(
+                            isDark,
+                            'Apertura',
+                            _formatElapsedTime(cuenta['fecha_apertura']),
+                          ),
+                          _buildDetailRow(
+                            isDark,
+                            'GarzÃ³n',
+                            cuenta['garzon_nombre'] ?? 'Ninguno',
+                          ),
+                          _buildDetailRow(
+                            isDark,
+                            'Anfitriona',
+                            cuenta['anfitriona_nombre'] ?? 'Ninguna',
+                          ),
+                          _buildDetailRow(
+                            isDark,
+                            'Cliente',
+                            cuenta['cliente_nombre'] ?? 'Cliente General',
+                          ),
+
                           const Divider(height: 32, thickness: 1),
                           Text(
                             'Detalle Consumos',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           const SizedBox(height: 8),
 
                           if (listItems.isEmpty)
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16.0,
+                              ),
                               child: Text(
                                 'No se han registrado consumos en esta comanda.',
-                                style: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                                style: GoogleFonts.inter(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
                               ),
                             )
                           else
                             ...listItems.map((item) {
-                              final double precio = double.tryParse(item['precio']?.toString() ?? '0') ?? 0.0;
-                              final int qty = int.tryParse(item['cantidad']?.toString() ?? '1') ?? 1;
+                              final double precio =
+                                  double.tryParse(
+                                        item['precio']?.toString() ?? '0',
+                                      ) ??
+                                      0.0;
+                              final int qty =
+                                  int.tryParse(
+                                        item['cantidad']?.toString() ?? '1',
+                                      ) ??
+                                      1;
                               return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6.0,
+                                ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            item['producto_nombre'] ?? 'Producto',
-                                            style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                                            item['producto_nombre'] ??
+                                                'Producto',
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
                                           Text(
                                             '$qty x ${_formatCurrency(precio)}',
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
-                                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                              color: isDark
+                                                  ? AppTheme.darkTextSecondary
+                                                  : AppTheme.lightTextSecondary,
                                             ),
                                           ),
                                         ],
@@ -370,7 +491,9 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                                     ),
                                     Text(
                                       _formatCurrency(precio * qty),
-                                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -378,10 +501,22 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                             }),
 
                           const Divider(height: 32, thickness: 1),
-                          _buildPriceRow('Subtotal', _formatCurrency(subtotal)),
+                          _buildPriceRow(
+                            'Subtotal',
+                            _formatCurrency(subtotal),
+                          ),
                           if (descuento > 0)
-                            _buildPriceRow('Descuento', '- ${_formatCurrency(descuento)}', color: Colors.redAccent),
-                          _buildPriceRow('Consumo Estimado', _formatCurrency(total), isTotal: true, color: Colors.green),
+                            _buildPriceRow(
+                              'Descuento',
+                              '- ${_formatCurrency(descuento)}',
+                              color: Colors.redAccent,
+                            ),
+                          _buildPriceRow(
+                            'Consumo Estimado',
+                            _formatCurrency(total),
+                            isTotal: true,
+                            color: Colors.green,
+                          ),
                         ],
                       ),
                     );
@@ -395,7 +530,12 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  Widget _buildDetailRow(bool isDark, String label, String value, {Color? valueColor}) {
+  Widget _buildDetailRow(
+    bool isDark,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -403,14 +543,23 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
           ),
           Text(
             value,
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: valueColor ?? (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+              color:
+                  valueColor ??
+                  (isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary),
             ),
           ),
         ],
@@ -418,7 +567,12 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  Widget _buildPriceRow(String label, String value, {bool isTotal = false, Color? color}) {
+  Widget _buildPriceRow(
+    String label,
+    String value, {
+    bool isTotal = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0),
       child: Row(
@@ -445,7 +599,8 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   }
 
   void _showCuentaCobroModal(int idCuenta, dynamic cuenta) {
-    final double totalConsumo = double.tryParse(cuenta['total']?.toString() ?? '0') ?? 0.0;
+    final double totalConsumo =
+        double.tryParse(cuenta['total']?.toString() ?? '0') ?? 0.0;
     _tipController.clear();
     String cobroMetodoPago = 'efectivo';
     bool applyTip = false;
@@ -463,12 +618,22 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
             final double finalAmount = totalConsumo + tipAmount + cardFee;
 
             return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                  color: isDark
+                      ? AppTheme.darkSurfaceColor
+                      : AppTheme.lightSurfaceColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                  border: Border.all(
+                    color: isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor,
+                  ),
                 ),
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -480,7 +645,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                       children: [
                         Text(
                           'Cobrar Cuenta Mesa ${cuenta['room_name'] ?? ''}',
-                          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.close),
@@ -491,12 +659,19 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                     const SizedBox(height: 12),
 
                     // Totals Breakdown
-                    _buildBreakdownRow(isDark, 'Subtotal Consumo', _formatCurrency(totalConsumo)),
-                    
+                    _buildBreakdownRow(
+                      isDark,
+                      'Subtotal Consumo',
+                      _formatCurrency(totalConsumo),
+                    ),
+
                     // Tip check
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text('Añadir Propina sugerida (10%)', style: GoogleFonts.inter(fontSize: 13)),
+                      title: Text(
+                        'AÃ±adir Propina sugerida (10%)',
+                        style: GoogleFonts.inter(fontSize: 13),
+                      ),
                       value: applyTip,
                       onChanged: (val) {
                         setLocalState(() {
@@ -518,7 +693,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: 'Monto Propina (\$)',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                         onChanged: (val) {
                           setLocalState(() {
@@ -532,19 +710,49 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                     // Payment Method selector
                     Text(
                       'Forma de Pago',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: cobroMetodoPago,
                       decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'efectivo', child: Text('Efectivo', style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'tarjeta', child: Text('Tarjeta', style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'transferencia', child: Text('Transferencia', style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'prepago', child: Text('Prepago (Saldos)', style: TextStyle(fontSize: 13))),
+                        DropdownMenuItem(
+                          value: 'efectivo',
+                          child: Text(
+                            'Efectivo',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'tarjeta',
+                          child: Text(
+                            'Tarjeta',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'transferencia',
+                          child: Text(
+                            'Transferencia',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'prepago',
+                          child: Text(
+                            'Prepago (Saldos)',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -560,10 +768,15 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                         }
                       },
                     ),
-                    
+
                     if (cardFee > 0) ...[
                       const SizedBox(height: 8),
-                      _buildBreakdownRow(isDark, 'Cargo tarjeta (2%)', _formatCurrency(cardFee), color: Colors.orange),
+                      _buildBreakdownRow(
+                        isDark,
+                        'Cargo tarjeta (2%)',
+                        _formatCurrency(cardFee),
+                        color: Colors.orange,
+                      ),
                     ],
 
                     const Divider(height: 24, thickness: 1),
@@ -582,16 +795,26 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: AppTheme.getPrimaryButtonStyle(context).copyWith(
-                          backgroundColor: WidgetStateProperty.all(Colors.green),
+                          backgroundColor: WidgetStateProperty.all(
+                            Colors.green,
+                          ),
                         ),
                         onPressed: () async {
                           final navigator = Navigator.of(context);
-                          await _cobrarCuenta(idCuenta, cobroMetodoPago, tipAmount, cardFee);
+                          await _cobrarCuenta(
+                            idCuenta,
+                            cobroMetodoPago,
+                            tipAmount,
+                            cardFee,
+                          );
                           navigator.pop();
                         },
                         child: Text(
                           'Completar Cobro',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -605,7 +828,13 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  Widget _buildBreakdownRow(bool isDark, String label, String value, {bool isTotal = false, Color? color}) {
+  Widget _buildBreakdownRow(
+    bool isDark,
+    String label,
+    String value, {
+    bool isTotal = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -616,7 +845,9 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
             style: GoogleFonts.inter(
               fontSize: isTotal ? 14 : 13,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
           ),
           Text(
@@ -624,52 +855,16 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
             style: GoogleFonts.inter(
               fontSize: isTotal ? 18 : 13,
               fontWeight: FontWeight.bold,
-              color: color ?? (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+              color:
+                  color ??
+                  (isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary),
             ),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _cobrarCuenta(int idCuenta, String metodoPago, double propina, double cargoTarjeta) async {
-    final client = ref.read(apiClientProvider);
-    final user = ref.read(authProvider).user;
-
-    try {
-      final response = await client.dio.post(
-        '/cuentas/$idCuenta/cobrar',
-        data: {
-          'metodo_pago': metodoPago,
-          'propina': propina,
-          'cargo_tarjeta': cargoTarjeta,
-          'usuario_id': user?.id ?? 1,
-        },
-      );
-
-      if (response.data != null && response.data['success'] == true) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cuenta cobrada correctamente. Mesa liberada.'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        _fetchData();
-      } else {
-        final msg = response.data?['message'] ?? 'Error al cobrar cuenta';
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $msg'), backgroundColor: Colors.redAccent),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error de conexión al realizar cobro'), backgroundColor: Colors.redAccent),
-      );
-    }
   }
 
   void _showCuentaAnulacionModal(int idCuenta) {
@@ -679,9 +874,11 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
-          backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+          backgroundColor: isDark
+              ? AppTheme.darkSurfaceColor
+              : AppTheme.lightSurfaceColor,
           title: Text(
-            'Anulación de Cuenta',
+            'AnulaciÃ³n de Cuenta',
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           content: Form(
@@ -690,18 +887,25 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '¿Estás seguro de que deseas anular esta cuenta por completo? Esta acción liberará la mesa.',
-                  style: GoogleFonts.inter(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  'Â¿EstÃ¡s seguro de que deseas anular esta cuenta por completo? Esta acciÃ³n liberarÃ¡ la mesa.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _motivoAnulacionController,
                   decoration: const InputDecoration(
-                    labelText: 'Motivo de Anulación',
+                    labelText: 'Motivo de AnulaciÃ³n',
                     hintText: 'Ej: Cliente se retira / Error de registro',
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'El motivo es requerido';
+                    if (val == null || val.trim().isEmpty) {
+                      return 'El motivo es requerido';
+                    }
                     return null;
                   },
                 ),
@@ -711,18 +915,34 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancelar', style: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+              child: Text(
+                'Cancelar',
+                style: GoogleFonts.inter(
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 if (_anulacionFormKey.currentState?.validate() == true) {
                   final navigator = Navigator.of(context);
-                  await _anularCuenta(idCuenta, _motivoAnulacionController.text);
+                  await _anularCuenta(
+                    idCuenta,
+                    _motivoAnulacionController.text,
+                  );
                   navigator.pop();
                 }
               },
-              child: Text('Confirmar Anulación', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Confirmar AnulaciÃ³n',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -730,317 +950,396 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  Future<void> _anularCuenta(int idCuenta, String motivo) async {
-    final client = ref.read(apiClientProvider);
-    try {
-      final response = await client.dio.post(
-        '/cuentas/anulacion',
-        data: {
-          'id_cuenta': idCuenta,
-          'motivo': motivo,
-        },
-      );
-
-      if (response.data != null && response.data['success'] == true) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cuenta anulada correctamente'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        _fetchData();
-      } else {
-        final msg = response.data?['message'] ?? 'Error al anular cuenta';
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $msg'), backgroundColor: Colors.redAccent),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error de conexión al anular cuenta'), backgroundColor: Colors.redAccent),
-      );
-    }
-  }
+  // ─────────────────────────────────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final state = ref.watch(cuentasListProvider);
 
-    final double totalAcumulado = double.tryParse(_resumen['total_estimado']?.toString() ?? '0') ?? 0.0;
-    final int mesasOcupadas = int.tryParse(_resumen['mesas_ocupadas']?.toString() ?? '0') ?? 0;
+    final double totalAcumulado =
+        double.tryParse(state.resumen['total_estimado']?.toString() ?? '0') ??
+            0.0;
+    final int mesasOcupadas =
+        int.tryParse(state.resumen['mesas_ocupadas']?.toString() ?? '0') ?? 0;
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        elevation: 0,
-        title: Text(
-          'Cuentas Activas',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryColor),
-            onPressed: () => _fetchData(isManual: true),
+      body: Column(
+        children: [
+          PremiumHeader(
+            title: 'Cuentas Activas',
+            showBackButton: true,
+            onBack: () => context.pop(),
+            showRefreshButton: true,
+            isRefreshing: state.isRefreshing,
+            onRefresh: () =>
+                ref.read(cuentasListProvider.notifier).fetchData(isManual: true),
           ),
-        ],
-      ),
-      body: FadeLoadingSwitcher(
-        isLoading: _loading,
-        skeleton: _buildSkeletonList(),
-        content: RefreshIndicator(
-              onRefresh: () => _fetchData(isManual: true),
-              color: AppTheme.primaryColor,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_error.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _error,
-                                style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13),
-                              ),
+          Expanded(
+            child: FadeLoadingSwitcher(
+              isLoading: state.isLoading,
+              skeleton: _buildSkeletonList(),
+              content: RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(cuentasListProvider.notifier).fetchData(isManual: true),
+                color: Theme.of(context).colorScheme.primary,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (state.error.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color:
+                                  Colors.redAccent.withValues(alpha: 0.2),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Summary cards
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildSummaryCard(
-                            isDark: isDark,
-                            label: 'ESTIMADO CONSUMOS',
-                            value: _formatCurrency(totalAcumulado),
-                            color: Colors.green,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildSummaryCard(
-                            isDark: isDark,
-                            label: 'MESA/HAB OCUPADAS',
-                            value: '$mesasOcupadas',
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Search bar
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (v) => setState(() => _searchQuery = v),
-                        decoration: InputDecoration(
-                          hintText: 'Buscar por código, cliente o mesa...',
-                          hintStyle: GoogleFonts.inter(
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                            fontSize: 13,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search_rounded,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                          ),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded, size: 18),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
-
-                    // Tabs
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          _buildCuentaTab(isDark, 'todas', 'Todas', _cuentas.length),
-                          const SizedBox(width: 8),
-                          _buildCuentaTab(isDark, 'pendientes', 'Pendientes', _cuentas.where((c) => (c['estado']?.toString() ?? '') == '1').length),
-                        ],
-                      ),
-                    ),
-
-                    // Count and label
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _activeTab == 'pendientes' ? 'Cuentas Pendientes' : 'Salas y Mesas Activas',
-                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          '${_filteredCuentas.length} cuentas',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    if (_filteredCuentas.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 48.0),
-                          child: Column(
+                          child: Row(
                             children: [
-                              Icon(_activeTab == 'pendientes' ? Icons.check_circle_outline_rounded : Icons.door_sliding_outlined, size: 48, color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
-                              const SizedBox(height: 8),
-                              Text(
-                                _activeTab == 'pendientes' ? 'No hay cuentas pendientes' : 'No hay mesas activas',
-                                style: GoogleFonts.inter(
-                                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: Colors.redAccent,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  state.error,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.redAccent,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _filteredCuentas.length,
-                        itemBuilder: (context, index) {
-                          final cuenta = _filteredCuentas[index];
-                          final double total = double.tryParse(cuenta['total']?.toString() ?? '0') ?? 0.0;
+                        const SizedBox(height: 16),
+                      ],
 
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: InkWell(
-                              onTap: () => _showCuentaActionSheet(cuenta),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text(
-                                                'Mesa / Hab: ${cuenta['room_name'] ?? cuenta['room_number'] ?? 'Sin Nro'}',
-                                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.green.withValues(alpha: 0.12),
-                                                  borderRadius: BorderRadius.circular(8),
+                      // Summary cards
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSummaryCard(
+                              isDark: isDark,
+                              label: 'ESTIMADO CONSUMOS',
+                              value: _formatCurrency(totalAcumulado),
+                              color: Colors.green,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildSummaryCard(
+                              isDark: isDark,
+                              label: 'MESA/HAB OCUPADAS',
+                              value: '$mesasOcupadas',
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Search bar
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppTheme.darkSurfaceColor
+                              : AppTheme.lightSurfaceColor,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark
+                                ? AppTheme.darkBorderColor
+                                : AppTheme.lightBorderColor,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          decoration: InputDecoration(
+                            hintText:
+                                'Buscar por cÃ³digo, cliente o mesa...',
+                            hintStyle: GoogleFonts.inter(
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search_rounded,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.clear_rounded,
+                                      size: 18,
+                                    ),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Tabs
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            _buildCuentaTab(
+                              isDark,
+                              'todas',
+                              'Todas',
+                              state.cuentas.length,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildCuentaTab(
+                              isDark,
+                              'pendientes',
+                              'Pendientes',
+                              state.cuentas
+                                  .where(
+                                    (c) =>
+                                        (c['estado']?.toString() ?? '') == '1',
+                                  )
+                                  .length,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Count and label
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _activeTab == 'pendientes'
+                                ? 'Cuentas Pendientes'
+                                : 'Salas y Mesas Activas',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${_filteredCuentas.length} cuentas',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (_filteredCuentas.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 48.0,
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  _activeTab == 'pendientes'
+                                      ? Icons.check_circle_outline_rounded
+                                      : Icons.door_sliding_outlined,
+                                  size: 48,
+                                  color: isDark
+                                      ? AppTheme.darkBorderColor
+                                      : AppTheme.lightBorderColor,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _activeTab == 'pendientes'
+                                      ? 'No hay cuentas pendientes'
+                                      : 'No hay mesas activas',
+                                  style: GoogleFonts.inter(
+                                    color: isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _filteredCuentas.length,
+                          itemBuilder: (context, index) {
+                            final cuenta = _filteredCuentas[index];
+                            final double total =
+                                double.tryParse(
+                                      cuenta['total']?.toString() ?? '0',
+                                    ) ??
+                                    0.0;
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: InkWell(
+                                onTap: () =>
+                                    _showCuentaActionSheet(cuenta),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'Mesa / Hab: ${cuenta['room_name'] ?? cuenta['room_number'] ?? 'Sin Nro'}',
+                                                  style: GoogleFonts.inter(
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    fontSize: 15,
+                                                  ),
                                                 ),
-                                                child: Row(
-                                                  children: [
-                                                    const Icon(Icons.timer_outlined, size: 10, color: Colors.green),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      _formatElapsedTime(cuenta['fecha_apertura']),
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.green,
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
                                                       ),
+                                                  decoration:
+                                                      BoxDecoration(
+                                                    color: Colors.green
+                                                        .withValues(
+                                                      alpha: 0.12,
                                                     ),
-                                                  ],
+                                                    borderRadius:
+                                                        BorderRadius
+                                                            .circular(8),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons
+                                                            .timer_outlined,
+                                                        size: 10,
+                                                        color:
+                                                            Colors.green,
+                                                      ),
+                                                      const SizedBox(
+                                                          width: 4),
+                                                      Text(
+                                                        _formatElapsedTime(
+                                                          cuenta['fecha_apertura'],
+                                                        ),
+                                                        style:
+                                                            GoogleFonts
+                                                                .inter(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight
+                                                                  .bold,
+                                                          color: Colors
+                                                              .green,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Anfitriona: ${cuenta['anfitriona_nombre'] ?? 'Ninguna'}',
-                                            style: GoogleFonts.inter(fontSize: 13),
-                                          ),
-                                          Text(
-                                            'Garzón: ${cuenta['garzon_nombre'] ?? 'Ninguno'}',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                              ],
                                             ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Anfitriona: ${cuenta['anfitriona_nombre'] ?? 'Ninguna'}',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            Text(
+                                              'GarzÃ³n: ${cuenta['garzon_nombre'] ?? 'Ninguno'}',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                color: isDark
+                                                    ? AppTheme
+                                                        .darkTextSecondary
+                                                    : AppTheme
+                                                        .lightTextSecondary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            _formatCurrency(total),
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 16,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Icon(
+                                            Icons
+                                                .arrow_forward_ios_rounded,
+                                            size: 14,
+                                            color: isDark
+                                                ? AppTheme.darkBorderColor
+                                                : AppTheme
+                                                    .lightBorderColor,
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          _formatCurrency(total),
-                                          style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 16,
-                                            color: Colors.green,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Icon(
-                                          Icons.arrow_forward_ios_rounded,
-                                          size: 14,
-                                          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                  ],
+                            );
+                          },
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add_business_rounded),
+      floatingActionButton: PremiumFAB(
+        icon: const Icon(Icons.add_business_rounded),
         onPressed: () => context.push('/cajero/cuentas/nueva'),
       ),
     );
@@ -1069,7 +1368,9 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
             style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 6),
@@ -1121,20 +1422,35 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isActive ? AppTheme.primaryColor : Colors.transparent,
+            color: isActive
+                ? Theme.of(context).colorScheme.primary
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            border: isActive ? null : Border.all(
-              color: AppTheme.primaryColor.withValues(alpha: 0.3),
-            ),
+            border: isActive
+                ? null
+                : Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.3),
+                  ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (count > 0) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: isActive ? Colors.white.withValues(alpha: 0.2) : AppTheme.primaryColor.withValues(alpha: 0.1),
+                    color: isActive
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -1142,7 +1458,9 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
-                      color: isActive ? Colors.white : AppTheme.primaryColor,
+                      color: isActive
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -1155,7 +1473,9 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                   fontWeight: FontWeight.w700,
                   color: isActive
                       ? Colors.white
-                      : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                      : (isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary),
                 ),
               ),
             ],

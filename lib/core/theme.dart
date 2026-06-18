@@ -16,40 +16,32 @@ class AppThemeOption {
 }
 
 const List<AppThemeOption> appThemeOptions = [
+  // Tonos Cálidos
   AppThemeOption(
     name: 'Terracota (Default)',
     color: Color(0xFFD84315),
     gradient: [Color(0xFFD84315), Color(0xFFBF360C), Color(0xFF9E2A0B)],
   ),
   AppThemeOption(
-    name: 'Violeta',
-    color: Color(0xFF7C3AED),
-    gradient: [Color(0xFF7C3AED), Color(0xFF6D28D9), Color(0xFF5B21B6)],
+    name: 'Rojo',
+    color: Color(0xFFE11D48),
+    gradient: [Color(0xFFE11D48), Color(0xFFBE123C), Color(0xFF9F1239)],
   ),
   AppThemeOption(
-    name: 'Azul',
-    color: Color(0xFF2563EB),
-    gradient: [Color(0xFF2563EB), Color(0xFF1D4ED8), Color(0xFF1E40AF)],
+    name: 'Naranja',
+    color: Color(0xFFF97316),
+    gradient: [Color(0xFFF97316), Color(0xFFEA580C), Color(0xFFC2410C)],
   ),
   AppThemeOption(
-    name: 'Índigo',
-    color: Color(0xFF4F46E5),
-    gradient: [Color(0xFF4F46E5), Color(0xFF4338CA), Color(0xFF3730A3)],
+    name: 'Amarillo',
+    color: Color(0xFFEAB308),
+    gradient: [Color(0xFFEAB308), Color(0xFFCA8A04), Color(0xFFA16207)],
   ),
+  // Tonos Fríos
   AppThemeOption(
     name: 'Esmeralda',
     color: Color(0xFF059669),
     gradient: [Color(0xFF059669), Color(0xFF047857), Color(0xFF065F46)],
-  ),
-  AppThemeOption(
-    name: 'Naranja',
-    color: Color(0xFFEA580C),
-    gradient: [Color(0xFFEA580C), Color(0xFFC2410C), Color(0xFF9A3412)],
-  ),
-  AppThemeOption(
-    name: 'Rosa',
-    color: Color(0xFFDB2777),
-    gradient: [Color(0xFFDB2777), Color(0xFFBE185D), Color(0xFF9D174D)],
   ),
   AppThemeOption(
     name: 'Cian',
@@ -57,18 +49,59 @@ const List<AppThemeOption> appThemeOptions = [
     gradient: [Color(0xFF0891B2), Color(0xFF0E7490), Color(0xFF155E75)],
   ),
   AppThemeOption(
-    name: 'Ámbar',
-    color: Color(0xFFD97706),
-    gradient: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF92400E)],
+    name: 'Azul',
+    color: Color(0xFF3B82F6),
+    gradient: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1D4ED8)],
   ),
   AppThemeOption(
-    name: 'Pizarra',
-    color: Color(0xFF475569),
-    gradient: [Color(0xFF475569), Color(0xFF334155), Color(0xFF1E293B)],
+    name: 'Violeta',
+    color: Color(0xFF8B5CF6),
+    gradient: [Color(0xFF8B5CF6), Color(0xFF7C3AED), Color(0xFF6D28D9)],
+  ),
+  // Tonos Neutros
+  AppThemeOption(
+    name: 'Rosa',
+    color: Color(0xFFEC4899),
+    gradient: [Color(0xFFEC4899), Color(0xFFDB2777), Color(0xFFBE185D)],
+  ),
+  AppThemeOption(
+    name: 'Negro',
+    color: Color(0xFF334155),
+    gradient: [Color(0xFF334155), Color(0xFF1E293B), Color(0xFF0F172A)],
   ),
 ];
 
 class AppTheme {
+  // Semantic / Status Colors
+  static const Color errorColor = Color(0xFFEF4444); // Red - errors, delete, danger
+  static const Color successColor = Color(0xFF10B981); // Green - success, active, completed
+  static const Color warningColor = Color(0xFFF59E0B); // Amber - pending, warning
+  static const Color infoColor = Color(0xFF3B82F6); // Blue - info, processing
+
+  // Semantic Dark Variants
+  static const Color errorDarkColor = Color(0xFF991B1B);
+  static const Color successDarkColor = Color(0xFF065F46);
+  static const Color infoDarkColor = Color(0xFF1E40AF);
+  static const Color warningDarkColor = Color(0xFFB45309);
+
+  // Semantic Light Background Variants
+  static const Color errorLightBg = Color(0xFFFEE2E2);
+  static const Color successLightBg = Color(0xFFD1FAE5);
+  static const Color infoLightBg = Color(0xFFDBEAFE);
+  static const Color warningLightBg = Color(0xFFFEF3C7);
+
+  // Additional Palette
+  static const Color nearBlackColor = Color(0xFF111111); // Alternative dark surface
+  static const Color gray500Color = Color(0xFF6B7280); // Gray 500 - alternative secondary
+  static const Color gray700Color = Color(0xFF374151); // Gray 700 - borders/dividers
+  static const Color purpleColor = Color(0xFF8B5CF6); // Purple - extras
+  static const Color lightRedColor = Color(0xFFFCA5A5); // Light red
+  static const Color darkSurfaceAltColor = Color(0xFF27272A); // Alternative dark surface
+
+  // Status Dark Variants (for dark mode foreground)
+  static const Color successLightFg = Color(0xFF6EE7B7); // Light green
+  static const Color infoLightFg = Color(0xFF93C5FD); // Light blue
+
   // Brand Colors
   static const Color primaryColor = Color(0xFFD84315); // Deep Warm Orange / Terracotta
   static const Color secondaryColor = Color(0xFFFFB300); // Warm Amber
@@ -90,8 +123,9 @@ class AppTheme {
 
   // Common Button Style Helper
   static ButtonStyle getPrimaryButtonStyle(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return ElevatedButton.styleFrom(
-      backgroundColor: primaryColor,
+      backgroundColor: primary,
       foregroundColor: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       elevation: 0,

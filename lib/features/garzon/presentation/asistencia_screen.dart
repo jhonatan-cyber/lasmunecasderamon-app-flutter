@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
+import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -16,29 +18,44 @@ class AsistenciaScreen extends ConsumerStatefulWidget {
 class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
   String _activeTab = 'asistencias'; // 'asistencias' or 'gratificaciones'
   String _filter = 'all'; // 'all', 'pendiente', 'pagado'
-  bool _loading = true;
-  String _error = '';
-
   List<dynamic> _asistencias = [];
   List<dynamic> _gratificaciones = [];
+  DateTime _currentDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => _fetchData());
+  }
+
+  void _navigateMonth(int direction) {
+    setState(() {
+      _currentDate = DateTime(_currentDate.year, _currentDate.month + direction, 1);
+    });
+    _fetchData();
+  }
+
+  void _goToCurrentMonth() {
+    setState(() {
+      _currentDate = DateTime.now();
+    });
     _fetchData();
   }
 
   Future<void> _fetchData({bool isManual = false}) async {
-    if (!isManual) {
-      setState(() => _loading = true);
-    }
-    setState(() => _error = '');
+    final notifier = ref.read(refreshProvider('asistencia').notifier);
+    notifier.startRefresh(isManual: isManual);
 
     try {
       final client = ref.read(apiClientProvider);
 
+      final firstDay = DateTime(_currentDate.year, _currentDate.month, 1);
+      final lastDay = DateTime(_currentDate.year, _currentDate.month + 1, 0);
+      final startDateStr = DateFormat('yyyy-MM-dd').format(firstDay);
+      final endDateStr = DateFormat('yyyy-MM-dd').format(lastDay);
+
       final responses = await Future.wait([
-        client.dio.get('/attendance/user?tipo=detalle'),
+        client.dio.get('/attendance/user?tipo=detalle&startDate=$startDateStr&endDate=$endDateStr'),
         client.dio.get('/gratificaciones/me'),
       ]);
 
@@ -55,36 +72,31 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
       List<dynamic> gratList = [];
       if (gratificacionesRes.data != null && gratificacionesRes.data is List) {
         gratList = gratificacionesRes.data;
-      } else if (gratificacionesRes.data != null && gratificacionesRes.data['success'] == true) {
+      } else if (gratificacionesRes.data != null &&
+          gratificacionesRes.data['success'] == true) {
         gratList = gratificacionesRes.data['data'] ?? [];
       }
 
+      if (!mounted) return;
       setState(() {
         _asistencias = attendanceList;
         _gratificaciones = gratList;
-        _loading = false;
       });
+      notifier.endRefresh();
 
-      if (!mounted) return;
-      if (isManual) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Datos de asistencia actualizados'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+      if (isManual) notifier.showSuccessSnack(context, 'Datos de asistencia actualizados');
     } catch (e) {
-      setState(() {
-        _error = 'Error al conectar con el servidor';
-        _loading = false;
-      });
+      if (!mounted) return;
+      notifier.endRefresh(error: 'Error al conectar con el servidor');
     }
   }
 
   String _formatCurrency(double amount) {
-    final format = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    final format = NumberFormat.currency(
+      locale: 'es_CL',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
     return format.format(amount);
   }
 
@@ -101,7 +113,10 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
 
   String _normalizeEstado(dynamic estado) {
     final str = estado.toString().toLowerCase();
-    if (str == '1' || str == 'pendiente' || str == 'por_cobrar' || str == 'por cobrar') {
+    if (str == '1' ||
+        str == 'pendiente' ||
+        str == 'por_cobrar' ||
+        str == 'por cobrar') {
       return 'pendiente';
     }
     if (str == '0' || str == 'pagado' || str == 'cobrado' || str == 'cobrada') {
@@ -115,7 +130,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final currentData = _activeTab == 'asistencias' ? _asistencias : _gratificaciones;
+    final currentData = _activeTab == 'asistencias'
+        ? _asistencias
+        : _gratificaciones;
 
     // Filter logic
     final filteredData = currentData.where((item) {
@@ -128,144 +145,201 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
     }).toList();
 
     // Calculations
-    final pendingShifts = _asistencias.where((a) => _normalizeEstado(a['estado']) == 'pendiente');
-    final double totalSueldo = pendingShifts.fold(0.0, (sum, item) => sum + (double.tryParse(item['sueldo']?.toString() ?? '0') ?? 0.0));
-    final double totalAporte = pendingShifts.fold(0.0, (sum, item) => sum + (double.tryParse(item['aporte']?.toString() ?? '0') ?? 0.0));
+    final pendingShifts = _asistencias.where(
+      (a) => _normalizeEstado(a['estado']) == 'pendiente',
+    );
+    final double totalSueldo = pendingShifts.fold(
+      0.0,
+      (sum, item) =>
+          sum + (double.tryParse(item['sueldo']?.toString() ?? '0') ?? 0.0),
+    );
+    final double totalAporte = pendingShifts.fold(
+      0.0,
+      (sum, item) =>
+          sum + (double.tryParse(item['aporte']?.toString() ?? '0') ?? 0.0),
+    );
     final double totalACobrar = totalSueldo - totalAporte;
 
-    final double totalGratificaciones = _gratificaciones.fold(0.0, (sum, item) => sum + (double.tryParse(item['monto']?.toString() ?? '0') ?? 0.0));
+    final double totalGratificaciones = _gratificaciones.fold(
+      0.0,
+      (sum, item) =>
+          sum + (double.tryParse(item['monto']?.toString() ?? '0') ?? 0.0),
+    );
+
+    final accentTheme = ref.watch(accentColorProvider);
+    final gradientColors = accentTheme.gradient;
+    final refresh = ref.watch(refreshProvider('asistencia'));
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
-      appBar: AppBar(
-        title: Text(
-          'Asistencia',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        elevation: 0,
-        centerTitle: false,
-      ),
-      body: FadeLoadingSwitcher(
-        isLoading: _loading,
-        skeleton: _buildSkeletonGrid(),
-        content: RefreshIndicator(
-              onRefresh: () => _fetchData(isManual: true),
-              color: AppTheme.primaryColor,
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                children: [
-                  // Tab Buttons (Turnos / Gratificaciones)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildMainTabButton(
-                          title: 'Turnos',
-                          isActive: _activeTab == 'asistencias',
-                          icon: Icons.calendar_month_rounded,
-                          onTap: () => setState(() {
-                            _activeTab = 'asistencias';
-                            _filter = 'all';
-                          }),
-                          isDark: isDark,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildMainTabButton(
-                          title: 'Gratificaciones',
-                          isActive: _activeTab == 'gratificaciones',
-                          icon: Icons.card_giftcard_rounded,
-                          onTap: () => setState(() {
-                            _activeTab = 'gratificaciones';
-                            _filter = 'all';
-                          }),
-                          isDark: isDark,
-                        ),
-                      ),
-                    ],
+      body: Column(
+        children: [
+          PremiumHeader(
+            title: 'Asistencia',
+            gradient: gradientColors,
+            showRefreshButton: true,
+            isRefreshing: refresh.isRefreshing,
+            onRefresh: () => _fetchData(isManual: true),
+          ),
+          Expanded(
+            child: FadeLoadingSwitcher(
+              isLoading: refresh.isLoading,
+              skeleton: _buildSkeletonGrid(),
+              content: RefreshIndicator(
+                onRefresh: () => _fetchData(isManual: true),
+                color: Theme.of(context).colorScheme.primary,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 12.0,
                   ),
-                  const SizedBox(height: 16),
-
-                  // Summary Card
-                  _buildSummaryCard(
-                    isDark: isDark,
-                    totalACobrar: totalACobrar,
-                    totalSueldo: totalSueldo,
-                    totalAporte: totalAporte,
-                    totalGratificaciones: totalGratificaciones,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Filter Row (only for turnos)
-                  if (_activeTab == 'asistencias') ...[
+                  children: [
+                    // Tab Buttons (Turnos / Gratificaciones)
                     Row(
                       children: [
-                        _buildFilterButton('all', 'Todas (${_asistencias.length})', isDark),
-                        const SizedBox(width: 8),
-                        _buildFilterButton('pendiente', 'Pendientes (${_asistencias.where((a) => _normalizeEstado(a['estado']) == 'pendiente').length})', isDark),
-                        const SizedBox(width: 8),
-                        _buildFilterButton('pagado', 'Pagadas (${_asistencias.where((a) => _normalizeEstado(a['estado']) == 'pagado').length})', isDark),
+                        Expanded(
+                          child: _buildMainTabButton(
+                            title: 'Turnos',
+                            isActive: _activeTab == 'asistencias',
+                            icon: Icons.calendar_month_rounded,
+                            onTap: () => setState(() {
+                              _activeTab = 'asistencias';
+                              _filter = 'all';
+                            }),
+                            isDark: isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMainTabButton(
+                            title: 'Gratificaciones',
+                            isActive: _activeTab == 'gratificaciones',
+                            icon: Icons.card_giftcard_rounded,
+                            onTap: () => setState(() {
+                              _activeTab = 'gratificaciones';
+                              _filter = 'all';
+                            }),
+                            isDark: isDark,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                  ],
 
-                  if (_error.isNotEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Text(
-                          _error,
-                          style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 14),
-                        ),
-                      ),
-                    )
-                  else if (filteredData.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(40),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                    if (_activeTab == 'asistencias') ...[
+                      _buildMonthNavigation(isDark),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Summary Card
+                    _buildSummaryCard(
+                      isDark: isDark,
+                      totalACobrar: totalACobrar,
+                      totalSueldo: totalSueldo,
+                      totalAporte: totalAporte,
+                      totalGratificaciones: totalGratificaciones,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Filter Row (only for turnos)
+                    if (_activeTab == 'asistencias') ...[
+                      Row(
                         children: [
-                          Icon(
-                            _activeTab == 'asistencias' ? Icons.calendar_today_rounded : Icons.card_giftcard_rounded,
-                            size: 48,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          _buildFilterButton(
+                            'all',
+                            'Todas (${_asistencias.length})',
+                            isDark,
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No se encontraron registros',
-                            style: GoogleFonts.inter(
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                            ),
+                          const SizedBox(width: 8),
+                          _buildFilterButton(
+                            'pendiente',
+                            'Pendientes (${_asistencias.where((a) => _normalizeEstado(a['estado']) == 'pendiente').length})',
+                            isDark,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildFilterButton(
+                            'pagado',
+                            'Pagadas (${_asistencias.where((a) => _normalizeEstado(a['estado']) == 'pagado').length})',
+                            isDark,
                           ),
                         ],
                       ),
-                    )
-                  else
-                    // ListView inside parent ListView: Disable nested scroll
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredData.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredData[index];
-                        if (_activeTab == 'asistencias') {
-                          return _buildAsistenciaCard(item, index, isDark);
-                        } else {
-                          return _buildGratificacionCard(item, index, isDark);
-                        }
-                      },
-                    ),
-                ],
+                      const SizedBox(height: 16),
+                    ],
+
+                    if (refresh.error.isNotEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Text(
+                            refresh.error,
+                            style: GoogleFonts.inter(
+                              color: Colors.redAccent,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (filteredData.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(40),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppTheme.darkSurfaceColor
+                              : AppTheme.lightSurfaceColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark
+                                ? AppTheme.darkBorderColor
+                                : AppTheme.lightBorderColor,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _activeTab == 'asistencias'
+                                  ? Icons.calendar_today_rounded
+                                  : Icons.card_giftcard_rounded,
+                              size: 48,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No se encontraron registros',
+                              style: GoogleFonts.inter(
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      // ListView inside parent ListView: Disable nested scroll
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredData.length,
+                        itemBuilder: (context, index) {
+                          final item = filteredData[index];
+                          if (_activeTab == 'asistencias') {
+                            return _buildAsistenciaCard(item, index, isDark);
+                          } else {
+                            return _buildGratificacionCard(item, index, isDark);
+                          }
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
+          ),
+        ],
       ),
     );
   }
@@ -310,13 +384,17 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           decoration: BoxDecoration(
             color: isActive
-                ? AppTheme.primaryColor
-                : (isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor),
+                ? Theme.of(context).colorScheme.primary
+                : (isDark
+                      ? AppTheme.darkSurfaceColor
+                      : AppTheme.lightSurfaceColor),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isActive
-                  ? AppTheme.primaryColor
-                  : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                  ? Theme.of(context).colorScheme.primary
+                  : (isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor),
             ),
           ),
           child: Row(
@@ -327,7 +405,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                 size: 18,
                 color: isActive
                     ? Colors.white
-                    : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                    : (isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary),
               ),
               const SizedBox(width: 8),
               Text(
@@ -337,7 +417,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                   fontWeight: FontWeight.bold,
                   color: isActive
                       ? Colors.white
-                      : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                      : (isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary),
                 ),
               ),
             ],
@@ -354,8 +436,12 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
     required double totalAporte,
     required double totalGratificaciones,
   }) {
-    final color = _activeTab == 'asistencias' ? const Color(0xFFF59E0B) : AppTheme.primaryColor;
-    final totalAmount = _activeTab == 'asistencias' ? totalACobrar : totalGratificaciones;
+    final color = _activeTab == 'asistencias'
+        ? AppTheme.warningColor
+        : Theme.of(context).colorScheme.primary;
+    final totalAmount = _activeTab == 'asistencias'
+        ? totalACobrar
+        : totalGratificaciones;
 
     return Container(
       width: double.infinity,
@@ -370,12 +456,16 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
       child: Column(
         children: [
           Text(
-            _activeTab == 'asistencias' ? 'SITUACIÓN DE ASISTENCIAS' : 'GRATIFICACIONES ENTREGADAS',
+            _activeTab == 'asistencias'
+                ? 'SITUACIÓN DE ASISTENCIAS'
+                : 'GRATIFICACIONES ENTREGADAS',
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 8),
@@ -397,13 +487,17 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
                 ),
                 Container(
                   width: 1,
                   height: 12,
-                  color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+                  color: isDark
+                      ? AppTheme.darkBorderColor
+                      : AppTheme.lightBorderColor,
                   margin: const EdgeInsets.symmetric(horizontal: 12),
                 ),
                 Text(
@@ -422,7 +516,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
               ),
             ),
         ],
@@ -443,13 +539,17 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: isActive
-                  ? AppTheme.primaryColor
-                  : (isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor),
+                  ? Theme.of(context).colorScheme.primary
+                  : (isDark
+                        ? AppTheme.darkSurfaceColor
+                        : AppTheme.lightSurfaceColor),
               borderRadius: BorderRadius.circular(9999),
               border: Border.all(
                 color: isActive
-                    ? AppTheme.primaryColor
-                    : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                    ? Theme.of(context).colorScheme.primary
+                    : (isDark
+                          ? AppTheme.darkBorderColor
+                          : AppTheme.lightBorderColor),
               ),
             ),
             child: Text(
@@ -459,7 +559,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                 fontWeight: FontWeight.w600,
                 color: isActive
                     ? Colors.white
-                    : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                    : (isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary),
               ),
             ),
           ),
@@ -471,9 +573,12 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
   Widget _buildAsistenciaCard(dynamic item, int index, bool isDark) {
     final estado = _normalizeEstado(item['estado']);
     final isPendiente = estado == 'pendiente';
-    final double sueldo = double.tryParse(item['sueldo']?.toString() ?? '0') ?? 0.0;
-    final double aporte = double.tryParse(item['aporte']?.toString() ?? '0') ?? 0.0;
-    final double total = double.tryParse(item['total']?.toString() ?? '0') ?? (sueldo - aporte);
+    final double sueldo =
+        double.tryParse(item['sueldo']?.toString() ?? '0') ?? 0.0;
+    final double aporte =
+        double.tryParse(item['aporte']?.toString() ?? '0') ?? 0.0;
+    final double total =
+        double.tryParse(item['total']?.toString() ?? '0') ?? (sueldo - aporte);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -481,7 +586,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,23 +601,34 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                 height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                  color: isDark
+                      ? AppTheme.gray700Color
+                      : AppTheme.lightBorderColor,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   '${index + 1}',
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: isPendiente
-                      ? (isDark ? const Color(0x3310B981) : const Color(0xFFD1FAE5))
-                      : (isDark ? const Color(0x333B82F6) : const Color(0xFFDBEAFE)),
+                      ? (isDark
+                            ? const Color(0x3310B981)
+                            : AppTheme.successLightBg)
+                      : (isDark
+                            ? const Color(0x333B82F6)
+                            : AppTheme.infoLightBg),
                   borderRadius: BorderRadius.circular(9999),
                 ),
                 child: Text(
@@ -519,8 +637,12 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: isPendiente
-                        ? (isDark ? const Color(0xFF10B981) : const Color(0xFF065F46))
-                        : (isDark ? const Color(0xFF3B82F6) : const Color(0xFF1E40AF)),
+                        ? (isDark
+                              ? AppTheme.successColor
+                              : AppTheme.successDarkColor)
+                        : (isDark
+                              ? AppTheme.infoColor
+                              : AppTheme.infoDarkColor),
                   ),
                 ),
               ),
@@ -532,14 +654,18 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
               Icon(
                 Icons.calendar_today_rounded,
                 size: 16,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
               ),
               const SizedBox(width: 6),
               Text(
                 _formatDate(item['fecha']),
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
                 ),
               ),
               if (item['hora'] != null) ...[
@@ -547,14 +673,18 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                 Icon(
                   Icons.access_time_rounded,
                   size: 16,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   item['hora'].toString().substring(0, 5),
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
                 ),
               ],
@@ -570,7 +700,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     'Sueldo',
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -589,7 +721,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     'Aporte',
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -609,7 +743,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     'Total',
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -618,7 +754,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],
@@ -629,13 +765,19 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.check_circle_rounded, size: 14, color: AppTheme.primaryColor),
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Pagado: ${_formatDate(item['fecha_pago'])}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
                 ),
               ],
@@ -649,7 +791,8 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
   Widget _buildGratificacionCard(dynamic item, int index, bool isDark) {
     final estado = _normalizeEstado(item['estado']);
     final isPendiente = estado == 'pendiente';
-    final double monto = double.tryParse(item['monto']?.toString() ?? '0') ?? 0.0;
+    final double monto =
+        double.tryParse(item['monto']?.toString() ?? '0') ?? 0.0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -657,7 +800,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,23 +815,34 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                 height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                  color: isDark
+                      ? AppTheme.gray700Color
+                      : AppTheme.lightBorderColor,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   '${index + 1}',
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: isPendiente
-                      ? (isDark ? const Color(0x3310B981) : const Color(0xFFD1FAE5))
-                      : (isDark ? const Color(0x333B82F6) : const Color(0xFFDBEAFE)),
+                      ? (isDark
+                            ? const Color(0x3310B981)
+                            : AppTheme.successLightBg)
+                      : (isDark
+                            ? const Color(0x333B82F6)
+                            : AppTheme.infoLightBg),
                   borderRadius: BorderRadius.circular(9999),
                 ),
                 child: Text(
@@ -695,28 +851,37 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: isPendiente
-                        ? (isDark ? const Color(0xFF10B981) : const Color(0xFF065F46))
-                        : (isDark ? const Color(0xFF3B82F6) : const Color(0xFF1E40AF)),
+                        ? (isDark
+                              ? AppTheme.successColor
+                              : AppTheme.successDarkColor)
+                        : (isDark
+                              ? AppTheme.infoColor
+                              : AppTheme.infoDarkColor),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          if (item['descripcion'] != null && item['descripcion'].toString().isNotEmpty) ...[
+          if (item['descripcion'] != null &&
+              item['descripcion'].toString().isNotEmpty) ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF222225) : const Color(0xFFF9F9FB),
+                color: isDark
+                    ? const Color(0xFF222225)
+                    : const Color(0xFFF9F9FB),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 '“${item['descripcion']}”',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -727,29 +892,38 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
               Icon(
                 Icons.calendar_today_rounded,
                 size: 16,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
               ),
               const SizedBox(width: 6),
               Text(
                 _formatDate(item['fecha_hora']),
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
                 ),
               ),
-              if (item['fecha_hora'] != null && item['fecha_hora'].toString().contains(' ')) ...[
+              if (item['fecha_hora'] != null &&
+                  item['fecha_hora'].toString().contains(' ')) ...[
                 const SizedBox(width: 12),
                 Icon(
                   Icons.access_time_rounded,
                   size: 16,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   item['fecha_hora'].toString().split(' ')[1].substring(0, 5),
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
                 ),
               ],
@@ -764,7 +938,9 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
                 ),
               ),
               Text(
@@ -772,10 +948,48 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: AppTheme.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthNavigation(bool isDark) {
+    final monthLabel = DateFormat('MMMM yyyy', 'es_ES').format(_currentDate);
+    final monthFormatted = monthLabel[0].toUpperCase() + monthLabel.substring(1);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: Icon(Icons.chevron_left, color: isDark ? Colors.white : Colors.black87),
+            onPressed: () => _navigateMonth(-1),
+          ),
+          GestureDetector(
+            onTap: _goToCurrentMonth,
+            child: Text(
+              monthFormatted,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.chevron_right, color: isDark ? Colors.white : Colors.black87),
+            onPressed: () => _navigateMonth(1),
           ),
         ],
       ),

@@ -17,7 +17,6 @@ class AnfitrionaTabsLayout extends ConsumerWidget {
     if (location == '/anfitriona/comisiones') return 1;
     if (location == '/anfitriona/asistencia') return 3;
     if (location == '/anfitriona/anticipos') return 4;
-    // Default to Center (Inicio) if it's '/anfitriona'
     return 2;
   }
 
@@ -100,7 +99,6 @@ class AnfitrionaTabsLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _getSelectedIndex(context);
     
-    // Gradiente premium alineado a la marca
     final accentTheme = ref.watch(accentColorProvider);
     final gradientColors = accentTheme.gradient;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -110,7 +108,7 @@ class AnfitrionaTabsLayout extends ConsumerWidget {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: gradientColors.last,
+        systemNavigationBarColor: Colors.transparent,
         systemNavigationBarIconBrightness: Brightness.light,
         systemNavigationBarDividerColor: Colors.transparent,
       ),

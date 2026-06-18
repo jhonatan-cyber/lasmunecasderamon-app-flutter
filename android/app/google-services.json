@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "113101914797",
+    "project_id": "lasmunecasderamon-6d141",
+    "storage_bucket": "lasmunecasderamon-6d141.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:113101914797:android:02a118897030488a173c24",
+        "android_client_info": {
+          "package_name": "com.lasmunecasderamon.lasmunecasderamon_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbKImgHiTZOlCScceA_d0XGVXC12UTPT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

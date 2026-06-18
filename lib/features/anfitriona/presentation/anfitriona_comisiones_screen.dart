@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/widgets/premium_header.dart';
+import '../../../core/theme.dart';
+import '../../../core/hooks/refresh_provider.dart';
 import '../../auth/data/auth_notifier.dart';
 
 class AnfitrionaComisionesScreen extends ConsumerStatefulWidget {
@@ -13,8 +16,6 @@ class AnfitrionaComisionesScreen extends ConsumerStatefulWidget {
 
 class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisionesScreen> {
   List<dynamic> _comisiones = [];
-  bool _isLoading = false;
-  String? _error;
   String _filter = 'all'; // all, pendiente, pagado
 
   @override
@@ -24,10 +25,8 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
   }
 
   Future<void> _fetchComisiones({bool isManual = false}) async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final notifier = ref.read(refreshProvider('anfitriona_comisiones').notifier);
+    notifier.startRefresh(isManual: isManual);
 
     try {
       final apiClient = ref.read(apiClientProvider);
@@ -39,21 +38,16 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
         // Filtramos solo las de tipo 'venta' para visual parity con la app original
         final ventaComisiones = rawList.where((c) => c != null && c['tipo'] == 'venta').toList();
 
-        setState(() {
-          _comisiones = ventaComisiones;
-          _isLoading = false;
-        });
+        if (!mounted) return;
+        setState(() => _comisiones = ventaComisiones);
+        notifier.endRefresh();
       } else {
-        setState(() {
-          _error = data?['message'] ?? 'Error al cargar comisiones';
-          _isLoading = false;
-        });
+        if (!mounted) return;
+        notifier.endRefresh(error: data?['message'] ?? 'Error al cargar comisiones');
       }
     } catch (e) {
-      setState(() {
-        _error = 'Error de conexion con el servidor';
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      notifier.endRefresh(error: 'Error de conexion con el servidor');
     }
   }
 
@@ -95,10 +89,10 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
 
   void _showComisionDetail(dynamic item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accentColor = Color(0xFFD84315);
-    final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
-    final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final accentColor = Theme.of(context).colorScheme.primary;
+    final cardBg = isDark ? AppTheme.nearBlackColor : Colors.white;
+    final textPrimary = isDark ? Colors.white : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.gray500Color;
     final borderColor = isDark ? accentColor.withValues(alpha: 0.25) : Colors.grey.shade200;
 
     final double amount = double.tryParse((item['comision'] ?? item['monto'] ?? 0).toString()) ?? 0.0;
@@ -143,7 +137,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.black : const Color(0xFFF9FAFB),
+                    color: isDark ? Colors.black : AppTheme.lightBgColor,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: borderColor),
                   ),
@@ -171,7 +165,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
                             style: GoogleFonts.outfit(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
-                              color: isPendiente ? accentColor : const Color(0xFF10B981),
+                              color: isPendiente ? accentColor : AppTheme.successColor,
                             ),
                           ),
                         ],
@@ -187,7 +181,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: isPendiente ? accentColor.withValues(alpha: 0.1) : const Color(0xFF10B981).withValues(alpha: 0.1),
+                              color: isPendiente ? accentColor.withValues(alpha: 0.1) : AppTheme.successColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -195,7 +189,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
                               style: GoogleFonts.inter(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: isPendiente ? accentColor : const Color(0xFF10B981),
+                                color: isPendiente ? accentColor : AppTheme.successColor,
                               ),
                             ),
                           ),
@@ -246,11 +240,11 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    const accentColor = Color(0xFFD84315);
-    final bg = isDark ? Colors.black : const Color(0xFFF9FAFB);
-    final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
-    final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
+    final accentColor = Theme.of(context).colorScheme.primary;
+    final bg = isDark ? Colors.black : AppTheme.lightBgColor;
+    final cardBg = isDark ? AppTheme.nearBlackColor : Colors.white;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.gray500Color;
+    final textPrimary = isDark ? Colors.white : AppTheme.lightTextPrimary;
     final borderColor = isDark ? accentColor.withValues(alpha: 0.25) : Colors.grey.shade200;
 
     // Totales
@@ -270,36 +264,26 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
 
     final formatter = NumberFormat.simpleCurrency(decimalDigits: 0, name: 'CLP');
 
+    final accentTheme = ref.watch(accentColorProvider);
+    final gradientColors = accentTheme.gradient;
+
+    final refresh = ref.watch(refreshProvider('anfitriona_comisiones'));
+
     return Scaffold(
       backgroundColor: bg,
-      appBar: AppBar(
-        backgroundColor: bg,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Comisiones',
-              style: GoogleFonts.outfit(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black,
-              ),
-            ),
-            Text(
-              'Mis ganancias por ventas',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Resumen de comisiones
+      body: Column(
+        children: [
+          PremiumHeader(
+            title: 'Comisiones',
+            gradient: gradientColors,
+            showRefreshButton: true,
+            isRefreshing: refresh.isRefreshing,
+            onRefresh: () => _fetchComisiones(isManual: true),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                // Resumen de comisiones
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Container(
@@ -392,9 +376,9 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
 
             // Commissions list
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: accentColor))
-                  : _error != null
+              child: refresh.isLoading
+                  ? Center(child: CircularProgressIndicator(color: accentColor))
+                  : refresh.error.isNotEmpty
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24.0),
@@ -402,7 +386,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  _error!,
+                                  refresh.error,
                                   style: GoogleFonts.inter(color: Colors.redAccent),
                                   textAlign: TextAlign.center,
                                 ),
@@ -529,7 +513,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
                                                     style: GoogleFonts.outfit(
                                                       fontSize: 18,
                                                       fontWeight: FontWeight.w900,
-                                                      color: isPendiente ? accentColor : const Color(0xFF10B981),
+                                                      color: isPendiente ? accentColor : AppTheme.successColor,
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),
@@ -551,6 +535,8 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
           ],
         ),
       ),
+    ],
+  ),
     );
   }
 

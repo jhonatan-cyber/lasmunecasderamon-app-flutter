@@ -62,7 +62,7 @@ class _AttendanceCodeDisplayState extends ConsumerState<AttendanceCodeDisplay> {
     final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
     final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
-    const accentColor = Color(0xFFD84315);
+    final accentColor = Theme.of(context).colorScheme.primary;
 
     showDialog(
       context: context,
@@ -108,7 +108,7 @@ class _AttendanceCodeDisplayState extends ConsumerState<AttendanceCodeDisplay> {
                                   color: accentColor.withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.qr_code_rounded,
                                   size: 32,
                                   color: accentColor,
@@ -143,7 +143,7 @@ class _AttendanceCodeDisplayState extends ConsumerState<AttendanceCodeDisplay> {
                                   border: Border.all(color: Colors.grey.shade200),
                                 ),
                                 child: _loading
-                                    ? const Center(child: CircularProgressIndicator(color: accentColor))
+                                    ? Center(child: CircularProgressIndicator(color: accentColor))
                                     : code.isNotEmpty
                                         ? QrImageView(
                                             data: code,
@@ -198,7 +198,7 @@ class _AttendanceCodeDisplayState extends ConsumerState<AttendanceCodeDisplay> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.refresh, size: 20, color: accentColor),
+                                    icon: Icon(Icons.refresh, size: 20, color: accentColor),
                                     onPressed: () async {
                                       setDialogState(() {
                                         _loading = true;
@@ -242,7 +242,7 @@ class _AttendanceCodeDisplayState extends ConsumerState<AttendanceCodeDisplay> {
       return const SizedBox.shrink();
     }
 
-    const accentColor = Color(0xFFD84315);
+    final accentColor = Theme.of(context).colorScheme.primary;
 
     return InkWell(
       onTap: () async {

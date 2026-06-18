@@ -43,6 +43,16 @@ dependencies:
   
   # HTTP client
   dio: ^5.5.0
+  dio_cache_interceptor: ^3.5.1
+  dio_cache_interceptor_hive_store: ^4.0.0
+  path_provider: ^2.1.5
+
+  # Connectivity & Offline
+  connectivity_plus: ^6.0.3
+
+  # Reports & Sharing
+  pdf: ^3.11.1
+  share_plus: ^10.1.4
   
   # Local storage & security
   shared_preferences: ^2.2.3
@@ -58,6 +68,14 @@ dependencies:
   local_auth: ^3.0.1
   mobile_scanner: ^7.2.0
 
+  # Push Notifications
+  firebase_core: ^4.10.0
+  firebase_messaging: ^16.3.0
+  flutter_local_notifications: ^22.0.1
+  sentry_flutter: ^9.0.0
+  fl_chart: ^1.2.0
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,6 +86,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_secure_storage_platform_interface: ^1.1.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -77,6 +96,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/fonts/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

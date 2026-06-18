@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../cajero/presentation/widgets/staff_call_overlay.dart';
 
-
 class GarzonTabsLayout extends StatelessWidget {
   final Widget child;
 
@@ -16,7 +15,7 @@ class GarzonTabsLayout extends StatelessWidget {
     if (location == '/garzon/anticipos') return 2;
     if (location == '/garzon/propinas') return 3;
     if (location == '/garzon/horas-extras') return 4;
-    return 0; // Default to /garzon (Home)
+    return 0;
   }
 
   void _onItemTapped(int index, BuildContext context) {
@@ -44,29 +43,30 @@ class GarzonTabsLayout extends StatelessWidget {
     final selectedIndex = _getSelectedIndex(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final navBarColor = isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor;
+    final navBarColor = isDark
+        ? AppTheme.darkSurfaceColor
+        : AppTheme.lightSurfaceColor;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: navBarColor,
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
         systemNavigationBarDividerColor: Colors.transparent,
       ),
       child: Scaffold(
-        body: Stack(
-          children: [
-            child,
-            const StaffCallOverlay(),
-          ],
-        ),
+        body: Stack(children: [child, const StaffCallOverlay()]),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             border: Border(
               top: BorderSide(
-                color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+                color: isDark
+                    ? AppTheme.darkBorderColor
+                    : AppTheme.lightBorderColor,
                 width: 1.0,
               ),
             ),
@@ -75,31 +75,61 @@ class GarzonTabsLayout extends StatelessWidget {
             selectedIndex: selectedIndex,
             onDestinationSelected: (index) => _onItemTapped(index, context),
             backgroundColor: navBarColor,
-            indicatorColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-            destinations: const [
+            indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_rounded, color: AppTheme.darkTextSecondary),
-                selectedIcon: Icon(Icons.home_rounded, color: AppTheme.primaryColor),
+                icon: Icon(
+                  Icons.home_rounded,
+                  color: AppTheme.darkTextSecondary,
+                ),
+                selectedIcon: Icon(
+                  Icons.home_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 label: 'Inicio',
               ),
               NavigationDestination(
-                icon: Icon(Icons.calendar_today_rounded, color: AppTheme.darkTextSecondary),
-                selectedIcon: Icon(Icons.calendar_today_rounded, color: AppTheme.primaryColor),
+                icon: Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppTheme.darkTextSecondary,
+                ),
+                selectedIcon: Icon(
+                  Icons.calendar_today_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 label: 'Asistencia',
               ),
               NavigationDestination(
-                icon: Icon(Icons.wallet_rounded, color: AppTheme.darkTextSecondary),
-                selectedIcon: Icon(Icons.wallet_rounded, color: AppTheme.primaryColor),
+                icon: Icon(
+                  Icons.wallet_rounded,
+                  color: AppTheme.darkTextSecondary,
+                ),
+                selectedIcon: Icon(
+                  Icons.wallet_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 label: 'Anticipos',
               ),
               NavigationDestination(
-                icon: Icon(Icons.monetization_on_rounded, color: AppTheme.darkTextSecondary),
-                selectedIcon: Icon(Icons.monetization_on_rounded, color: AppTheme.primaryColor),
+                icon: Icon(
+                  Icons.monetization_on_rounded,
+                  color: AppTheme.darkTextSecondary,
+                ),
+                selectedIcon: Icon(
+                  Icons.monetization_on_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 label: 'Propinas',
               ),
               NavigationDestination(
-                icon: Icon(Icons.more_time_rounded, color: AppTheme.darkTextSecondary),
-                selectedIcon: Icon(Icons.more_time_rounded, color: AppTheme.primaryColor),
+                icon: Icon(
+                  Icons.more_time_rounded,
+                  color: AppTheme.darkTextSecondary,
+                ),
+                selectedIcon: Icon(
+                  Icons.more_time_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 label: 'Extras',
               ),
             ],

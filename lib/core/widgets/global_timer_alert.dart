@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/timer_service.dart';
+import '../../core/theme.dart';
 
 class GlobalTimerAlert extends ConsumerStatefulWidget {
   const GlobalTimerAlert({super.key});
@@ -41,7 +42,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppTheme.darkSurfaceColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         contentPadding: EdgeInsets.zero,
         content: Column(
@@ -76,7 +77,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
                             ? 'Venta completada'
                             : 'Tiempo terminado',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFFFCA5A5),
+                      color: AppTheme.lightRedColor,
                       fontSize: 13,
                     ),
                     textAlign: TextAlign.center,
@@ -157,7 +158,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
               ),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626),
+                  backgroundColor: AppTheme.errorColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

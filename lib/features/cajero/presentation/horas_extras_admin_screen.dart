@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
+import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -55,24 +56,20 @@ class CajeroHorasExtrasAdminScreen extends ConsumerStatefulWidget {
 }
 
 class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtrasAdminScreen> {
-  bool _loading = true;
   List<OvertimeRecord> _records = [];
-  String _error = '';
   String _statusFilter = 'all'; // all, pendiente, pagado
   String _userFilter = 'all'; // all or userId as string
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    Future.microtask(() => _fetchData());
   }
 
   Future<void> _fetchData({bool isManual = false}) async {
+    final notifier = ref.read(refreshProvider('horas_extras_admin').notifier);
     if (!isManual) {
-      setState(() {
-        _loading = true;
-        _error = '';
-      });
+      notifier.startRefresh(isManual: false);
     }
     try {
       final client = ref.read(apiClientProvider);
@@ -80,18 +77,17 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
       
       if (response.data != null && response.data['success'] == true) {
         final List<dynamic> data = response.data['data'] ?? [];
+        if (!mounted) return;
         setState(() {
           _records = data.map((json) => OvertimeRecord.fromJson(json)).toList();
-          _loading = false;
         });
+        notifier.endRefresh();
       } else {
         throw Exception(response.data?['message'] ?? 'Error al cargar horas extras');
       }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (!mounted) return;
+      notifier.endRefresh(error: e.toString());
     }
   }
 
@@ -252,9 +248,9 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -265,11 +261,11 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                         Text('Total a pagar', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.darkTextSecondary)),
                         Text(
                           _formatCurrency(record.total != 0 ? record.total : record.monto),
-                          style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                          style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                         ),
                       ],
                     ),
-                    const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor, size: 32),
+                    Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary, size: 32),
                   ],
                 ),
               ),
@@ -323,15 +319,16 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
   @override
   Widget build(BuildContext context) {
     final statsData = _stats;
+    final refresh = ref.watch(refreshProvider('horas_extras_admin'));
 
     return Scaffold(
       backgroundColor: AppTheme.darkBgColor,
       body: FadeLoadingSwitcher(
-        isLoading: _loading,
+        isLoading: refresh.isLoading,
         skeleton: _buildSkeletonGrid(),
         content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
@@ -414,7 +411,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                               label: 'POR COBRAR',
                               value: _formatCurrency(statsData['totalAPagar']),
                               icon: Icons.wallet_rounded,
-                              color: AppTheme.primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],
@@ -446,11 +443,11 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
                                     : AppTheme.darkSurfaceColor,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: isSelected ? AppTheme.primaryColor : Colors.white10,
+                                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white10,
                                   width: 1.5,
                                 ),
                               ),
@@ -460,7 +457,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                                     width: 32,
                                     height: 32,
                                     decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Center(
@@ -469,7 +466,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                                         style: GoogleFonts.inter(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryColor,
+                                          color: Theme.of(context).colorScheme.primary,
                                         ),
                                       ),
                                     ),
@@ -537,11 +534,11 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                     // Main list
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _error.isNotEmpty
+                      child: refresh.error.isNotEmpty
                           ? Center(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 40.0),
-                                child: Text('Error: $_error', style: GoogleFonts.inter(color: Colors.red)),
+                                child: Text('Error: ${refresh.error}', style: GoogleFonts.inter(color: Colors.red)),
                               ),
                             )
                           : _filteredRecords.isEmpty
@@ -584,7 +581,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                                           width: 40,
                                           height: 40,
                                           decoration: BoxDecoration(
-                                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                             shape: BoxShape.circle,
                                           ),
                                           child: Center(
@@ -593,7 +590,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                                               style: GoogleFonts.inter(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.bold,
-                                                color: AppTheme.primaryColor,
+                                                color: Theme.of(context).colorScheme.primary,
                                               ),
                                             ),
                                           ),
@@ -630,7 +627,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                                             const SizedBox(height: 6),
                                             Text(
                                               _formatCurrency(record.total != 0 ? record.total : record.monto),
-                                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                                             )
                                           ],
                                         ),
@@ -692,13 +689,13 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
     return Expanded(
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected ? AppTheme.primaryColor : AppTheme.darkSurfaceColor,
+          backgroundColor: isSelected ? Theme.of(context).colorScheme.primary : AppTheme.darkSurfaceColor,
           foregroundColor: isSelected ? Colors.white : AppTheme.darkTextSecondary,
           padding: const EdgeInsets.symmetric(vertical: 10),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(9999),
-            side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.white10),
+            side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white10),
           ),
         ),
         onPressed: () => setState(() => _statusFilter = value),

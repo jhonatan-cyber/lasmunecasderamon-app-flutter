@@ -28,7 +28,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppTheme.primaryColor,
+                  Theme.of(context).colorScheme.primary,
                   const Color(0xFF881337), // Rosa/rojo muy oscuro
                   const Color(0xFF1A0B10), // Aún más oscuro
                 ],
@@ -41,7 +41,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.25),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -131,9 +131,9 @@ class CajeroPerfilScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.5), width: 1),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5), width: 1),
                       ),
                       child: Text(
                         role.toUpperCase(),
@@ -160,6 +160,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _buildInfoCard(
+                    context,
                     isDark,
                     title: 'Nombre Completo',
                     value: fullName,
@@ -167,6 +168,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildInfoCard(
+                    context,
                     isDark,
                     title: 'Correo Electrónico',
                     value: email,
@@ -174,6 +176,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildInfoCard(
+                    context,
                     isDark,
                     title: 'Identificador de Usuario',
                     value: user?.id ?? 'N/A',
@@ -181,6 +184,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildInfoCard(
+                    context,
                     isDark,
                     title: 'Rol Asignado',
                     value: role,
@@ -197,6 +201,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
   }
 
   Widget _buildInfoCard(
+    BuildContext context,
     bool isDark, {
     required String title,
     required String value,
@@ -226,12 +231,12 @@ class CajeroPerfilScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
               icon,
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
               size: 20,
             ),
           ),

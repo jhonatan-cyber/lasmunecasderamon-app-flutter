@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:local_auth/local_auth.dart';
 import '../../../core/api_client.dart';
+import '../../../core/haptic_service.dart';
 import '../../../core/theme.dart';
 import '../data/auth_notifier.dart';
 import '../domain/user.dart';
@@ -44,13 +46,40 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
 
   bool _isLoading = true;
   bool _saving = false;
+  bool _isBiometricAvailable = false;
+  bool _isBiometricEnabled = false;
   String? _localImagePath;
   final ImagePicker _picker = ImagePicker();
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => _fetchProfileData());
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    try {
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final isSupported = await _localAuth.isDeviceSupported();
+      final authNotifier = ref.read(authProvider.notifier);
+      final enabled = await authNotifier.isBiometricEnabled();
+
+      if (mounted) {
+        setState(() {
+          _isBiometricAvailable = canCheck && isSupported;
+          _isBiometricEnabled = enabled;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isBiometricAvailable = false;
+          _isBiometricEnabled = false;
+        });
+      }
+    }
   }
 
   @override
@@ -124,7 +153,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
   void _showPhotoOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF18181A),
+      backgroundColor: AppTheme.darkSurfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -144,7 +173,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
               ),
               const SizedBox(height: 20),
               ListTile(
-                leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.primaryColor),
+                leading: Icon(Icons.camera_alt_rounded, color: Theme.of(context).colorScheme.primary),
                 title: Text('Tomar Foto con Cámara', style: GoogleFonts.inter(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
@@ -152,7 +181,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryColor),
+                leading: Icon(Icons.photo_library_rounded, color: Theme.of(context).colorScheme.primary),
                 title: Text('Elegir de Galería', style: GoogleFonts.inter(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
@@ -167,13 +196,15 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
   }
 
   Future<void> _saveChanges() async {
+    final messenger = ScaffoldMessenger.of(context);
+    await HapticService.medium();
     final user = ref.read(authProvider).user;
     if (user == null || _saving) return;
 
     if (_passwordController.text.trim().isNotEmpty && _passwordController.text.trim().length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFEF4444),
+          backgroundColor: AppTheme.errorColor,
           content: Text(
             'La contraseña debe tener al menos 4 caracteres',
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -232,7 +263,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: AppTheme.successColor,
               content: Text('Perfil actualizado correctamente',
                   style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
             ),
@@ -247,7 +278,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
+            backgroundColor: AppTheme.errorColor,
             content: Text(e.toString().replaceAll('Exception:', ''), style: GoogleFonts.inter(color: Colors.white)),
           ),
         );
@@ -262,19 +293,20 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
   }
 
   void _handleLogout() {
+    HapticService.medium();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF18181A),
+        backgroundColor: AppTheme.darkSurfaceColor,
         title: Text('Cerrar sesión', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Text('¿Estás seguro que deseas salir?', style: GoogleFonts.inter(color: const Color(0xFF9CA3AF))),
+        content: Text('¿Estás seguro que deseas salir?', style: GoogleFonts.inter(color: AppTheme.darkTextSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
             onPressed: () {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
@@ -292,11 +324,11 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accentTheme = ref.watch(accentColorProvider);
 
-    final bg = isDark ? const Color(0xFF0F0F10) : const Color(0xFFF3F4F6);
-    final cardBg = isDark ? const Color(0xFF18181A) : Colors.white;
+    final bg = isDark ? AppTheme.darkBgColor : const Color(0xFFF3F4F6);
+    final cardBg = isDark ? AppTheme.darkSurfaceColor : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF64748B);
-    final borderColor = isDark ? const Color(0xFF262629) : Colors.grey.shade200;
+    final subColor = isDark ? AppTheme.darkTextSecondary : const Color(0xFF64748B);
+    final borderColor = isDark ? AppTheme.darkBorderColor : Colors.grey.shade200;
 
     final nameText = user != null ? '${user.nombre} ${user.nick.isNotEmpty ? "(${user.nick})" : ""}' : '';
 
@@ -496,7 +528,11 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                                     height: 44,
                                     margin: const EdgeInsets.only(right: 12, bottom: 8, top: 4),
                                     decoration: BoxDecoration(
-                                      color: option.color,
+                                      gradient: LinearGradient(
+                                        colors: option.gradient,
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
                                       shape: BoxShape.circle,
                                       border: isSelected
                                           ? Border.all(color: textColor, width: 3)
@@ -504,7 +540,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                                       boxShadow: isSelected
                                           ? [
                                               BoxShadow(
-                                                color: option.color.withValues(alpha: 0.4),
+                                                color: option.gradient.first.withValues(alpha: 0.4),
                                                 blurRadius: 8,
                                                 spreadRadius: 2,
                                               )
@@ -632,7 +668,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                                 backgroundColor: accentTheme.color,
                                 foregroundColor: Colors.white,
                                 elevation: 4,
-                                shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
+                                shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               ),
                               onPressed: _saving ? null : _saveChanges,
@@ -649,7 +685,77 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          
+
+                          // Biometric Auth Toggle
+                          if (_isBiometricAvailable) ...[
+                            Container(
+                              decoration: BoxDecoration(
+                                color: cardBg,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: borderColor, width: 1.5),
+                              ),
+                              child: SwitchListTile(
+                                secondary: Icon(
+                                  Icons.fingerprint_rounded,
+                                  color: _isBiometricEnabled
+                                      ? accentTheme.color
+                                      : subColor,
+                                ),
+                                title: Text(
+                                  'Inicio con huella / Face ID',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Inicia sesión sin escribir tu contraseña',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: subColor,
+                                  ),
+                                ),
+                                value: _isBiometricEnabled,
+                                activeThumbColor: accentTheme.color,
+                                onChanged: (val) async {
+                                  final notifier = ref.read(authProvider.notifier);
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  if (val) {
+                                    final authenticated = await _localAuth.authenticate(
+                                      localizedReason: 'Confirma tu identidad para habilitar el ingreso biométrico',
+                                      biometricOnly: true,
+                                    );
+                                    if (authenticated) {
+                                      final creds = await notifier.getCredentials();
+                                      if (creds != null) {
+                                        await notifier.setBiometricEnabled(true);
+                                        setState(() => _isBiometricEnabled = true);
+                                      } else if (messenger.mounted) {
+                                        messenger.showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: AppTheme.warningColor,
+                                            content: Text(
+                                              'Inicia sesión manualmente primero para guardar tus credenciales',
+                                              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } else {
+                                    await notifier.setBiometricEnabled(false);
+                                    setState(() => _isBiometricEnabled = false);
+                                  }
+                                },
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+
                           // Logout button
                           Center(
                             child: TextButton.icon(
@@ -658,7 +764,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                               label: Text(
                                 'Cerrar Sesión',
                                 style: GoogleFonts.inter(
-                                  color: const Color(0xFFEF4444),
+                                  color: AppTheme.errorColor,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                 ),

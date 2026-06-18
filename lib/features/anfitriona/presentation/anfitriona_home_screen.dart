@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../../core/api_client.dart';
 import '../../../core/theme.dart';
+import '../../../core/hooks/refresh_provider.dart';
 import '../../auth/data/auth_notifier.dart';
 import 'widgets/attendance_code_display.dart';
 import 'widgets/active_service_card.dart';
@@ -19,41 +20,10 @@ class AnfitrionaHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<AnfitrionaHomeScreen> createState() => _AnfitrionaHomeScreenState();
 }
 
-class _AnronHomeData {
-  final Map<String, dynamic> stats;
-  final dynamic activeService;
-  final int userStatus;
-  final bool isLoading;
-  final String? error;
-
-  _AnronHomeData({
-    this.stats = const {'totalEarnings': 0, 'svcCount': 0},
-    this.activeService,
-    this.userStatus = 1,
-    this.isLoading = false,
-    this.error,
-  });
-
-  _AnronHomeData copyWith({
-    Map<String, dynamic>? stats,
-    dynamic activeService,
-    bool nullActiveService = false,
-    int? userStatus,
-    bool? isLoading,
-    String? error,
-  }) {
-    return _AnronHomeData(
-      stats: stats ?? this.stats,
-      activeService: nullActiveService ? null : (activeService ?? this.activeService),
-      userStatus: userStatus ?? this.userStatus,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
-  }
-}
-
 class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
-  _AnronHomeData _data = _AnronHomeData();
+  Map<String, dynamic> _stats = {'totalEarnings': 0, 'svcCount': 0};
+  dynamic _activeService;
+  int _userStatus = 1;
 
   @override
   void initState() {
@@ -61,11 +31,11 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
     Future.microtask(() => _loadData());
   }
 
-  Future<void> _loadData() async {
-    if (!mounted) return;
-    setState(() {
-      _data = _data.copyWith(isLoading: true, error: null);
-    });
+  Future<void> _loadData({bool isManual = false}) async {
+    final notifier = ref.read(refreshProvider('anfitriona_home').notifier);
+    if (!isManual) {
+      notifier.startRefresh(isManual: false);
+    }
 
     try {
       final apiClient = ref.read(apiClientProvider);
@@ -84,43 +54,37 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
       final servicesRes = responses[1].data;
       final statusRes = responses[2].data;
 
-      Map<String, dynamic> stats = {'totalEarnings': 0, 'svcCount': 0};
+      Map<String, dynamic> newStats = {'totalEarnings': 0, 'svcCount': 0};
       if (statsRes != null && statsRes['success'] == true && statsRes['data'] != null) {
-        stats = Map<String, dynamic>.from(statsRes['data']);
+        newStats = Map<String, dynamic>.from(statsRes['data']);
       }
 
-      dynamic activeService;
+      dynamic newActiveService;
       if (servicesRes != null && servicesRes['success'] == true && servicesRes['data'] is List) {
         final List<dynamic> list = servicesRes['data'];
-        activeService = list.firstWhere(
+        newActiveService = list.firstWhere(
           (s) => int.tryParse(s['estado']?.toString() ?? '0') == 2,
           orElse: () => null,
         );
       }
 
-      int userStatus = 1;
+      int newUserStatus = 1;
       if (statusRes != null && statusRes['success'] == true && statusRes['status'] != null) {
-        userStatus = int.tryParse(statusRes['status']?.toString() ?? '1') ?? 1;
+        newUserStatus = int.tryParse(statusRes['status']?.toString() ?? '1') ?? 1;
       }
 
       if (mounted) {
         setState(() {
-          _data = _AnronHomeData(
-            stats: stats,
-            activeService: activeService,
-            userStatus: userStatus,
-            isLoading: false,
-          );
+          _stats = newStats;
+          _activeService = newActiveService;
+          _userStatus = newUserStatus;
         });
+        notifier.endRefresh();
+        if (isManual) notifier.showSuccessSnack(context, 'Datos actualizados');
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _data = _data.copyWith(
-            isLoading: false,
-            error: 'Error al conectar con el servidor',
-          );
-        });
+        notifier.endRefresh(error: 'Error al conectar con el servidor');
       }
     }
   }
@@ -138,7 +102,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirmar', style: TextStyle(color: Color(0xFFD84315), fontWeight: FontWeight.bold)),
+            child: Text('Confirmar', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -218,7 +182,8 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
     final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
     final borderColor = isDark ? const Color(0xFF27272A) : Colors.grey.shade200;
 
-    final double totalEarnings = double.tryParse(_data.stats['totalEarnings']?.toString() ?? '0') ?? 0.0;
+    final refresh = ref.watch(refreshProvider('anfitriona_home'));
+    final double totalEarnings = double.tryParse(_stats['totalEarnings']?.toString() ?? '0') ?? 0.0;
     const double targetEarnings = 50000.0;
     final int percent = targetEarnings > 0 ? ((totalEarnings / targetEarnings) * 100).round().clamp(0, 100) : 0;
 
@@ -409,11 +374,11 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(_data.userStatus),
+                                  color: _getStatusColor(_userStatus),
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: _getStatusColor(_data.userStatus).withValues(alpha: 0.5),
+                                      color: _getStatusColor(_userStatus).withValues(alpha: 0.5),
                                       blurRadius: 4,
                                       spreadRadius: 1,
                                     ),
@@ -422,7 +387,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                _getStatusText(_data.userStatus),
+                                _getStatusText(_userStatus),
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -437,7 +402,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                   ],
                 ),
                 // Boton Solicitar Servicio integrado en Header (si no hay servicio activo)
-                if (_data.activeService == null) ...[
+                if (_activeService == null) ...[
                   Padding(
                     padding: const EdgeInsets.only(top: 20.0),
                     child: Center(
@@ -471,7 +436,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
           // Scrollable Content
           Expanded(
             child: RefreshIndicator(
-              onRefresh: _loadData,
+              onRefresh: () => _loadData(isManual: true),
               color: accentColor,
               backgroundColor: cardBg,
               child: ListView(
@@ -479,14 +444,14 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   // Active Service Card (si tiene habitacion asignada)
-                  if (_data.activeService != null) ...[
+                  if (_activeService != null) ...[
                     ActiveServiceCard(
-                      habitacion: _data.activeService['habitacion']?.toString() ?? '',
-                      tiempoRestante: _data.activeService['tiempo_restante']?.toString(),
+                      habitacion: _activeService['habitacion']?.toString() ?? '',
+                      tiempoRestante: _activeService['tiempo_restante']?.toString(),
                       onPress: () {
                         ServiceDetailModal.show(
                           context: context,
-                          servicio: _data.activeService,
+                          servicio: _activeService,
                         );
                       },
                     ),
@@ -620,11 +585,11 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                     ),
                   ),
 
-                  if (_data.error != null) ...[
+                  if (refresh.error.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     Center(
                       child: Text(
-                        _data.error!,
+                        refresh.error,
                         style: TextStyle(color: Colors.redAccent.shade100),
                       ),
                     ),

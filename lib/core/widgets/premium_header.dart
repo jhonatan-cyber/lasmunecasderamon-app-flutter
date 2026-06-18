@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme.dart';
 
 class PremiumHeaderTab {
   final String id;
@@ -23,11 +22,13 @@ class PremiumHeader extends StatelessWidget {
   final bool showRefreshButton;
   final bool isRefreshing;
   final VoidCallback? onRefresh;
-  final bool? connectionStatus; // null = hidden, true = connected, false = disconnected
+  final bool? connectionStatus;
   final String? connectionLabel;
   final Widget? rightWidget;
+  final Widget? leadingWidget;
   final String? centerTitle;
   final double bottomPadding;
+  final List<Color>? gradient;
 
   const PremiumHeader({
     super.key,
@@ -47,9 +48,18 @@ class PremiumHeader extends StatelessWidget {
     this.connectionStatus,
     this.connectionLabel,
     this.rightWidget,
+    this.leadingWidget,
     this.centerTitle,
     this.bottomPadding = 25.0,
+    this.gradient,
   });
+
+  Color _shadowColor(BuildContext context) {
+    if (gradient != null && gradient!.isNotEmpty) {
+      return gradient!.first.withValues(alpha: 0.25);
+    }
+    return Theme.of(context).colorScheme.primary.withValues(alpha: 0.25);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,25 +67,31 @@ class PremiumHeader extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryColor,
-            Color(0xFF881337),
-            Color(0xFF1A0B10),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        gradient: gradient != null
+            ? LinearGradient(
+                colors: gradient!,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Color(0xFF881337),
+                  Color(0xFF1A0B10),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(32),
           bottomRight: Radius.circular(32),
         ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x40D84315),
+            color: _shadowColor(context),
             blurRadius: 15,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -88,12 +104,12 @@ class PremiumHeader extends StatelessWidget {
           ),
           child: Column(
             children: [
-              // Top row: back button, title, actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Back button
-                  if (showBackButton && onBack != null)
+                  if (leadingWidget != null)
+                    leadingWidget!
+                  else if (showBackButton && onBack != null)
                     GestureDetector(
                       onTap: onBack,
                       child: Container(
@@ -114,11 +130,10 @@ class PremiumHeader extends StatelessWidget {
                       ),
                     ),
 
-                  // Title
                   Expanded(
                     child: Text(
                       centerTitle ?? title,
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.left,
                       style: GoogleFonts.inter(
                         fontSize: isTablet ? 20 : 18,
                         fontWeight: FontWeight.bold,
@@ -128,7 +143,6 @@ class PremiumHeader extends StatelessWidget {
                     ),
                   ),
 
-                  // Right widget (custom) or refresh button or add button
                   if (rightWidget != null)
                     rightWidget!
                   else if (showRefreshButton)
@@ -198,7 +212,6 @@ class PremiumHeader extends StatelessWidget {
                 ],
               ),
 
-              // Subtitle row
               if (subtitle != null) ...[
                 const SizedBox(height: 20),
                 Text(
@@ -211,7 +224,6 @@ class PremiumHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                // Connection status or subtitle description
                 if (connectionStatus != null)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -220,11 +232,17 @@ class PremiumHeader extends StatelessWidget {
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: connectionStatus! ? Colors.greenAccent : Colors.redAccent,
+                          color: connectionStatus!
+                              ? Colors.greenAccent
+                              : Colors.redAccent,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: (connectionStatus! ? Colors.greenAccent : Colors.redAccent).withValues(alpha: 0.6),
+                              color:
+                                  (connectionStatus!
+                                          ? Colors.greenAccent
+                                          : Colors.redAccent)
+                                      .withValues(alpha: 0.6),
                               blurRadius: 6,
                               spreadRadius: 1,
                             ),
@@ -245,7 +263,6 @@ class PremiumHeader extends StatelessWidget {
                   ),
               ],
 
-              // Tabs row
               if (tabs != null && tabs!.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 SingleChildScrollView(
@@ -280,7 +297,9 @@ class PremiumHeader extends StatelessWidget {
                               tab.label,
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                                fontWeight: isActive
+                                    ? FontWeight.bold
+                                    : FontWeight.w600,
                                 color: isActive
                                     ? Colors.white
                                     : Colors.white.withValues(alpha: 0.7),

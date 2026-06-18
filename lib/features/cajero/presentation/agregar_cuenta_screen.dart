@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
+import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/hooks/set_state_provider.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -17,9 +20,6 @@ class AgregarCuentaScreen extends ConsumerStatefulWidget {
 }
 
 class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
-  bool _loading = true;
-  bool _submitting = false;
-  String _error = '';
 
   // Original Cuenta details
   Map<String, dynamic>? _cuentaOriginal;
@@ -39,17 +39,11 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
   }
 
   Future<void> _fetchDetailsAndAssets() async {
-    setState(() {
-      _loading = true;
-      _error = '';
-    });
+    ref.read(refreshProvider('agregar_cuenta').notifier).startRefresh(isManual: false);
 
     final int? cuentaId = int.tryParse(widget.id);
     if (cuentaId == null) {
-      setState(() {
-        _error = 'ID de cuenta no válido';
-        _loading = false;
-      });
+      ref.read(refreshProvider('agregar_cuenta').notifier).endRefresh(error: 'ID de cuenta no válido');
       return;
     }
 
@@ -78,18 +72,15 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
       setState(() {
         _cuentaOriginal = cuentaMap;
         _categories = categoriesData;
-        _loading = false;
       });
+      ref.read(refreshProvider('agregar_cuenta').notifier).endRefresh();
 
       if (_categories.isNotEmpty) {
         _onCategorySelected(_categories.first);
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = 'Error al cargar detalles de la comanda';
-        _loading = false;
-      });
+      ref.read(refreshProvider('agregar_cuenta').notifier).endRefresh(error: 'Error al cargar detalles de la comanda');
     }
   }
 
@@ -168,7 +159,8 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
     if (idCuenta == null) return;
 
     final client = ref.read(apiClientProvider);
-    setState(() => _submitting = true);
+    final notifier = ref.read(setStateProvider('agregar_cuenta').notifier);
+    notifier.startSubmit();
 
     try {
       final List<Map<String, dynamic>> itemsPayload = [];
@@ -214,7 +206,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
         const SnackBar(content: Text('Error de conexión al agregar productos'), backgroundColor: Colors.redAccent),
       );
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) notifier.endSubmit();
     }
   }
 
@@ -227,19 +219,20 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final refreshState = ref.watch(refreshProvider('agregar_cuenta'));
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        elevation: 0,
-        title: Text(
-          'Agregar a Cuenta',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-      ),
-      body: FadeLoadingSwitcher(
-        isLoading: _loading,
+      body: Column(
+        children: [
+          PremiumHeader(
+            title: 'Agregar a Cuenta',
+            showBackButton: true,
+            onBack: () => context.pop(),
+          ),
+          Expanded(
+            child: FadeLoadingSwitcher(
+        isLoading: refreshState.isLoading,
         skeleton: _buildSkeletonGrid(),
         content: LayoutBuilder(
               builder: (context, constraints) {
@@ -247,30 +240,29 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
 
                 final mainContent = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_error.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _error,
-                                style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13),
+                  children: [                      if (refreshState.error.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  refreshState.error,
+                                  style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                        const SizedBox(height: 16),
+                      ],
                     // Account context info card
                     _buildAccountHeader(isDark),
                     const SizedBox(height: 16),
@@ -329,6 +321,9 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
               },
             ),
       ),
+    ),
+    ],
+  ),
     );
   }
 
@@ -372,7 +367,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
         children: [
           Text(
             'Mesa / Habitación: ${_cuentaOriginal!['room_name'] ?? 'Comanda'}',
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(height: 4),
           Text(
@@ -406,7 +401,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
               onSelected: (selected) {
                 if (selected) _onCategorySelected(cat);
               },
-              selectedColor: AppTheme.primaryColor,
+              selectedColor: Theme.of(context).colorScheme.primary,
               labelStyle: TextStyle(color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black87)),
             ),
           );
@@ -450,7 +445,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: cartQty > 0
-                  ? AppTheme.primaryColor
+                  ? Theme.of(context).colorScheme.primary
                   : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
               width: cartQty > 0 ? 1.5 : 1,
             ),
@@ -494,7 +489,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
                     ),
                   ],
                   IconButton(
-                    icon: const Icon(Icons.add_circle, size: 24, color: AppTheme.primaryColor),
+                    icon: Icon(Icons.add_circle, size: 24, color: Theme.of(context).colorScheme.primary),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => _addToCart(id),
@@ -533,8 +528,8 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
           width: double.infinity,
           child: ElevatedButton(
             style: AppTheme.getPrimaryButtonStyle(context),
-            onPressed: _submitting ? null : _submitAdicion,
-            child: _submitting
+            onPressed: ref.watch(setStateProvider('agregar_cuenta')).isSubmitting ? null : _submitAdicion,
+            child: ref.watch(setStateProvider('agregar_cuenta')).isSubmitting
                 ? const SizedBox(
                     height: 20,
                     width: 20,
@@ -744,16 +739,16 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: AppTheme.getPrimaryButtonStyle(context),
-                    onPressed: _submitting
+                    onPressed: ref.watch(setStateProvider('agregar_cuenta')).isSubmitting
                         ? null
                         : () async {
                             final navigator = Navigator.of(context);
                             await _submitAdicion();
-                            if (mounted && !_submitting) {
+                            if (mounted && !ref.read(setStateProvider('agregar_cuenta')).isSubmitting) {
                               navigator.pop();
                             }
                           },
-                    child: _submitting
+                    child: ref.watch(setStateProvider('agregar_cuenta')).isSubmitting
                         ? const SizedBox(
                             height: 20,
                             width: 20,

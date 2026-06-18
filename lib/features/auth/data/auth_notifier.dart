@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
+import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import '../../../core/api_client.dart';
+import '../../../core/offline/providers.dart';
 import '../domain/user.dart';
 
 class AuthState {
@@ -209,11 +211,66 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await prefs.setString('user', jsonEncode(updatedUser.toJson()));
     state = state.copyWith(user: updatedUser);
   }
+
+  /// Sends a password reset request to the backend.
+  /// The backend should send a verification code to the user's email.
+  Future<void> requestPasswordReset(String email) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _apiClient.dio.post('/auth/reset-password', data: {'email': email});
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'] ?? 'Error al solicitar el reset';
+      state = state.copyWith(isLoading: false, error: message);
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  /// Confirms a password reset with the verification code and new password.
+  Future<void> confirmPasswordReset(String code, String newPassword) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _apiClient.dio.post('/auth/reset-password/confirm', data: {
+        'code': code,
+        'password': newPassword,
+      });
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'] ?? 'Error al restablecer la contraseña';
+      state = state.copyWith(isLoading: false, error: message);
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
 }
 
 // Providers definition
+
+/// Persistent HTTP cache store (Hive‑backed).
+///
+/// Initialised lazily; the first read creates the store on disk under
+/// the app's documents directory.
+final cacheStoreProvider = FutureProvider<HiveCacheStore>((ref) {
+  return ApiClient.createDefaultStore();
+});
+
+/// Pre‑configured API client with auth + cache + offline interceptors.
+///
+/// The cache store is injected when available — if initialisation fails
+/// the client still works without caching.
+/// The offline sync manager replays failed requests when connectivity
+/// is restored.
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
+  final cacheStore = ref.watch(cacheStoreProvider).valueOrNull;
+  final offlineSync = ref.watch(offlineSyncManagerProvider);
+  final client = ApiClient(cacheStore: cacheStore, offlineSync: offlineSync);
+
+  // Initialise the sync manager with this client's Dio instance so it
+  // can replay queued requests.
+  offlineSync.init(dio: client.dio);
+
+  return client;
 });
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

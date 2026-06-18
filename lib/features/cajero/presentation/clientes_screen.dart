@@ -1,9 +1,12 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
+import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/hooks/set_state_provider.dart';
+import '../../../core/widgets/premium_fab.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../../core/widgets/skeleton_loader.dart';
@@ -86,8 +89,6 @@ class CajeroClientesScreen extends ConsumerStatefulWidget {
 
 class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   List<Client> _clients = [];
-  bool _loading = true;
-  bool _refreshing = false;
   String _searchTerm = '';
 
   void _showErrorSnackBar(String message) {
@@ -108,7 +109,6 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   final _lastNameCtrl = TextEditingController();
   final _runCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  bool _submitting = false;
 
   // Charge controllers
   final _amountCtrl = TextEditingController();
@@ -118,14 +118,13 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   String _primaryMethod = 'efectivo';
   String _secondaryMethod = 'transferencia';
 
-  // History states
   bool _historyLoading = false;
   List<ClientHistory> _historyData = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchClients();
+    Future.microtask(() => _fetchClients());
   }
 
   @override
@@ -141,8 +140,11 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   }
 
   Future<void> _fetchClients({bool isManual = false}) async {
+    final notifier = ref.read(refreshProvider('clientes').notifier);
     if (!isManual && _clients.isEmpty) {
-      setState(() => _loading = true);
+      notifier.startRefresh(isManual: false);
+    } else if (isManual) {
+      notifier.startRefresh(isManual: true);
     }
     try {
       final client = ref.read(apiClientProvider);
@@ -154,32 +156,24 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
           final List<Client> loaded = rawList.map((c) => Client.fromJson(c)).toList();
           loaded.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-          setState(() {
-            _clients = loaded;
-            _loading = false;
-            _refreshing = false;
-          });
+          if (!mounted) return;
+          setState(() => _clients = loaded);
+          notifier.endRefresh();
           return;
         }
       }
-      setState(() {
-        _loading = false;
-        _refreshing = false;
-      });
+      if (!mounted) return;
+      notifier.endRefresh();
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _refreshing = false;
-      });
-      _showErrorSnackBar('No se pudieron descargar los clientes');
+      if (!mounted) return;
+      notifier.endRefresh(error: 'No se pudieron descargar los clientes');
     }
   }
 
   Future<void> _saveClient(Client? editingClient) async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _submitting = true);
-    try {
+    await ref.read(setStateProvider('clientes_submit').notifier).guard(() async {
       final client = ref.read(apiClientProvider);
       final payload = {
         if (editingClient != null) 'id': editingClient.id,
@@ -201,11 +195,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
       } else {
         _showErrorSnackBar(response.data['message'] ?? 'Error al guardar');
       }
-    } catch (e) {
-      _showErrorSnackBar('Error de conexión al guardar cliente');
-    } finally {
-      setState(() => _submitting = false);
-    }
+    });
   }
 
   Future<void> _deleteClient(Client clientToDelete) async {
@@ -220,7 +210,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
         _showErrorSnackBar(response.data['message'] ?? 'No se pudo eliminar');
       }
     } catch (e) {
-      _showErrorSnackBar('Error de conexión al eliminar cliente');
+      _showErrorSnackBar('Error de conexiÃ³n al eliminar cliente');
     }
   }
 
@@ -229,7 +219,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
     final rawAmount = double.tryParse(rawAmountStr) ?? 0.0;
 
     if (rawAmount <= 0) {
-      _showErrorSnackBar('Ingrese un monto válido');
+      _showErrorSnackBar('Ingrese un monto vÃ¡lido');
       return;
     }
 
@@ -243,15 +233,14 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
       }
     }
 
-    setState(() => _submitting = true);
-    try {
+    await ref.read(setStateProvider('clientes_submit').notifier).guard(() async {
       final client = ref.read(apiClientProvider);
       final body = {
         'cliente_id': clientToLoad.id,
         'monto': rawAmount,
         'tipo': 'CARGA',
         'metodo_pago': _loadMetodoPago,
-        'motivo': 'Carga de saldo prepago (Módulo Clientes)'
+        'motivo': 'Carga de saldo prepago (MÃ³dulo Clientes)'
       };
 
       if (_loadMetodoPago == 'mixto') {
@@ -273,11 +262,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
       } else {
         _showErrorSnackBar(response.data['message'] ?? 'Error al cargar saldo');
       }
-    } catch (e) {
-      _showErrorSnackBar('Error de conexión al cargar saldo');
-    } finally {
-      setState(() => _submitting = false);
-    }
+    });
   }
 
   Future<void> _fetchHistory(String clientId, {bool isManual = false}) async {
@@ -293,6 +278,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
         final rawList = response.data['success'] == true ? response.data['data'] : response.data;
         if (rawList is List) {
           final List<ClientHistory> loaded = rawList.map((h) => ClientHistory.fromJson(h)).toList();
+          if (!mounted) return;
           setState(() {
             _historyData = loaded;
             _historyLoading = false;
@@ -300,13 +286,11 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
           return;
         }
       }
-      setState(() {
-        _historyLoading = false;
-      });
+      if (!mounted) return;
+      setState(() => _historyLoading = false);
     } catch (e) {
-      setState(() {
-        _historyLoading = false;
-      });
+      if (!mounted) return;
+      setState(() => _historyLoading = false);
       _showErrorSnackBar('No se pudo cargar el historial');
     }
   }
@@ -437,25 +421,24 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                           controller: _phoneCtrl,
                           style: GoogleFonts.inter(fontSize: 14),
                           keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(labelText: 'Teléfono'),
+                          decoration: const InputDecoration(labelText: 'TelÃ©fono'),
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           height: 48,
-                          child: ElevatedButton(
-                            style: AppTheme.getPrimaryButtonStyle(context),
-                            onPressed: _submitting
-                                ? null
-                                : () async {
-                                    setModalState(() => _submitting = true);
-                                    await _saveClient(client);
-                                    setModalState(() => _submitting = false);
-                                  },
-                            child: _submitting
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : Text(client != null ? 'ACTUALIZAR' : 'CREAR CLIENTE'),
-                          ),
+                          child: Consumer(builder: (context, ref, _) {
+                            final isSubmitting = ref.watch(setStateProvider('clientes_submit')).isSubmitting;
+                            return ElevatedButton(
+                              style: AppTheme.getPrimaryButtonStyle(context),
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () => _saveClient(client),
+                              child: isSubmitting
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : Text(client != null ? 'ACTUALIZAR' : 'CREAR CLIENTE'),
+                            );
+                          }),
                         ),
                       ],
                     ),
@@ -565,8 +548,8 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Distribución de Pago',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                                'DistribuciÃ³n de Pago',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                               ),
                               const SizedBox(height: 12),
                               Row(
@@ -632,19 +615,18 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                       SizedBox(
                         width: double.infinity,
                         height: 50,
-                        child: ElevatedButton(
-                          style: AppTheme.getPrimaryButtonStyle(context),
-                          onPressed: _submitting
-                              ? null
-                              : () async {
-                                  setModalState(() => _submitting = true);
-                                  await _loadBalance(client);
-                                  setModalState(() => _submitting = false);
-                                },
-                          child: _submitting
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : Text('CONFIRMAR CARGA'),
-                        ),
+                        child: Consumer(builder: (context, ref, _) {
+                          final isSubmitting = ref.watch(setStateProvider('clientes_submit')).isSubmitting;
+                          return ElevatedButton(
+                            style: AppTheme.getPrimaryButtonStyle(context),
+                            onPressed: isSubmitting
+                                ? null
+                                : () => _loadBalance(client),
+                            child: isSubmitting
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('CONFIRMAR CARGA'),
+                          );
+                        }),
                       ),
                     ],
                   ),
@@ -708,9 +690,9 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (_historyLoading)
-                        const Expanded(
+                        Expanded(
                           child: Center(
-                            child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                            child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                           ),
                         )
                       else ...[
@@ -748,7 +730,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                         const SizedBox(height: 16),
                         Expanded(
                           child: RefreshIndicator(
-                            color: AppTheme.primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                             onRefresh: () => _fetchHistory(client.id, isManual: true),
                             child: _historyData.isEmpty
                                 ? Center(
@@ -840,9 +822,9 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
                                                         if (item.detalle!['habitacion'] != null)
-                                                          _buildSmallDetailRow(Icons.bed_outlined, 'Habitación', item.detalle!['habitacion'].toString()),
+                                                          _buildSmallDetailRow(Icons.bed_outlined, 'HabitaciÃ³n', item.detalle!['habitacion'].toString()),
                                                         if (item.detalle!['tiempo'] != null)
-                                                          _buildSmallDetailRow(Icons.timer_outlined, 'Duración', '${item.detalle!['tiempo']} min'),
+                                                          _buildSmallDetailRow(Icons.timer_outlined, 'DuraciÃ³n', '${item.detalle!['tiempo']} min'),
                                                       ],
                                                     ),
                                                     if (item.detalle!['anfitrionas'] is List && (item.detalle!['anfitrionas'] as List).isNotEmpty) ...[
@@ -1063,7 +1045,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'MÉTODO DE PAGO',
+          'MÃ‰TODO DE PAGO',
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w900,
@@ -1083,10 +1065,10 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
                         : Colors.transparent,
                     border: Border.all(
-                      color: isSelected ? AppTheme.primaryColor : Colors.grey.withValues(alpha: 0.3),
+                      color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.withValues(alpha: 0.3),
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -1097,7 +1079,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                       Icon(
                         m['icon'] as IconData,
                         size: 18,
-                        color: isSelected ? AppTheme.primaryColor : Colors.grey,
+                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1105,7 +1087,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 8,
                           fontWeight: FontWeight.w800,
-                          color: isSelected ? AppTheme.primaryColor : Colors.grey,
+                          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1126,7 +1108,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
       builder: (context) {
         return AlertDialog(
           title: Text('Eliminar Cliente', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          content: Text('¿Está seguro que desea eliminar a ${client.name} ${client.lastName}?'),
+          content: Text('Â¿EstÃ¡ seguro que desea eliminar a ${client.name} ${client.lastName}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -1176,12 +1158,9 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
             showBackButton: true,
             onBack: () => Navigator.pop(context),
             showRefreshButton: true,
-            isRefreshing: _refreshing,
-            onRefresh: () {
-              setState(() => _refreshing = true);
-              _fetchClients(isManual: true);
-            },
-            subtitle: 'Gestión de Clientes',
+            isRefreshing: ref.watch(refreshProvider('clientes')).isRefreshing,
+            onRefresh: () => _fetchClients(isManual: true),
+
           ),
 
           // Buscador y Totales
@@ -1207,7 +1186,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                         child: TextField(
                           style: GoogleFonts.inter(fontSize: 14),
                           decoration: InputDecoration(
-                            hintText: 'Buscar por nombre, RUN o teléfono...',
+                            hintText: 'Buscar por nombre, RUN o telÃ©fono...',
                             hintStyle: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                             border: InputBorder.none,
                           ),
@@ -1281,10 +1260,10 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
           // Main list
           Expanded(
             child: FadeLoadingSwitcher(
-              isLoading: _loading,
+              isLoading: ref.watch(refreshProvider('clientes')).isLoading,
               skeleton: _buildSkeletonGrid(),
               content: RefreshIndicator(
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                     onRefresh: () => _fetchClients(isManual: true),
                     child: filteredClients.isEmpty
                         ? ListView(
@@ -1365,7 +1344,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                                                   const SizedBox(width: 6),
                                                   Expanded(
                                                     child: Text(
-                                                      c.phone.isNotEmpty ? c.phone : 'Sin Teléfono',
+                                                      c.phone.isNotEmpty ? c.phone : 'Sin TelÃ©fono',
                                                       style: GoogleFonts.inter(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
@@ -1482,13 +1461,10 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        onPressed: () => _openClientFormDialog(null),
+      floatingActionButton: PremiumFAB(
         icon: const Icon(Icons.person_add_rounded),
-        label: Text('NUEVO CLIENTE', style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        label: 'NUEVO CLIENTE',
+        onPressed: () => _openClientFormDialog(null),
       ),
     );
   }

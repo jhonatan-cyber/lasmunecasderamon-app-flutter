@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:lasmunecasderamon_flutter/core/theme.dart'; // Para themeModeProvider y AppTheme
+import 'package:lasmunecasderamon_flutter/core/haptic_service.dart';
+import '../../../core/hooks/set_state_provider.dart';
 import '../data/auth_notifier.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -18,9 +20,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
-  String? _localError;
-  bool _isLoading = false;
 
   // Biometrics and QR status
   final LocalAuthentication _localAuth = LocalAuthentication();
@@ -60,9 +59,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _authenticateBiometrics() async {
-    setState(() {
-      _localError = null;
-    });
+    await HapticService.light();
+    final notifier = ref.read(setStateProvider('login').notifier);
+    notifier.clearError();
 
     try {
       final authenticated = await _localAuth.authenticate(
@@ -76,9 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final creds = await authNotifier.getCredentials();
         
         if (creds != null) {
-          setState(() {
-            _isLoading = true;
-          });
+          notifier.startSubmit();
           
           final u = creds['username'] ?? '';
           final p = creds['password'] ?? '';
@@ -86,71 +83,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           final requiere2FA = await authNotifier.login(username: u, password: p);
           
           if (requiere2FA) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              context.push('/login-code');
-            }
+            notifier.endSubmit();
+            if (mounted) context.push('/login-code');
+          } else {
+            notifier.endSubmit();
           }
         } else {
-          setState(() {
-            _localError = 'No hay credenciales guardadas. Inicia sesión manualmente primero.';
-          });
+          notifier.setError('No hay credenciales guardadas. Inicia sesión manualmente primero.');
         }
       }
     } catch (e) {
-      setState(() {
-        _localError = 'Error al autenticar con biometría: ${e.toString().replaceFirst('Exception: ', '')}';
-        _isLoading = false;
-      });
+      notifier.setError('Error al autenticar con biometría: ${e.toString().replaceFirst('Exception: ', '')}');
+      notifier.endSubmit();
     }
   }
 
   Future<void> _login() async {
+    await HapticService.light();
     if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-      _localError = null;
-    });
 
     final u = _usernameController.text.trim();
     final p = _passwordController.text.trim();
 
-    try {
+    await ref.read(setStateProvider('login').notifier).guard(() async {
       final authNotifier = ref.read(authProvider.notifier);
       final requiere2FA = await authNotifier.login(username: u, password: p);
 
-      if (requiere2FA) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          context.push('/login-code');
-        }
-      } else {
-        if (_isBiometricAvailable) {
-          await authNotifier.saveCredentials(u, p);
-          await authNotifier.setBiometricEnabled(true);
-        }
+      if (requiere2FA && mounted) {
+        context.push('/login-code');
+      } else if (_isBiometricAvailable) {
+        await authNotifier.saveCredentials(u, p);
+        await authNotifier.setBiometricEnabled(true);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _localError = e.toString().replaceFirst('Exception: ', '');
-          _isLoading = false;
-        });
-      }
-    }
+    });
   }
 
   void _openQRScanner() {
+    HapticService.light();
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          backgroundColor: const Color(0xFF18181A),
+          backgroundColor: AppTheme.darkSurfaceColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -215,92 +189,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _loginWithQR(String qrToken) async {
-    setState(() {
-      _isLoading = true;
-      _localError = null;
-    });
-    try {
+    await ref.read(setStateProvider('login').notifier).guard(() async {
       final authNotifier = ref.read(authProvider.notifier);
       final requiere2FA = await authNotifier.login(qrToken: qrToken);
-      
-      if (requiere2FA) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          context.push('/login-code');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _localError = e.toString().replaceFirst('Exception: ', '');
-          _isLoading = false;
-        });
-      }
-    }
+      if (requiere2FA && mounted) context.push('/login-code');
+    });
   }
 
   void _showForgotPasswordDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF18181A),
-          title: Text(
-            'Recuperar Contraseña',
-            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            'Por favor, comunícate con el Administrador o el personal de Soporte Técnico de la empresa para reestablecer tus credenciales de acceso.',
-            style: GoogleFonts.inter(color: const Color(0xFF9CA3AF)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Entendido',
-                style: GoogleFonts.inter(color: const Color(0xFFD84315), fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+    context.push('/auth/reset-password');
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final formState = ref.watch(setStateProvider('login'));
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode == ThemeMode.dark;
+    final obscurePassword = formState.flags['obscurePassword'] ?? true;
+    final isBusy = formState.isSubmitting || authState.isLoading;
     
-    final accentColor = const Color(0xFFD84315);
+    final accentColor = Theme.of(context).colorScheme.primary;
     final textColor = isDark ? Colors.white : Colors.black;
-    final labelColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563);
-    final borderColor = isDark ? const Color(0xFF262629) : const Color(0xFFD1D5DB);
+    final labelColor = isDark ? AppTheme.darkTextSecondary : const Color(0xFF4B5563);
+    final borderColor = isDark ? AppTheme.darkBorderColor : const Color(0xFFD1D5DB);
 
     // Dynamic duration and curve for theme transition
     const transitionDuration = Duration(milliseconds: 250);
     const transitionCurve = Curves.easeOutCubic;
 
     return AnimatedTheme(
-      data: isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
+      data: AppTheme.getTheme(isDark ? Brightness.dark : Brightness.light, accentColor),
       duration: transitionDuration,
       child: Scaffold(
         body: Stack(
           children: [
             // Dark Background Gradient (base layer)
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF2E0C04), // Terracotta shadow
-                    Color(0xFF0F0F10), // Obsidian
-                    Color(0xFF0F0F10),
-                    Color(0xFF140D0B), // Warm wood accent
+                    accentColor.withValues(alpha: 0.8), // Terracotta shadow
+                    const Color(0xFF0F0F10), // Obsidian
+                    const Color(0xFF0F0F10),
+                    const Color(0xFF140D0B), // Warm wood accent
                   ],
                   stops: [0.0, 0.4, 0.8, 1.0],
                 ),
@@ -312,15 +246,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               duration: transitionDuration,
               curve: transitionCurve,
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFFFFF3F0),
-                      Color(0xFFF9FAFB),
-                      Color(0xFFF9FAFB),
-                      Color(0xFFFFECE5),
+                      accentColor.withValues(alpha: 0.05),
+                      const Color(0xFFF9FAFB),
+                      const Color(0xFFF9FAFB),
+                      accentColor.withValues(alpha: 0.08),
                     ],
                     stops: [0.0, 0.4, 0.8, 1.0],
                   ),
@@ -328,25 +262,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             
-            // Theme Toggle Button (Top Right)
-            Positioned(
-              top: 50,
-              right: 20,
-              child: CircleAvatar(
-                backgroundColor: isDark ? const Color(0xFF18181A) : Colors.white,
-                child: IconButton(
-                  icon: Icon(
-                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                    color: isDark ? Colors.yellow : Colors.deepPurple,
-                  ),
-                  onPressed: () {
-                    ref.read(themeModeProvider.notifier).state = 
-                      isDark ? ThemeMode.light : ThemeMode.dark;
-                  },
-                ),
-              ),
-            ),
-
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
@@ -379,7 +294,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Error Display
-                            if (_localError != null || authState.error != null) ...[
+                            if (formState.error != null || authState.error != null) ...[
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
@@ -391,7 +306,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                 ),
                                 child: Text(
-                                  _localError ?? authState.error!,
+                                  formState.error ?? authState.error!,
                                   style: GoogleFonts.inter(
                                     color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
                                     fontSize: 13,
@@ -476,20 +391,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 TextFormField(
                                   controller: _passwordController,
                                   style: TextStyle(color: textColor),
-                                  obscureText: _obscurePassword,
+                                  obscureText: obscurePassword,
                                   textInputAction: TextInputAction.done,
                                   onFieldSubmitted: (_) => _login(),
                                   decoration: InputDecoration(
                                     prefixIcon: Icon(Icons.lock_outline_rounded, color: labelColor),
                                     suffixIcon: IconButton(
                                       icon: Icon(
-                                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                        obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                                         color: labelColor,
                                       ),
                                       onPressed: () {
-                                        setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        });
+                                        ref.read(setStateProvider('login').notifier).toggleFlag('obscurePassword');
                                       },
                                     ),
                                     hintText: '••••••••',
@@ -549,12 +462,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  onTap: (_isLoading || authState.isLoading) ? null : _login,
+                                  onTap: isBusy ? null : _login,
                                   borderRadius: BorderRadius.circular(30),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 16),
                                     alignment: Alignment.center,
-                                    child: (_isLoading || authState.isLoading)
+                                    child: isBusy
                                       ? SizedBox(
                                           height: 20,
                                           width: 20,
@@ -639,6 +552,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
+            
+            // Theme Toggle Button (Top Right) — placed after SafeArea to stay on top
+            Positioned(
+              top: 50,
+              right: 20,
+              child: CircleAvatar(
+                backgroundColor: isDark ? AppTheme.darkSurfaceColor : Colors.white,
+                child: IconButton(
+                  icon: Icon(
+                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    color: isDark ? Colors.yellow : Colors.deepPurple,
+                  ),
+                  onPressed: () {
+                    ref.read(themeModeProvider.notifier).state = 
+                      isDark ? ThemeMode.light : ThemeMode.dark;
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -652,8 +584,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required bool isDark,
     required Color accentColor,
   }) {
-    final btnBg = isDark ? const Color(0xFF18181A) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF262629) : const Color(0xFFD1D5DB);
+    final btnBg = isDark ? AppTheme.darkSurfaceColor : Colors.white;
+    final borderColor = isDark ? AppTheme.darkBorderColor : const Color(0xFFD1D5DB);
     final textColor = isDark ? Colors.white : Colors.black;
     
     const transitionDuration = Duration(milliseconds: 250);

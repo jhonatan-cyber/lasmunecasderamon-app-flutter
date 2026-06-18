@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme.dart';
 
 class ServiceCard extends StatelessWidget {
   final dynamic item;
@@ -16,34 +17,48 @@ class ServiceCard extends StatelessWidget {
     required this.onAssistance,
   });
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return 'Sin fecha';
+  DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
     try {
-      final date = DateTime.parse(dateStr).toUtc();
-      return DateFormat('d MMM y', 'es_ES').format(date);
+      return DateTime.parse(dateStr).toLocal();
     } catch (_) {
-      return 'Error';
+      try {
+        final cleaned = dateStr.trim().replaceAll(' ', 'T');
+        return DateTime.parse(cleaned).toLocal();
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    final date = _parseDate(dateStr);
+    if (date == null) return 'Sin fecha';
+    try {
+      return DateFormat('dd/MM/yyyy', 'es_ES').format(date);
+    } catch (_) {
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     }
   }
 
   String _formatTime(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return '';
+    final date = _parseDate(dateStr);
+    if (date == null) return '';
     try {
-      final date = DateTime.parse(dateStr).toUtc();
       return DateFormat('HH:mm').format(date);
     } catch (_) {
-      return '';
+      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const accentColor = Color(0xFFD84315);
+    final accentColor = Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
-    final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final textPrimary = isDark ? Colors.white : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.gray500Color;
     final borderColor = isDark ? accentColor.withValues(alpha: 0.25) : Colors.grey.shade200;
 
     final estadoNum = int.tryParse(item['estado']?.toString() ?? '0') ?? 0;
@@ -85,6 +100,8 @@ class ServiceCard extends StatelessWidget {
     final double comision = double.tryParse(item['comision_usuario']?.toString() ?? '0') ?? 0.0;
     final String idServicio = item['id_servicio']?.toString() ?? '';
     final String fechaCrea = item['fecha_crea']?.toString() ?? '';
+    final String cliente = item['cliente']?.toString() ?? 'Sin cliente';
+    final int tiempo = int.tryParse(item['tiempo']?.toString() ?? '0') ?? 0;
 
     final formatter = NumberFormat.decimalPattern('es_ES');
 
@@ -169,6 +186,29 @@ class ServiceCard extends StatelessWidget {
                   Text(
                     _formatTime(fechaCrea),
                     style: GoogleFonts.inter(fontSize: 11, color: textSecondary),
+                  ),
+                  if (tiempo > 0) ...[
+                    const SizedBox(width: 12),
+                    Icon(Icons.timer_outlined, size: 12, color: textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$tiempo min',
+                      style: GoogleFonts.inter(fontSize: 11, color: textSecondary),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.person_outline, size: 12, color: textSecondary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      cliente,
+                      style: GoogleFonts.inter(fontSize: 11, color: textSecondary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),

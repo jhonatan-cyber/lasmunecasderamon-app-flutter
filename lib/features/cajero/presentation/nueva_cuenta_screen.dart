@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
+import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/hooks/set_state_provider.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -16,9 +19,6 @@ class NuevaCuentaScreen extends ConsumerStatefulWidget {
 }
 
 class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
-  bool _loadingAssets = true;
-  bool _submitting = false;
-  String _error = '';
 
   // Asset lists
   List<dynamic> _anfitrionas = [];
@@ -43,19 +43,44 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
   }
 
   Future<void> _fetchAssets() async {
-    setState(() {
-      _loadingAssets = true;
-      _error = '';
-    });
+    ref.read(refreshProvider('nueva_cuenta').notifier).startRefresh(isManual: false);
 
     try {
       final client = ref.read(apiClientProvider);
 
       final responses = await Future.wait([
-        client.dio.get('/anfitrionas').catchError((_) => Response(requestOptions: RequestOptions(), data: {'success': false})),
-        client.dio.get('/rooms').catchError((_) => Response(requestOptions: RequestOptions(), data: {'success': false})),
-        client.dio.get('/clients').catchError((_) => Response(requestOptions: RequestOptions(), data: {'success': false})),
-        client.dio.get('/categories').catchError((_) => Response(requestOptions: RequestOptions(), data: {'success': false})),
+        client.dio
+            .get('/anfitrionas')
+            .catchError(
+              (_) => Response(
+                requestOptions: RequestOptions(),
+                data: {'success': false},
+              ),
+            ),
+        client.dio
+            .get('/rooms')
+            .catchError(
+              (_) => Response(
+                requestOptions: RequestOptions(),
+                data: {'success': false},
+              ),
+            ),
+        client.dio
+            .get('/clients')
+            .catchError(
+              (_) => Response(
+                requestOptions: RequestOptions(),
+                data: {'success': false},
+              ),
+            ),
+        client.dio
+            .get('/categories')
+            .catchError(
+              (_) => Response(
+                requestOptions: RequestOptions(),
+                data: {'success': false},
+              ),
+            ),
       ]);
 
       final anfitrionasRes = responses[0];
@@ -64,7 +89,8 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       final categoriesRes = responses[3];
 
       List<dynamic> anfitrionasData = [];
-      if (anfitrionasRes.data != null && anfitrionasRes.data['success'] == true) {
+      if (anfitrionasRes.data != null &&
+          anfitrionasRes.data['success'] == true) {
         anfitrionasData = anfitrionasRes.data['data'] ?? [];
       }
 
@@ -89,18 +115,15 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
         _rooms = roomsData;
         _clients = clientsData;
         _categories = categoriesData;
-        _loadingAssets = false;
       });
+      ref.read(refreshProvider('nueva_cuenta').notifier).endRefresh();
 
       if (_categories.isNotEmpty) {
         _onCategorySelected(_categories.first);
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = 'Error al cargar recursos';
-        _loadingAssets = false;
-      });
+      ref.read(refreshProvider('nueva_cuenta').notifier).endRefresh(error: 'Error al cargar recursos');
     }
   }
 
@@ -110,8 +133,10 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       _products = [];
     });
 
-    final int catId = int.tryParse(category['id_categoria']?.toString() ?? '') ??
-        int.tryParse(category['id']?.toString() ?? '') ?? 0;
+    final int catId =
+        int.tryParse(category['id_categoria']?.toString() ?? '') ??
+        int.tryParse(category['id']?.toString() ?? '') ??
+        0;
 
     if (catId == 0) return;
 
@@ -150,7 +175,8 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
     _cart.forEach((prodId, qty) {
       final product = _findProductById(prodId);
       if (product != null) {
-        final double price = double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
+        final double price =
+            double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
         total += price * qty;
       }
     });
@@ -159,9 +185,13 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
 
   dynamic _findProductById(int id) {
     try {
-      return _products.firstWhere((p) =>
-          (int.tryParse(p['id_producto']?.toString() ?? '') ??
-           int.tryParse(p['id']?.toString() ?? '') ?? 0) == id);
+      return _products.firstWhere(
+        (p) =>
+            (int.tryParse(p['id_producto']?.toString() ?? '') ??
+                int.tryParse(p['id']?.toString() ?? '') ??
+                0) ==
+            id,
+      );
     } catch (_) {
       return null;
     }
@@ -170,20 +200,25 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
   Future<void> _submitCuenta() async {
     if (_selectedRoom == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debe seleccionar una mesa o habitación'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('Debe seleccionar una mesa o habitación'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
 
     final client = ref.read(apiClientProvider);
-    setState(() => _submitting = true);
+    final notifier = ref.read(setStateProvider('nueva_cuenta').notifier);
+    notifier.startSubmit();
 
     try {
       final List<Map<String, dynamic>> itemsPayload = [];
       _cart.forEach((prodId, qty) {
         final product = _findProductById(prodId);
         if (product != null) {
-          final double price = double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
+          final double price =
+              double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
           itemsPayload.add({
             'producto_id': prodId,
             'cantidad': qty,
@@ -192,17 +227,21 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
         }
       });
 
-      final int roomId = int.tryParse(_selectedRoom['id_room']?.toString() ?? '') ??
-          int.tryParse(_selectedRoom['id']?.toString() ?? '') ?? 0;
+      final int roomId =
+          int.tryParse(_selectedRoom['id_room']?.toString() ?? '') ??
+          int.tryParse(_selectedRoom['id']?.toString() ?? '') ??
+          0;
 
       final int? anfitrionaId = _selectedAnfitriona != null
-          ? (int.tryParse(_selectedAnfitriona['id_anfitriona']?.toString() ?? '') ??
-             int.tryParse(_selectedAnfitriona['id']?.toString() ?? ''))
+          ? (int.tryParse(
+                  _selectedAnfitriona['id_anfitriona']?.toString() ?? '',
+                ) ??
+                int.tryParse(_selectedAnfitriona['id']?.toString() ?? ''))
           : null;
 
       final int? clienteId = _selectedClient != null
           ? (int.tryParse(_selectedClient['id_cliente']?.toString() ?? '') ??
-             int.tryParse(_selectedClient['id']?.toString() ?? ''))
+                int.tryParse(_selectedClient['id']?.toString() ?? ''))
           : null;
 
       final response = await client.dio.post(
@@ -229,21 +268,31 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
         final msg = response.data?['message'] ?? 'Error al abrir cuenta';
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $msg'), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text('Error: $msg'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error de conexión al abrir cuenta'), backgroundColor: Colors.redAccent),
+        const SnackBar(
+          content: Text('Error de conexión al abrir cuenta'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) notifier.endSubmit();
     }
   }
 
   String _formatCurrency(double amount) {
-    final format = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    final format = NumberFormat.currency(
+      locale: 'es_CL',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
     return format.format(amount);
   }
 
@@ -251,107 +300,125 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final refreshState = ref.watch(refreshProvider('nueva_cuenta'));
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        elevation: 0,
-        title: Text(
-          'Abrir Nueva Cuenta',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-      ),
-      body: FadeLoadingSwitcher(
-        isLoading: _loadingAssets,
-        skeleton: _buildSkeletonGrid(),
-        content: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 800;
+      body: Column(
+        children: [
+          PremiumHeader(
+            title: 'Abrir Nueva Cuenta',
+            showBackButton: true,
+            onBack: () => context.pop(),
+          ),
+          Expanded(
+            child: FadeLoadingSwitcher(
+              isLoading: refreshState.isLoading,
+              skeleton: _buildSkeletonGrid(),
+              content: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth > 800;
 
-                final mainContent = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_error.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _error,
-                                style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13),
-                              ),
+                  final mainContent = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (refreshState.error.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.redAccent.withValues(alpha: 0.2),
                             ),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: Colors.redAccent,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  refreshState.error,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.redAccent,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      // Form Pickers
+                      _buildFormPickers(isDark),
+                      const SizedBox(height: 16),
+
+                      // Product Catalog
+                      Text(
+                        'Agregar Consumos Iniciales',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+                      _buildCategoriesBar(isDark),
+                      const SizedBox(height: 12),
+
+                      // Products Grid
+                      Expanded(child: _buildProductsGrid(isDark)),
                     ],
-                    // Form Pickers
-                    _buildFormPickers(isDark),
-                    const SizedBox(height: 16),
+                  );
 
-                    // Product Catalog
-                    Text(
-                      'Agregar Consumos Iniciales',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildCategoriesBar(isDark),
-                    const SizedBox(height: 12),
+                  final sidePanel = _buildCartSidePanel(isDark);
 
-                    // Products Grid
-                    Expanded(
-                      child: _buildProductsGrid(isDark),
-                    ),
-                  ],
-                );
+                  if (isWide) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: mainContent,
+                          ),
+                        ),
+                        VerticalDivider(
+                          width: 1,
+                          color: isDark
+                              ? AppTheme.darkBorderColor
+                              : AppTheme.lightBorderColor,
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: sidePanel,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
 
-                final sidePanel = _buildCartSidePanel(isDark);
-
-                if (isWide) {
-                  return Row(
+                  return Column(
                     children: [
                       Expanded(
-                        flex: 3,
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: mainContent,
                         ),
                       ),
-                      VerticalDivider(width: 1, color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
-                      Expanded(
-                        flex: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: sidePanel,
-                        ),
-                      ),
+                      _buildCartBottomBar(isDark),
                     ],
                   );
-                }
-
-                return Column(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: mainContent,
-                      ),
-                    ),
-                    _buildCartBottomBar(isDark),
-                  ],
-                );
-              },
+                },
+              ),
             ),
+          ),
+        ],
       ),
     );
   }
@@ -370,7 +437,10 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.3,
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.3,
               ),
               itemCount: 6,
               itemBuilder: (context, i) => const SkeletonCard(lines: 2),
@@ -387,7 +457,9 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
       ),
       child: Column(
         children: [
@@ -396,11 +468,17 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
               Expanded(
                 child: DropdownButtonFormField<dynamic>(
                   initialValue: _selectedRoom,
-                  hint: Text('Mesa / Habitación', style: GoogleFonts.inter(fontSize: 13)),
+                  hint: Text(
+                    'Mesa / Habitación',
+                    style: GoogleFonts.inter(fontSize: 13),
+                  ),
                   items: _rooms.map((r) {
                     return DropdownMenuItem<dynamic>(
                       value: r,
-                      child: Text(r['name'] ?? r['numero']?.toString() ?? 'Mesa', style: const TextStyle(fontSize: 13)),
+                      child: Text(
+                        r['name'] ?? r['numero']?.toString() ?? 'Mesa',
+                        style: const TextStyle(fontSize: 13),
+                      ),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -412,16 +490,25 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
               Expanded(
                 child: DropdownButtonFormField<dynamic>(
                   initialValue: _selectedClient,
-                  hint: Text('Cliente (Opcional)', style: GoogleFonts.inter(fontSize: 13)),
+                  hint: Text(
+                    'Cliente (Opcional)',
+                    style: GoogleFonts.inter(fontSize: 13),
+                  ),
                   items: [
                     const DropdownMenuItem<dynamic>(
                       value: null,
-                      child: Text('Cliente General', style: TextStyle(fontSize: 13)),
+                      child: Text(
+                        'Cliente General',
+                        style: TextStyle(fontSize: 13),
+                      ),
                     ),
                     ..._clients.map((c) {
                       return DropdownMenuItem<dynamic>(
                         value: c,
-                        child: Text(c['nombre'] ?? 'Cliente', style: const TextStyle(fontSize: 13)),
+                        child: Text(
+                          c['nombre'] ?? 'Cliente',
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       );
                     }),
                   ],
@@ -435,7 +522,10 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<dynamic>(
             initialValue: _selectedAnfitriona,
-            hint: Text('Asociar a Anfitriona (Opcional)', style: GoogleFonts.inter(fontSize: 13)),
+            hint: Text(
+              'Asociar a Anfitriona (Opcional)',
+              style: GoogleFonts.inter(fontSize: 13),
+            ),
             items: [
               const DropdownMenuItem<dynamic>(
                 value: null,
@@ -444,7 +534,10 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
               ..._anfitrionas.map((a) {
                 return DropdownMenuItem<dynamic>(
                   value: a,
-                  child: Text(a['nombre'] ?? 'Anfitriona', style: const TextStyle(fontSize: 13)),
+                  child: Text(
+                    a['nombre'] ?? 'Anfitriona',
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 );
               }),
             ],
@@ -473,14 +566,21 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
             child: ChoiceChip(
               label: Text(
                 cat['nombre'] ?? 'Categoría',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               selected: isSelected,
               onSelected: (selected) {
                 if (selected) _onCategorySelected(cat);
               },
-              selectedColor: AppTheme.primaryColor,
-              labelStyle: TextStyle(color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black87)),
+              selectedColor: Theme.of(context).colorScheme.primary,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? Colors.white : Colors.black87),
+              ),
             ),
           );
         },
@@ -495,7 +595,11 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
           padding: const EdgeInsets.all(24.0),
           child: Text(
             'No hay productos',
-            style: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            style: GoogleFonts.inter(
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
           ),
         ),
       );
@@ -511,20 +615,27 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       itemCount: _products.length,
       itemBuilder: (context, index) {
         final product = _products[index];
-        final int id = int.tryParse(product['id_producto']?.toString() ?? '') ??
-            int.tryParse(product['id']?.toString() ?? '') ?? 0;
-        final double price = double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
+        final int id =
+            int.tryParse(product['id_producto']?.toString() ?? '') ??
+            int.tryParse(product['id']?.toString() ?? '') ??
+            0;
+        final double price =
+            double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
         final int cartQty = _cart[id] ?? 0;
 
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
+            color: isDark
+                ? AppTheme.darkSurfaceColor
+                : AppTheme.lightSurfaceColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: cartQty > 0
-                  ? AppTheme.primaryColor
-                  : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                  ? Theme.of(context).colorScheme.primary
+                  : (isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor),
               width: cartQty > 0 ? 1.5 : 1,
             ),
           ),
@@ -537,14 +648,21 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                 children: [
                   Text(
                     product['nombre'] ?? 'Producto',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     _formatCurrency(price),
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
                   ),
                 ],
               ),
@@ -553,7 +671,11 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                 children: [
                   if (cartQty > 0) ...[
                     IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, size: 22, color: Colors.redAccent),
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        size: 22,
+                        color: Colors.redAccent,
+                      ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () => _removeFromCart(id),
@@ -562,12 +684,19 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 10.0),
                       child: Text(
                         '$cartQty',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
                   IconButton(
-                    icon: const Icon(Icons.add_circle, size: 24, color: AppTheme.primaryColor),
+                    icon: Icon(
+                      Icons.add_circle,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => _addToCart(id),
@@ -591,15 +720,19 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
           style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        Expanded(
-          child: _buildCartItemsList(isDark),
-        ),
+        Expanded(child: _buildCartItemsList(isDark)),
         const Divider(height: 24, thickness: 1),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Subtotal Inicial', style: GoogleFonts.inter(fontSize: 14)),
-            Text(_formatCurrency(total), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(
+              _formatCurrency(total),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -607,16 +740,22 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
           width: double.infinity,
           child: ElevatedButton(
             style: AppTheme.getPrimaryButtonStyle(context),
-            onPressed: _submitting ? null : _submitCuenta,
-            child: _submitting
+            onPressed: ref.watch(setStateProvider('nueva_cuenta')).isSubmitting ? null : _submitCuenta,
+            child: ref.watch(setStateProvider('nueva_cuenta')).isSubmitting
                 ? const SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   )
                 : Text(
                     'Iniciar Cuenta de Mesa',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
           ),
         ),
@@ -629,7 +768,11 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       return Center(
         child: Text(
           'No se han agregado productos',
-          style: GoogleFonts.inter(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+          style: GoogleFonts.inter(
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+          ),
         ),
       );
     }
@@ -643,7 +786,8 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
         final product = _findProductById(entry.key);
         if (product == null) return const SizedBox();
 
-        final double price = double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
+        final double price =
+            double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
         final int qty = entry.value;
 
         return Padding(
@@ -657,13 +801,18 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                   children: [
                     Text(
                       product['nombre'] ?? 'Producto',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     Text(
                       '$qty x ${_formatCurrency(price)}',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
                       ),
                     ),
                   ],
@@ -673,11 +822,18 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                 children: [
                   Text(
                     _formatCurrency(price * qty),
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: Colors.redAccent,
+                    ),
                     onPressed: () {
                       setState(() {
                         _cart.remove(entry.key);
@@ -699,7 +855,13 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        border: Border(top: BorderSide(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor)),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -715,25 +877,36 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
                 ),
                 Text(
                   _formatCurrency(total),
-                  style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.green),
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.green,
+                  ),
                 ),
               ],
             ),
             ElevatedButton(
               style: AppTheme.getPrimaryButtonStyle(context).copyWith(
-                padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
+                padding: WidgetStateProperty.all(
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
               ),
               onPressed: () {
                 _showCartModalSheet(isDark);
               },
               child: Text(
                 'Revisar Cuenta (${_cart.values.fold(0, (a, b) => a + b)})',
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],
@@ -749,12 +922,22 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+              color: isDark
+                  ? AppTheme.darkSurfaceColor
+                  : AppTheme.lightSurfaceColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              border: Border.all(
+                color: isDark
+                    ? AppTheme.darkBorderColor
+                    : AppTheme.lightBorderColor,
+              ),
             ),
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -765,7 +948,10 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                   children: [
                     Text(
                       'Revisar Productos',
-                      style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -775,15 +961,27 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                 ),
                 const SizedBox(height: 12),
                 ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.35),
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.35,
+                  ),
                   child: _buildCartItemsList(isDark),
                 ),
                 const Divider(height: 24, thickness: 1),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total comanda', style: GoogleFonts.inter(fontSize: 14)),
-                    Text(_formatCurrency(_calculateTotal()), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
+                    Text(
+                      'Total comanda',
+                      style: GoogleFonts.inter(fontSize: 14),
+                    ),
+                    Text(
+                      _formatCurrency(_calculateTotal()),
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.green,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -791,24 +989,30 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: AppTheme.getPrimaryButtonStyle(context),
-                    onPressed: _submitting
+                    onPressed: ref.watch(setStateProvider('nueva_cuenta')).isSubmitting
                         ? null
                         : () async {
                             final navigator = Navigator.of(context);
                             await _submitCuenta();
-                            if (mounted && !_submitting) {
+                            if (mounted && !ref.read(setStateProvider('nueva_cuenta')).isSubmitting) {
                               navigator.pop();
                             }
                           },
-                    child: _submitting
+                    child: ref.watch(setStateProvider('nueva_cuenta')).isSubmitting
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
                         : Text(
                             'Abrir Cuenta',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                   ),
                 ),

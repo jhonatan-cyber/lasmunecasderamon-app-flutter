@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/sse_service.dart';
 import '../../../../core/sse_event.dart';
-import '../../../../core/theme.dart';
 import '../../../auth/data/auth_notifier.dart';
 
 class StaffCall {
@@ -356,7 +355,7 @@ class _StaffCallOverlayState extends ConsumerState<StaffCallOverlay> {
             height: 44,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),

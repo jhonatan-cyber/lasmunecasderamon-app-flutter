@@ -13,7 +13,8 @@ class _ShimmerProvider extends InheritedNotifier<AnimationController> {
   }) : super(notifier: notifier);
 
   static AnimationController of(BuildContext context) {
-    final provider = context.dependOnInheritedWidgetOfExactType<_ShimmerProvider>();
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<_ShimmerProvider>();
     assert(provider != null, 'No _ShimmerProvider found in context');
     return provider!.notifier!;
   }
@@ -46,10 +47,8 @@ class _ShimmerWrapperState extends State<ShimmerWrapper>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    )..repeat();
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat();
   }
 
   @override
@@ -60,10 +59,7 @@ class _ShimmerWrapperState extends State<ShimmerWrapper>
 
   @override
   Widget build(BuildContext context) {
-    return _ShimmerProvider(
-      notifier: _controller,
-      child: widget.child,
-    );
+    return _ShimmerProvider(notifier: _controller, child: widget.child);
   }
 }
 
@@ -124,15 +120,18 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
   Widget build(BuildContext context) {
     final controller = _resolveController(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
-    final base = widget.baseColor ??
+    final base =
+        widget.baseColor ??
         (isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : Colors.grey.withValues(alpha: 0.15));
-    final highlight = widget.highlightColor ??
+            ? primaryColor.withValues(alpha: 0.25)
+            : primaryColor.withValues(alpha: 0.15));
+    final highlight =
+        widget.highlightColor ??
         (isDark
-            ? Colors.white.withValues(alpha: 0.14)
-            : Colors.grey.withValues(alpha: 0.30));
+            ? primaryColor.withValues(alpha: 0.35)
+            : primaryColor.withValues(alpha: 0.25));
 
     return AnimatedBuilder(
       animation: controller,
@@ -198,11 +197,7 @@ class SkeletonCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showAvatar) ...[
-            const SkeletonLoader(
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-            ),
+            const SkeletonLoader(width: 48, height: 48, borderRadius: 24),
             const SizedBox(width: 12),
           ],
           Expanded(
@@ -455,11 +450,7 @@ class SkeletonStatCard extends StatelessWidget {
             color: borderColor,
             margin: const EdgeInsets.symmetric(horizontal: 16),
           ),
-          const SkeletonLoader(
-            width: 90,
-            height: 90,
-            borderRadius: 45,
-          ),
+          const SkeletonLoader(width: 90, height: 90, borderRadius: 45),
         ],
       ),
     );

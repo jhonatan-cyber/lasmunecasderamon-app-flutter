@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
+import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/hooks/set_state_provider.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -89,11 +91,8 @@ class CajeroGratificacionesScreen extends ConsumerStatefulWidget {
 }
 
 class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacionesScreen> {
-  bool _loading = true;
-  bool _submitting = false;
   List<GratificacionItem> _gratificaciones = [];
   List<GratificacionEmployee> _employees = [];
-  String _error = '';
   String _filter = 'todos'; // todos, pendiente, por_pagar, pagado, rechazada
 
   // Form states for dialog
@@ -105,7 +104,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    Future.microtask(() => _fetchData());
   }
 
   @override
@@ -116,11 +115,9 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
   }
 
   Future<void> _fetchData({bool isManual = false}) async {
+    final notifier = ref.read(refreshProvider('gratificaciones').notifier);
     if (!isManual) {
-      setState(() {
-        _loading = true;
-        _error = '';
-      });
+      notifier.startRefresh(isManual: false);
     }
     try {
       final client = ref.read(apiClientProvider);
@@ -151,16 +148,15 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
             .toList();
       }
 
+      if (!mounted) return;
       setState(() {
         _gratificaciones = gratsList;
         _employees = empsList;
-        _loading = false;
       });
+      notifier.endRefresh();
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (!mounted) return;
+      notifier.endRefresh(error: e.toString());
     }
   }
 
@@ -219,8 +215,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
     final amount = double.tryParse(cleanMonto) ?? 0.0;
     if (_selectedEmployee == null || amount <= 0) return;
 
-    setState(() => _submitting = true);
-    try {
+    await ref.read(setStateProvider('gratificaciones').notifier).guard(() async {
       final client = ref.read(apiClientProvider);
       final response = await client.dio.post(
         '/gratificaciones',
@@ -249,17 +244,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
       } else {
         throw Exception(response.data?['message'] ?? 'No se pudo crear la gratificación');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
-    }
+    });
   }
 
   void _showNewGratificacionModal() {
@@ -369,7 +354,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                                     return Container(
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
                                             : Colors.transparent,
                                       ),
                                       child: ListTile(
@@ -394,7 +379,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                                           ),
                                         ),
                                         trailing: isSelected
-                                            ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor)
+                                            ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary)
                                             : null,
                                       ),
                                     );
@@ -429,24 +414,23 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                             ),
                             const SizedBox(height: 24),
                             // Submit Button
-                            ElevatedButton(
-                              style: AppTheme.getPrimaryButtonStyle(context).copyWith(
-                                padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 16)),
-                              ),
-                              onPressed: _submitting || _selectedEmployee == null || _montoController.text.isEmpty
-                                  ? null
-                                  : () async {
-                                      setModalState(() => _submitting = true);
-                                      await _handleSubmit();
-                                      setModalState(() => _submitting = false);
-                                    },
-                              child: _submitting
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : Text(
-                                      'Enviar solicitud por WhatsApp',
-                                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                                    ),
-                            ),
+                            Consumer(builder: (context, ref, _) {
+                              final isSubmitting = ref.watch(setStateProvider('gratificaciones')).isSubmitting;
+                              return ElevatedButton(
+                                style: AppTheme.getPrimaryButtonStyle(context).copyWith(
+                                  padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 16)),
+                                ),
+                                onPressed: isSubmitting || _selectedEmployee == null || _montoController.text.isEmpty
+                                    ? null
+                                    : _handleSubmit,
+                                child: isSubmitting
+                                    ? const CircularProgressIndicator(color: Colors.white)
+                                    : Text(
+                                        'Enviar solicitud por WhatsApp',
+                                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                                      ),
+                              );
+                            }),
                             const SizedBox(height: 24),
                           ],
                         ),
@@ -465,15 +449,16 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
   @override
   Widget build(BuildContext context) {
     final totalsData = _totals;
+    final refresh = ref.watch(refreshProvider('gratificaciones'));
 
     return Scaffold(
       backgroundColor: AppTheme.darkBgColor,
       body: FadeLoadingSwitcher(
-        isLoading: _loading,
+        isLoading: refresh.isLoading,
         skeleton: _buildSkeletonGrid(),
         content: RefreshIndicator(
               onRefresh: () => _fetchData(isManual: true),
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
@@ -607,11 +592,11 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                     // Main list
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _error.isNotEmpty
+                      child: refresh.error.isNotEmpty
                           ? Center(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 40.0),
-                                child: Text('Error: $_error', style: GoogleFonts.inter(color: Colors.red)),
+                                child: Text('Error: ${refresh.error}', style: GoogleFonts.inter(color: Colors.red)),
                               ),
                             )
                           : _filteredData.isEmpty
@@ -702,7 +687,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                                             style: GoogleFonts.inter(
                                               fontSize: 22,
                                               fontWeight: FontWeight.w900,
-                                              color: AppTheme.primaryColor,
+                                              color: Theme.of(context).colorScheme.primary,
                                             ),
                                           ),
                                           const SizedBox(height: 6),
@@ -751,7 +736,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
         ),
       floatingActionButton: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
@@ -769,13 +754,13 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
     final isSelected = _filter == value;
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? AppTheme.primaryColor : AppTheme.darkSurfaceColor,
+        backgroundColor: isSelected ? Theme.of(context).colorScheme.primary : AppTheme.darkSurfaceColor,
         foregroundColor: isSelected ? Colors.white : AppTheme.darkTextSecondary,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(9999),
-          side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.white10),
+          side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white10),
         ),
       ),
       onPressed: () => setState(() => _filter = value),

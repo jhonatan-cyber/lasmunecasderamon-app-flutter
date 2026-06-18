@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/premium_header.dart';
 
 class CajeroPlaceholderScreen extends StatelessWidget {
   final String title;
@@ -16,15 +18,15 @@ class CajeroPlaceholderScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        elevation: 0,
-        title: Text(
-          title,
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-      ),
-      body: Center(
+      body: Column(
+        children: [
+          PremiumHeader(
+            title: title,
+            showBackButton: true,
+            onBack: () => context.pop(),
+          ),
+          Expanded(
+            child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -36,10 +38,10 @@ class CajeroPlaceholderScreen extends StatelessWidget {
                   color: (isDark ? Colors.grey[850] : Colors.grey[100])!,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.construction_rounded,
                   size: 48,
-                  color: AppTheme.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -73,6 +75,9 @@ class CajeroPlaceholderScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+    ],
+  ),
+);
   }
 }

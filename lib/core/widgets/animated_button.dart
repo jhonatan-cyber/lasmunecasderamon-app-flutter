@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
 
 /// A button with a subtle scale-down animation on press.
 /// Replaces plain GestureDetector/InkWell with consistent tactile feedback.
@@ -83,7 +82,7 @@ class _AnimatedButtonState extends State<AnimatedButton>
   @override
   Widget build(BuildContext context) {
     final radius = widget.borderRadius ?? BorderRadius.circular(12);
-    final bgColor = widget.backgroundColor ?? AppTheme.primaryColor;
+    final bgColor = widget.backgroundColor ?? Theme.of(context).colorScheme.primary;
 
     Widget button = GestureDetector(
       onTapDown: _onTapDown,
@@ -168,8 +167,8 @@ class PrimaryButton extends StatelessWidget {
       isExpanded: isExpanded,
       height: height,
       padding: padding,
-      gradient: const LinearGradient(
-        colors: [AppTheme.primaryColor, Color(0xFF881337)],
+      gradient: LinearGradient(
+        colors: [Theme.of(context).colorScheme.primary, Color(0xFF881337)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -206,7 +205,7 @@ class OutlinedAnimatedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = borderColor ?? AppTheme.primaryColor;
+    final color = borderColor ?? Theme.of(context).colorScheme.primary;
     return AnimatedButton(
       onPressed: onPressed,
       isLoading: isLoading,

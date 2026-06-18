@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../data/auth_notifier.dart';
+import '../../../core/hooks/set_state_provider.dart';
+import '../../../core/theme.dart';
 
 class VerifyCodeScreen extends ConsumerStatefulWidget {
   const VerifyCodeScreen({super.key});
@@ -15,7 +17,6 @@ class VerifyCodeScreen extends ConsumerStatefulWidget {
 class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
-  String? _localError;
 
   @override
   void dispose() {
@@ -31,9 +32,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   Future<void> _verifyCode() async {
     final code = _controllers.map((c) => c.text.trim()).join();
     if (code.length < 4) {
-      setState(() {
-        _localError = 'Por favor ingresa los 4 dígitos';
-      });
+      ref.read(setStateProvider('verify_code').notifier).setError('Por favor ingresa los 4 dígitos');
       return;
     }
 
@@ -41,15 +40,11 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     final tempAuthData = authState.tempAuthData;
 
     if (tempAuthData == null) {
-      setState(() {
-        _localError = 'Error de sesión. Vuelve al login.';
-      });
+      ref.read(setStateProvider('verify_code').notifier).setError('Error de sesión. Vuelve al login.');
       return;
     }
 
-    setState(() {
-      _localError = null;
-    });
+    ref.read(setStateProvider('verify_code').notifier).clearError();
 
     try {
       final notifier = ref.read(authProvider.notifier);
@@ -60,9 +55,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       );
       // Success redirect is handled automatically by the router listening to authProvider!
     } catch (e) {
-      setState(() {
-        _localError = e.toString().replaceAll('Exception: ', '');
-      });
+      ref.read(setStateProvider('verify_code').notifier).setError(e.toString().replaceAll('Exception: ', ''));
       // Clear code inputs on error to let them retry
       for (var controller in _controllers) {
         controller.clear();
@@ -95,21 +88,23 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final formState = ref.watch(setStateProvider('verify_code'));
+    final accentColor = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       body: Stack(
         children: [
           // Background Premium Gradient
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF2E0C04), // Terracotta shadow
-                  Color(0xFF0F0F10), // Obsidian
-                  Color(0xFF0F0F10),
-                  Color(0xFF140D0B), // Warm wood accent
+                  accentColor.withValues(alpha: 0.8), // Terracotta shadow
+                  AppTheme.darkBgColor, // Obsidian
+                  AppTheme.darkBgColor,
+                  const Color(0xFF140D0B), // Warm wood accent
                 ],
                 stops: [0.0, 0.4, 0.8, 1.0],
               ),
@@ -140,7 +135,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                     const Icon(
                       Icons.security_rounded,
                       size: 64,
-                      color: Color(0xFFFFB300), // Amber
+                      color: AppTheme.secondaryColor, // Amber
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -158,7 +153,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: const Color(0xFF9CA3AF),
+                        color: AppTheme.darkTextSecondary,
                       ),
                     ),
                     const SizedBox(height: 40),
@@ -167,10 +162,10 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                     Container(
                       padding: const EdgeInsets.all(28.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF18181A).withValues(alpha: 0.85),
+                        color: AppTheme.darkSurfaceColor.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xFF262629),
+                          color: AppTheme.darkBorderColor,
                           width: 1.5,
                         ),
                         boxShadow: [
@@ -185,19 +180,19 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Error Banner
-                          if (_localError != null || authState.error != null) ...[
+                          if (formState.error != null || authState.error != null) ...[
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                color: AppTheme.errorColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                                  color: AppTheme.errorColor.withValues(alpha: 0.3),
                                   width: 1,
                                 ),
                               ),
                               child: Text(
-                                _localError ?? authState.error!,
+                                formState.error ?? authState.error!,
                                 style: GoogleFonts.inter(
                                   color: const Color(0xFFFCA5A5),
                                   fontSize: 13,
@@ -249,7 +244,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderSide: const BorderSide(color: Color(0xFFFFB300), width: 2),
+                                        borderSide: const BorderSide(color: AppTheme.secondaryColor, width: 2),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
@@ -264,7 +259,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                           ElevatedButton(
                             onPressed: authState.isLoading ? null : _verifyCode,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD84315),
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               elevation: 0,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme.dart';
 
 class ServiceDetailModal extends StatelessWidget {
   final dynamic servicio;
@@ -32,11 +33,11 @@ class ServiceDetailModal extends StatelessWidget {
     VoidCallback? onEdit,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accentColor = Color(0xFFD84315);
+    final accentColor = Theme.of(context).colorScheme.primary;
     final bg = isDark ? Colors.black : const Color(0xFFF9FAFB);
     final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
-    final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final textPrimary = isDark ? Colors.white : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.gray500Color;
     final borderColor = isDark ? accentColor.withValues(alpha: 0.25) : Colors.grey.shade200;
 
     final estadoNum = int.tryParse(servicio['estado']?.toString() ?? '0') ?? 0;
@@ -48,17 +49,17 @@ class ServiceDetailModal extends StatelessWidget {
     _EstadoBadge getEstadoBadge(int estado) {
       switch (estado) {
         case 0:
-          return _EstadoBadge(label: 'ANULADO', color: const Color(0xFFEF4444));
+          return _EstadoBadge(label: 'ANULADO', color: AppTheme.errorColor);
         case 1:
-          return _EstadoBadge(label: 'FINALIZADO', color: const Color(0xFF10B981));
+          return _EstadoBadge(label: 'FINALIZADO', color: AppTheme.successColor);
         case 2:
-          return _EstadoBadge(label: 'EN PROCESO', color: const Color(0xFF3B82F6));
+          return _EstadoBadge(label: 'EN PROCESO', color: AppTheme.infoColor);
         case 3:
-          return _EstadoBadge(label: 'PAUSADO', color: const Color(0xFFF59E0B));
+          return _EstadoBadge(label: 'PAUSADO', color: AppTheme.warningColor);
         case 4:
           return _EstadoBadge(label: 'SOL. ANULACIÓN', color: const Color(0xFFF97316));
         default:
-          return _EstadoBadge(label: 'DESCONOCIDO', color: const Color(0xFF6B7280));
+          return _EstadoBadge(label: 'DESCONOCIDO', color: AppTheme.gray500Color);
       }
     }
 
@@ -197,6 +198,7 @@ class ServiceDetailModal extends StatelessWidget {
                                 textPrimary: textPrimary,
                                 textSecondary: textSecondary,
                                 borderColor: borderColor,
+                                iconColor: Theme.of(context).colorScheme.primary,
                               ),
                               _buildGridItem(
                                 width: (MediaQuery.of(context).size.width - 50) / 2,
@@ -207,6 +209,7 @@ class ServiceDetailModal extends StatelessWidget {
                                 textPrimary: textPrimary,
                                 textSecondary: textSecondary,
                                 borderColor: borderColor,
+                                iconColor: Theme.of(context).colorScheme.primary,
                               ),
                               _buildGridItem(
                                 width: MediaQuery.of(context).size.width - 40,
@@ -217,6 +220,7 @@ class ServiceDetailModal extends StatelessWidget {
                                 textPrimary: textPrimary,
                                 textSecondary: textSecondary,
                                 borderColor: borderColor,
+                                iconColor: Theme.of(context).colorScheme.primary,
                               ),
                               _buildGridItem(
                                 width: MediaQuery.of(context).size.width - 40,
@@ -227,6 +231,7 @@ class ServiceDetailModal extends StatelessWidget {
                                 textPrimary: textPrimary,
                                 textSecondary: textSecondary,
                                 borderColor: borderColor,
+                                iconColor: Theme.of(context).colorScheme.primary,
                               ),
                               _buildGridItem(
                                 width: (MediaQuery.of(context).size.width - 50) / 2,
@@ -237,6 +242,7 @@ class ServiceDetailModal extends StatelessWidget {
                                 textPrimary: textPrimary,
                                 textSecondary: textSecondary,
                                 borderColor: borderColor,
+                                iconColor: Theme.of(context).colorScheme.primary,
                               ),
                               _buildGridItem(
                                 width: (MediaQuery.of(context).size.width - 50) / 2,
@@ -247,6 +253,7 @@ class ServiceDetailModal extends StatelessWidget {
                                 textPrimary: textPrimary,
                                 textSecondary: textSecondary,
                                 borderColor: borderColor,
+                                iconColor: Theme.of(context).colorScheme.primary,
                               ),
                             ],
                           ),
@@ -302,15 +309,15 @@ class ServiceDetailModal extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                color: AppTheme.successColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF10B981)),
+                                border: Border.all(color: AppTheme.successColor),
                               ),
                               child: _buildSummaryRow(
                                 label: 'Comisión Habitación',
                                 val: '\$${formatter.format(habitacionComision)}',
-                                textPrimary: const Color(0xFF10B981),
-                                textSecondary: const Color(0xFF10B981),
+                                textPrimary: AppTheme.successColor,
+                                textSecondary: AppTheme.successColor,
                                 isBold: true,
                               ),
                             ),
@@ -325,7 +332,7 @@ class ServiceDetailModal extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.diamond_outlined, size: 32, color: accentColor),
+                                Icon(Icons.diamond_outlined, size: 32, color: accentColor),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
@@ -366,7 +373,7 @@ class ServiceDetailModal extends StatelessWidget {
                             Expanded(
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF3B82F6),
+                                  backgroundColor: AppTheme.infoColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -415,6 +422,7 @@ class ServiceDetailModal extends StatelessWidget {
     required Color textPrimary,
     required Color textSecondary,
     required Color borderColor,
+    required Color iconColor,
   }) {
     return Container(
       width: width,
@@ -427,7 +435,7 @@ class ServiceDetailModal extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFFD84315)),
+          Icon(icon, size: 16, color: iconColor),
           const SizedBox(height: 6),
           Text(
             label,

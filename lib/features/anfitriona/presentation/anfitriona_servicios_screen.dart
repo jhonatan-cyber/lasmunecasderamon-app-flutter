@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/widgets/premium_header.dart';
+import '../../../core/theme.dart';
+import '../../../core/hooks/refresh_provider.dart';
 import '../../auth/data/auth_notifier.dart';
 import 'widgets/service_card.dart';
 import 'widgets/service_detail_modal.dart';
@@ -15,8 +18,6 @@ class AnfitrionaServiciosScreen extends ConsumerStatefulWidget {
 
 class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosScreen> {
   List<dynamic> _servicios = [];
-  bool _isLoading = false;
-  String? _error;
   String _filter = 'all'; // all, pendiente, pagado, cobrado
 
   @override
@@ -26,10 +27,8 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
   }
 
   Future<void> _fetchServicios({bool isManual = false}) async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final notifier = ref.read(refreshProvider('anfitriona_servicios').notifier);
+    notifier.startRefresh(isManual: isManual);
 
     try {
       final apiClient = ref.read(apiClientProvider);
@@ -37,21 +36,16 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
       final data = response.data;
 
       if (data != null && data['success'] == true) {
-        setState(() {
-          _servicios = List<dynamic>.from(data['data'] ?? []);
-          _isLoading = false;
-        });
+        if (!mounted) return;
+        setState(() => _servicios = List<dynamic>.from(data['data'] ?? []));
+        notifier.endRefresh();
       } else {
-        setState(() {
-          _error = data?['message'] ?? 'Error al cargar servicios';
-          _isLoading = false;
-        });
+        if (!mounted) return;
+        notifier.endRefresh(error: data?['message'] ?? 'Error al cargar servicios');
       }
     } catch (e) {
-      setState(() {
-        _error = 'Error de conexion con el servidor';
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      notifier.endRefresh(error: 'Error de conexion con el servidor');
     }
   }
 
@@ -144,7 +138,7 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    const accentColor = Color(0xFFD84315);
+    final accentColor = Theme.of(context).colorScheme.primary;
     final bg = isDark ? Colors.black : const Color(0xFFF9FAFB);
     final cardBg = isDark ? const Color(0xFF111111) : Colors.white;
     final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
@@ -167,36 +161,26 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
 
     final formatter = NumberFormat.simpleCurrency(decimalDigits: 0, name: 'CLP');
 
+    final accentTheme = ref.watch(accentColorProvider);
+    final gradientColors = accentTheme.gradient;
+
+    final refresh = ref.watch(refreshProvider('anfitriona_servicios'));
+
     return Scaffold(
       backgroundColor: bg,
-      appBar: AppBar(
-        backgroundColor: bg,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Servicios',
-              style: GoogleFonts.outfit(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black,
-              ),
-            ),
-            Text(
-              'Mi historial de atención',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Summary Card
+      body: Column(
+        children: [
+          PremiumHeader(
+            title: 'Servicios',
+            gradient: gradientColors,
+            showRefreshButton: true,
+            isRefreshing: refresh.isRefreshing,
+            onRefresh: () => _fetchServicios(isManual: true),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                // Summary Card
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Container(
@@ -298,9 +282,9 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
 
             // Services list
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: accentColor))
-                  : _error != null
+              child: refresh.isLoading
+                  ? Center(child: CircularProgressIndicator(color: accentColor))
+                  : refresh.error.isNotEmpty
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24.0),
@@ -308,7 +292,7 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  _error!,
+                                  refresh.error,
                                   style: GoogleFonts.inter(color: Colors.redAccent),
                                   textAlign: TextAlign.center,
                                 ),
@@ -379,6 +363,8 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
           ],
         ),
       ),
+    ],
+  ),
     );
   }
 
