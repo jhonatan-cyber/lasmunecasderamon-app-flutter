@@ -605,8 +605,18 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
         ],
       ),
       floatingActionButton: PremiumFAB(
-        icon: const Icon(Icons.add),
-        onPressed: () => context.push('/cajero/ventas/nueva'),
+        label: _activeTab == 'historial' ? 'NUEVA VENTA' : 'NUEVO SERVICIO',
+        icon: Icon(
+          _activeTab == 'historial'
+              ? Icons.shopping_cart_outlined
+              : Icons.add,
+          color: Colors.white,
+        ),
+        onPressed: () => context.push(
+          _activeTab == 'historial'
+              ? '/cajero/ventas/nueva'
+              : '/cajero/servicios/nuevo',
+        ),
       ),
     );
 
