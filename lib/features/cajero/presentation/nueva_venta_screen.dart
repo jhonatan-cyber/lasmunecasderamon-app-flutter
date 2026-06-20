@@ -20,23 +20,23 @@ class NuevaVentaScreen extends ConsumerStatefulWidget {
 
 class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
 
-  // Asset data lists
+  
   List<dynamic> _anfitrionas = [];
   List<dynamic> _rooms = [];
   List<dynamic> _clients = [];
   List<dynamic> _categories = [];
   List<dynamic> _products = [];
 
-  // Selected values
+  
   dynamic _selectedAnfitriona;
   dynamic _selectedRoom;
   dynamic _selectedClient;
   dynamic _selectedCategory;
 
-  // Cart state
-  final Map<int, int> _cart = {}; // product_id -> qty
+  
+  final Map<int, int> _cart = {}; 
   String _paymentMethod =
-      'efectivo'; // efectivo, tarjeta, transferencia, prepago
+      'efectivo'; 
 
   @override
   void initState() {
@@ -50,7 +50,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
     try {
       final client = ref.read(apiClientProvider);
 
-      // Concurrently fetch assets
+      
       final responses = await Future.wait([
         client.dio
             .get('/anfitrionas')
@@ -154,7 +154,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
         });
       }
     } catch (_) {
-      // Ignorar fallas menores de carga de catálogo
+      
     }
   }
 
@@ -220,7 +220,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
     notifier.startSubmit();
 
     try {
-      // If method is prepago, validate balance
+      
       if (_paymentMethod == 'prepago') {
         if (_selectedClient == null) {
           notifier.endSubmit();
@@ -258,7 +258,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
         }
       }
 
-      // Build payload items
+      
       final List<Map<String, dynamic>> itemsPayload = [];
       _cart.forEach((prodId, qty) {
         final product = _findProductById(prodId);
@@ -364,7 +364,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
               skeleton: _buildSkeletonGrid(),
               content: LayoutBuilder(
                 builder: (context, constraints) {
-                  // If tablet or wide display (width > 800) use split layout
+                  
                   final isWide = constraints.maxWidth > 800;
 
                   final mainContent = Column(
@@ -401,11 +401,11 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      // Assets Pickers
+                      
                       _buildAssetsPickers(isDark),
                       const SizedBox(height: 16),
 
-                      // Catalog Categories
+                      
                       Text(
                         'Catálogo de Productos',
                         style: GoogleFonts.inter(
@@ -417,7 +417,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                       _buildCategoriesBar(isDark),
                       const SizedBox(height: 12),
 
-                      // Products List
+                      
                       Expanded(child: _buildProductsGrid(isDark)),
                     ],
                   );
@@ -451,7 +451,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                     );
                   }
 
-                  // Vertical Layout for Mobile
+                  
                   return Column(
                     children: [
                       Expanded(

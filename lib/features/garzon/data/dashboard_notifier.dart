@@ -4,9 +4,9 @@ import '../../../core/api_client.dart';
 import '../../auth/data/auth_notifier.dart';
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class GarzonDashboardState {
   final bool isLoading;
@@ -53,19 +53,19 @@ class GarzonDashboardState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifier
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class GarzonDashboardNotifier extends StateNotifier<GarzonDashboardState> {
   final ApiClient _apiClient;
 
   GarzonDashboardNotifier(this._apiClient) : super(GarzonDashboardState());
 
-  /// Fetches all dashboard data from 3 parallel endpoints:
-  ///   - /events/user         → event list
-  ///   - /events/stats        → earnings and service count
-  ///   - /users/me/stats      → payout / max advance amount
+  
+  
+  
+  
   Future<void> fetchDashboardData({bool isManual = false}) async {
     if (!mounted) return;
 
@@ -93,13 +93,13 @@ class GarzonDashboardNotifier extends StateNotifier<GarzonDashboardState> {
 
       if (!mounted) return;
 
-      // ── Parse events ──────────────────────────────────────────────
+      
       final eventsRes = responses[0];
       final List<Map<String, dynamic>> events = [];
       if (eventsRes != null && eventsRes.data != null) {
         final rawData = eventsRes.data;
-        // Handle both wrapped ({"success":true,"data":[...]}) and
-        // raw list ([...]) response formats.
+        
+        
         if (rawData is List) {
           for (final e in rawData) {
             events.add(Map<String, dynamic>.from(e));
@@ -116,7 +116,7 @@ class GarzonDashboardNotifier extends StateNotifier<GarzonDashboardState> {
         }
       }
 
-      // ── Parse stats ─────────────────────────────────────────────
+      
       final statsRes = responses[1];
       double totalEarnings = 0;
       int salesWithTips = 0;
@@ -133,7 +133,7 @@ class GarzonDashboardNotifier extends StateNotifier<GarzonDashboardState> {
         }
       }
 
-      // ── Parse payout total ─────────────────────────────────────
+      
       final meStatsRes = responses[2];
       double payoutTotal = 0;
       if (meStatsRes != null && meStatsRes.data != null) {
@@ -149,7 +149,7 @@ class GarzonDashboardNotifier extends StateNotifier<GarzonDashboardState> {
         }
       }
 
-      // ── Build event days for calendar visual ────────────────────
+      
       final Set<int> eventDays = {};
       final now = DateTime.now();
       for (final e in events) {
@@ -184,9 +184,9 @@ class GarzonDashboardNotifier extends StateNotifier<GarzonDashboardState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 final garzonDashboardProvider = StateNotifierProvider.autoDispose<
     GarzonDashboardNotifier, GarzonDashboardState>((ref) {

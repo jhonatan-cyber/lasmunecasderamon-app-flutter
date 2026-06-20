@@ -93,8 +93,9 @@ class _CajeroAdministrativoScreenState
           _events = data.map((json) => Event.fromJson(json)).toList();
         });
         notifier.endRefresh();
-        if (isManual)
-          notifier.showSuccessSnack(context, 'Resumen actualizado con éxito');
+        if (isManual) {
+            notifier.showSuccessSnack(context, 'Resumen actualizado con éxito');
+        }
       } else {
         throw Exception(response.data?['message'] ?? 'Error al cargar datos');
       }
@@ -153,7 +154,7 @@ class _CajeroAdministrativoScreenState
     final month = _currentMonth.month;
     final firstDay = DateTime(year, month, 1);
 
-    // Sunday start offset
+    
     final offset = firstDay.weekday % 7;
     final prevMonthLast = DateTime(year, month, 0);
     for (int i = offset - 1; i >= 0; i--) {
@@ -447,8 +448,9 @@ class _CajeroAdministrativoScreenState
                             if (t == 'venta') return Icons.fastfood_rounded;
                             if (t == 'propina') return Icons.wallet_rounded;
                             if (t == 'comision') return Icons.star_rounded;
-                            if (t == 'asistencia')
-                              return Icons.calendar_today_rounded;
+                            if (t == 'asistencia') {
+                                return Icons.calendar_today_rounded;
+                            }
                             return Icons.monetization_on_rounded;
                           }
 
@@ -798,7 +800,7 @@ class _CajeroAdministrativoScreenState
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
-                // Header
+                
                 Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
@@ -1004,7 +1006,7 @@ class _CajeroAdministrativoScreenState
                   const SizedBox(height: 16),
                 ],
 
-                // Calendar Card
+                
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Container(

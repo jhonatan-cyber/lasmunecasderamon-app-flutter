@@ -1,10 +1,10 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// SolicitudItem — Unified model for services, orders & advances
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class SolicitudItem {
   final String idUnificado;
-  final String tipoItem; // 'solicitud', 'pedido', 'anticipo'
+  final String tipoItem; 
   final String id;
   final String codigo;
   final double monto;
@@ -15,7 +15,7 @@ class SolicitudItem {
   final String motivo;
   final String? fechaMod;
 
-  // Custom properties for specific types
+  
   final List<dynamic>? anfitrionasIds;
   final List<dynamic>? anfitrionasConNicks;
   final double? comisionAnfitriona;

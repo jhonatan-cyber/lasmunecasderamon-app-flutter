@@ -5,21 +5,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'sse_event.dart';
 import 'sse_service.dart';
 
-/// Model representing an active timer, mirroring the RN Timer interface
+
 class ActiveTimer {
   final String id;
   final String servicioId;
   final String roomId;
   final String roomName;
-  final int duration; // in minutes
-  final int remainingTime; // in seconds
+  final int duration; 
+  final int remainingTime; 
   final bool isActive;
   final bool isPaused;
   final DateTime? startTime;
   final String servicioCode;
   final String? clienteId;
   final String clienteNombre;
-  final String? tipoTransaccion; // 'servicio', 'venta', 'cuenta'
+  final String? tipoTransaccion; 
   final String? anfitrionas;
   final double? precioServicio;
   final double? precioHabitacion;
@@ -69,7 +69,7 @@ class ActiveTimer {
     this.servicioOriginalId,
   });
 
-  /// Calculate remaining seconds based on server offset
+  
   int calculateRemaining(int serverOffset) {
     if (isPaused || estado == 3) {
       return remainingTime;
@@ -80,14 +80,14 @@ class ActiveTimer {
     final elapsedSeconds = ((now - start) / 1000).floor();
     final totalSeconds = duration * 60;
     final remaining = totalSeconds - elapsedSeconds;
-    // Grace period: if remaining is 0 but elapsed < 120s, give full duration
+    
     if (remaining == 0 && duration > 0 && elapsedSeconds < 120) {
       return totalSeconds;
     }
     return remaining;
   }
 
-  /// Get formatted remaining time as "M:SS" or "-M:SS" if overdue
+  
   String formatRemaining(int serverOffset) {
     final remaining = calculateRemaining(serverOffset);
     if (remaining <= 0 && (isPaused || estado == 3)) {
@@ -101,7 +101,7 @@ class ActiveTimer {
     return '$sign$m:${s.toString().padLeft(2, '0')}';
   }
 
-  /// Whether timer is overdue (time ran out)
+  
   bool isOverdue(int serverOffset) {
     if (isPaused || estado == 3) return false;
     return calculateRemaining(serverOffset) <= 0;
@@ -157,7 +157,7 @@ class ActiveTimer {
   }
 }
 
-/// State for the timer system
+
 class TimerState {
   final List<ActiveTimer> timers;
   final int serverOffset;
@@ -181,7 +181,7 @@ class TimerState {
     );
   }
 
-  /// Get a specific timer by servicio ID and tipo transaccion
+  
   ActiveTimer? getTimer(String servicioId, {String? tipoTransaccion}) {
     try {
       return timers.firstWhere(
@@ -193,7 +193,7 @@ class TimerState {
     }
   }
 
-  /// Get timer for a specific room
+  
   ActiveTimer? getTimerForRoom(String roomId) {
     try {
       return timers.firstWhere((t) => t.roomId == roomId);
@@ -202,13 +202,13 @@ class TimerState {
     }
   }
 
-  /// Get all timers for a specific tipo transaccion
+  
   List<ActiveTimer> getTimersByType(String tipo) {
     return timers.where((t) => t.tipoTransaccion == tipo).toList();
   }
 }
 
-/// Notifier managing the timer state
+
 class TimerNotifier extends StateNotifier<TimerState> {
   TimerNotifier() : super(TimerState()) {
     fetchActiveTimers();
@@ -225,9 +225,9 @@ class TimerNotifier extends StateNotifier<TimerState> {
   Timer? _countdownTimer;
   bool _isClosed = false;
 
-  /// Fetch active timers from the API
+  
   Future<void> fetchActiveTimers() async {
-    // Debounce: minimum 2 seconds between fetches
+    
     if (_lastFetchTime != null) {
       final diff = DateTime.now().difference(_lastFetchTime!);
       if (diff.inSeconds < 2) return;
@@ -265,7 +265,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
         );
       }
     } catch (_) {
-      // Silent retry after 5 seconds
+      
       if (!_isClosed) {
         Future.delayed(const Duration(seconds: 5), () {
           if (!_isClosed) fetchActiveTimers();
@@ -276,7 +276,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
     }
   }
 
-  /// Handle SSE events related to timers
+  
   void handleSSEEvent(SseEvent event) {
     switch (event.type) {
       case 'timer_started':
@@ -418,7 +418,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
     state = state.copyWith(
       timers: state.timers.map((t) {
         if (t.servicioId == servicioId && t.tipoTransaccion == tipo) {
-          // Re-parse with updated fields
+          
           final updatedJson = <String, dynamic>{
             'servicioId': t.servicioId,
             'roomId': t.roomId,
@@ -450,11 +450,11 @@ class TimerNotifier extends StateNotifier<TimerState> {
     );
   }
 
-  /// Start the countdown timer that updates state every second
+  
   void _startCountdown() {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!_isClosed && mounted) {
-        // Force rebuild to update countdown displays
+        
         state = state.copyWith();
       }
     });
@@ -477,11 +477,11 @@ class TimerNotifier extends StateNotifier<TimerState> {
   }
 }
 
-/// Provider for the timer system
+
 final timerProvider = StateNotifierProvider<TimerNotifier, TimerState>((ref) {
   final notifier = TimerNotifier();
 
-  // Listen to SSE events and route timer events
+  
   final sseAsync = ref.watch(sseEventStreamProvider);
   sseAsync.whenData((event) {
     if (event.type.startsWith('timer_') || event.type == 'timers_updated') {
@@ -496,13 +496,13 @@ final timerProvider = StateNotifierProvider<TimerNotifier, TimerState>((ref) {
   return notifier;
 });
 
-/// Helper provider to get a specific timer by room
+
 final timerForRoomProvider = Provider.family<ActiveTimer?, String>((ref, roomId) {
   final timerState = ref.watch(timerProvider);
   return timerState.getTimerForRoom(roomId);
 });
 
-/// Helper provider to get timers by type
+
 final timersByTypeProvider = Provider.family<List<ActiveTimer>, String>((ref, tipo) {
   final timerState = ref.watch(timerProvider);
   return timerState.getTimersByType(tipo);

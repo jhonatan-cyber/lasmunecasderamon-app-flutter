@@ -31,7 +31,7 @@ class SseService {
       final url = Uri.parse('${ApiClient.baseUrl}/notifications/sse');
       _request = await _client!.getUrl(url);
       
-      // SSE Headers
+      
       _request!.headers.add('Authorization', 'Bearer $_token');
       _request!.headers.add('Accept', 'text/event-stream');
       _request!.headers.add('Cache-Control', 'no-cache');
@@ -43,7 +43,7 @@ class SseService {
         throw Exception('Error de conexión SSE: ${_response!.statusCode}');
       }
 
-      // Conexión exitosa, emitir evento conectado
+      
       _controller.add(SseEvent(type: 'connected', data: const {}));
 
       _response!
@@ -58,9 +58,7 @@ class SseService {
               try {
                 final payload = jsonDecode(dataStr);
                 _controller.add(SseEvent.fromJson(payload));
-              } catch (e) {
-                // Ignore parsing errors of non-JSON data
-              }
+              } catch (_) {}
             }
           }
         },
@@ -107,7 +105,7 @@ class SseService {
   }
 }
 
-// Riverpod Provider
+
 final sseEventStreamProvider = StreamProvider<SseEvent>((ref) {
   final authState = ref.watch(authProvider);
   final token = authState.token;

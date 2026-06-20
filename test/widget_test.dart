@@ -24,13 +24,13 @@ void main() {
       createTestApp(
         child: const MyApp(),
         overrides: [
-          // Use a test AuthNotifier that doesn't touch FlutterSecureStorage
+          
           authProvider.overrideWith(
             (ref) => TestAuthNotifier(
               ref.watch(apiClientProvider),
             ),
           ),
-          // Mock the API client to prevent real network calls
+          
           apiClientProvider.overrideWith(
             (ref) => ApiClient(dio: createMockDio()),
           ),
@@ -38,18 +38,18 @@ void main() {
       ),
     );
 
-    // Process initial frame (router redirect, layout)
+    
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify the app root renders
+    
     expect(find.byType(MaterialApp), findsOneWidget);
 
-    // The router should redirect to /login since no user is authenticated.
-    // Login screen should render "Iniciar Sesión" button text.
+    
+    
     expect(find.text('Iniciar Sesión'), findsOneWidget);
 
-    // Login form labels should be present
+    
     expect(find.text('Nick'), findsWidgets);
     expect(find.text('Contraseña'), findsOneWidget);
   });
@@ -58,10 +58,10 @@ void main() {
     final container = ProviderContainer();
     addTearDown(() => container.dispose());
 
-    // Verify theme provider initializes with default value
+    
     expect(container.read(themeModeProvider), ThemeMode.dark);
 
-    // Verify accent color provider initializes with first option (Terracota)
+    
     expect(container.read(accentColorProvider), appThemeOptions[0]);
   });
 }

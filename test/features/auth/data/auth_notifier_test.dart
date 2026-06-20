@@ -7,10 +7,10 @@ import 'package:lasmunecasderamon_flutter/core/api_client.dart';
 import 'package:lasmunecasderamon_flutter/features/auth/data/auth_notifier.dart';
 import 'package:lasmunecasderamon_flutter/features/auth/domain/user.dart';
 
-/// A fake [FlutterSecureStoragePlatform] that keeps values in memory.
-///
-/// This avoids [MissingPluginException] when [AuthNotifier] tries to
-/// read/write tokens in the test environment.
+
+
+
+
 class FakeSecureStorage extends FlutterSecureStoragePlatform {
   final _store = <String, String>{};
 
@@ -48,9 +48,9 @@ class FakeSecureStorage extends FlutterSecureStoragePlatform {
   Future<void> deleteAll({Map<String, String>? options}) async => _store.clear();
 }
 
-/// Creates a [Dio] instance that returns a canned JSON [data] for every POST.
-///
-/// Pass [error] to simulate a failure instead.
+
+
+
 Dio _dioWithResponse({Map<String, dynamic>? data, DioException? errorData}) {
   final dio = Dio(BaseOptions(baseUrl: 'http://test'));
   dio.interceptors.add(
@@ -73,15 +73,15 @@ Dio _dioWithResponse({Map<String, dynamic>? data, DioException? errorData}) {
   return dio;
 }
 
-/// Helper to create a new [AuthNotifier] wired to a canned [Dio].
-///
-/// Waits for the async [AuthNotifier.checkAuth] to complete before returning.
+
+
+
 Future<AuthNotifier> _createNotifier({
   Map<String, dynamic>? response,
   DioException? errorData,
 }) async {
   final notifier = AuthNotifier(ApiClient(dio: _dioWithResponse(data: response, errorData: errorData)));
-  // Wait for constructor's checkAuth() to finish
+  
   await Future<void>.delayed(Duration.zero);
   return notifier;
 }
@@ -93,9 +93,9 @@ void main() {
   });
 
   group('AuthNotifier', () {
-    // ─────────────────────────────────────────────────────────────────────────
-    // Initial state
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('initial state is unauthenticated', () async {
       final notifier = await _createNotifier();
@@ -106,9 +106,9 @@ void main() {
       expect(notifier.state.error, isNull);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Login – success
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('login with username/password transforms username to email', () async {
       final notifier = await _createNotifier(response: {
@@ -171,7 +171,7 @@ void main() {
 
       final result = await notifier.login(username: 'user', password: 'pass');
 
-      // Full testability: the 2FA path returns BEFORE reaching secure storage
+      
       expect(result, isTrue);
       expect(notifier.state.tempAuthData, isNotNull);
       expect(notifier.state.tempAuthData!['username'], 'user');
@@ -195,9 +195,9 @@ void main() {
       expect(notifier.state.user!.role, 'cajero');
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Login – errors
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('login throws when neither credentials nor qrToken are provided', () async {
       final notifier = await _createNotifier();
@@ -210,7 +210,7 @@ void main() {
     });
 
     test('login sets error state on DioException with message', () async {
-      // Create a Dio that always rejects
+      
       final failingDio = Dio(BaseOptions(baseUrl: 'http://test'));
       failingDio.interceptors.add(
         InterceptorsWrapper(
@@ -251,9 +251,9 @@ void main() {
       expect(notifier.state.isLoading, isFalse);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Login – loading state
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('login sets isLoading while authenticating', () async {
       final notifier = await _createNotifier(response: {
@@ -263,20 +263,20 @@ void main() {
 
       expect(notifier.state.isLoading, isFalse);
 
-      // Start login but don't await: isLoading is set synchronously at the top
-      // of the method before any awaits.
+      
+      
       final loginFuture = notifier.login(username: 'user', password: 'pass');
 
-      // After the sync part of login(), isLoading should be true
+      
       expect(notifier.state.isLoading, isTrue);
 
       await loginFuture;
       expect(notifier.state.isLoading, isFalse);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Logout
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('logout clears user and token and resets state', () async {
       final notifier = await _createNotifier(response: {
@@ -296,9 +296,9 @@ void main() {
       expect(notifier.state.error, isNull);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Password reset
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('requestPasswordReset calls API and resets loading state', () async {
       final notifier = await _createNotifier(response: {'success': true});
@@ -380,9 +380,9 @@ void main() {
       expect(notifier2.state.isLoading, isFalse);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Biometric
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('isBiometricEnabled returns false by default', () async {
       final notifier = await _createNotifier();
@@ -404,9 +404,9 @@ void main() {
       expect(disabled, isFalse);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Profile
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('updateProfile updates state and persists to SharedPreferences', () async {
       final notifier = await _createNotifier(response: {
@@ -426,14 +426,14 @@ void main() {
       expect(notifier.state.user!.nombre, 'New Name');
       expect(notifier.state.user!.email, 'new@test.com');
 
-      // Verify persistence
+      
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('user'), contains('New Name'));
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Credentials (save/get)
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('saveCredentials and getCredentials round-trip', () async {
       final notifier = await _createNotifier();
@@ -456,9 +456,9 @@ void main() {
       expect(await notifier.getCredentials(), isNull);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // AuthState value semantics
-    // ─────────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('AuthState copyWith clears fields with clear flags', () {
       final state = AuthState(

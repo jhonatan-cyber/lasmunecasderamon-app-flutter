@@ -24,7 +24,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
   @override
   void initState() {
     super.initState();
-    // Defer to avoid Riverpod rebuild during mount cycle (avoids !_dirty assertion)
+    
     Future.microtask(() => ref.read(serviciosFormProvider.notifier).fetchFormData());
   }
 
@@ -34,7 +34,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     super.dispose();
   }
 
-  // Formatting currency helper
+  
   String _formatCurrency(double amount) {
     final format = NumberFormat.currency(
       locale: 'es_CL',
@@ -102,7 +102,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                         ),
                       ),
 
-                    // Room Selector Card
+                    
                     _buildSectionTitle('Habitación'),
                     const SizedBox(height: 8),
                     _buildSelectorCard(
@@ -117,7 +117,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Hostess Selector Card
+                    
                     _buildSectionTitle(
                       'Anfitrionas (${state.selectedHostesses.length})',
                     ),
@@ -144,7 +144,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Client Selector Card
+                    
                     _buildSectionTitle('Clientes (${state.selectedClients.length})'),
                     const SizedBox(height: 8),
                     _buildSelectorCard(
@@ -168,7 +168,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Dynamic Commission Banner Alert
+                    
                     if (state.hasComision)
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -202,7 +202,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                         ),
                       ),
 
-                    // Service Price Input (Hide if room has commission)
+                    
                     if (!state.hasComision && state.selectedRoom != null) ...[
                       _buildSectionTitle('Precio del Servicio'),
                       const SizedBox(height: 8),
@@ -265,7 +265,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Payment Method Section
+                    
                     _buildSectionTitle('Método de Pago'),
                     const SizedBox(height: 8),
                     if (hasClientBalance)
@@ -303,11 +303,11 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                     _buildPaymentSelector(state),
                     const SizedBox(height: 24),
 
-                    // Summary Card
+                    
                     _buildSummaryCard(isDark, totals),
                     const SizedBox(height: 32),
 
-                    // Submit Button
+                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -351,7 +351,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     );
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
+  
 
   Future<void> _submitService() async {
     final ok = await ref.read(serviciosFormProvider.notifier).submitService();
@@ -369,7 +369,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     }
   }
 
-  // ── Skeleton ──────────────────────────────────────────────────────────────
+  
 
   Widget _buildSkeletonForm() {
     return ShimmerWrapper(
@@ -645,7 +645,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     );
   }
 
-  // ── BottomSheet Picker for Rooms ──────────────────────────────────────────
+  
 
   void _showRoomPicker() {
     final state = ref.read(serviciosFormProvider);
@@ -709,7 +709,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     );
   }
 
-  // ── BottomSheet Picker for Hostesses ──────────────────────────────────────
+  
 
   void _showHostessPicker() {
     showModalBottomSheet(
@@ -799,7 +799,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     );
   }
 
-  // ── BottomSheet Picker for Clients ────────────────────────────────────────
+  
 
   void _showClientPicker() {
     showModalBottomSheet(

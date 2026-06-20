@@ -1,13 +1,13 @@
 import 'package:dio/dio.dart';
 import 'offline_sync_manager.dart';
 
-/// Dio interceptor that queues failed requests when the device is offline.
-///
-/// - On **connection errors** (`connectionError`, `connectionTimeout`,
-///   `sendTimeout`) it serialises the failed request into the offline queue
-///   and lets the error propagate so the caller still sees the failure.
-/// - Only mutating requests (POST, PUT, PATCH, DELETE) are queued — GET
-///   requests are served from cache by `DioCacheInterceptor`.
+
+
+
+
+
+
+
 class OfflineInterceptor extends Interceptor {
   final OfflineSyncManager _syncManager;
 

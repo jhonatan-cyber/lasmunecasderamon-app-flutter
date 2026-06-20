@@ -21,18 +21,18 @@ class NuevoServicioScreen extends ConsumerStatefulWidget {
 
 class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
 
-  // Asset lists
+  
   List<dynamic> _anfitrionas = [];
   List<dynamic> _habitaciones = [];
   List<dynamic> _clientes = [];
   bool _cajaAbierta = false;
 
-  // Selected values
+  
   dynamic _selectedRoom;
   final List<dynamic> _selectedHostesses = [];
   final List<dynamic> _selectedClients = [];
 
-  // Form controllers & state
+  
   final TextEditingController _precioServicioController = TextEditingController(
     text: "0",
   );
@@ -40,12 +40,12 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
     text: "0",
   );
   String _paymentMethod =
-      'efectivo'; // efectivo, tarjeta, transferencia, prepago, mixto
-  String _metodoPagoAdicional = ''; // additional method if prepago is partial
+      'efectivo'; 
+  String _metodoPagoAdicional = ''; 
 
-  // Mixed payments state
+  
   final List<Map<String, dynamic>> _pagosMixtos =
-      []; // { 'metodo': String, 'monto': double }
+      []; 
 
   @override
   void initState() {
@@ -132,7 +132,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
         rawClientes = clientsRes.data;
       }
 
-      // Deduplicate by ID helper
+      
       List<dynamic> deduplicate(List<dynamic> list, String idKey) {
         final seen = <String>{};
         final result = [];
@@ -146,7 +146,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
         return result;
       }
 
-      // Normalize rooms
+      
       final habitacionesNormalizadas = rawHabitaciones.map((room) {
         final name =
             room['nombre'] ??
@@ -206,7 +206,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
     }
   }
 
-  // Calculate pricing values
+  
   Map<String, double> _calculateTotals() {
     final double roomPrice = _selectedRoom != null
         ? double.tryParse(_selectedRoom['precio']?.toString() ?? '0') ?? 0.0
@@ -277,14 +277,14 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
     };
   }
 
-  // Generate random 8-character code
+  
   String _generateCode() {
     final dt = DateTime.now().microsecondsSinceEpoch.toString();
     final hashStr = dt.substring(dt.length - 8);
     return 'SRV$hashStr';
   }
 
-  // Update client prepago list after loading balance
+  
   void _updateClientSaldo(dynamic clientId, double nuevoSaldo) {
     setState(() {
       _clientes = _clientes.map((c) {
@@ -295,7 +295,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
         return c;
       }).toList();
 
-      // Update selected client details
+      
       if (_selectedClients.isNotEmpty) {
         final primaryId =
             (_selectedClients.first['id_cliente'] ??
@@ -501,7 +501,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
         0.0;
     final bool hasAnfitrionaComision = comisionAnfitriona > 0;
 
-    // Mixed payment validation
+    
     if (_paymentMethod == 'mixto') {
       final double totalIngresado = _pagosMixtos.fold(
         0.0,
@@ -531,7 +531,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
       }
     }
 
-    // Prepago balance validation
+    
     final primaryClient = _selectedClients.isNotEmpty
         ? _selectedClients.first
         : null;
@@ -644,7 +644,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        // Return with delay to show snackbar
+        
         Future.delayed(const Duration(milliseconds: 1000), () {
           if (mounted) context.pop();
         });
@@ -754,7 +754,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                                 );
                               }
                             });
-                            setState(() {}); // refresh outer screen
+                            setState(() {}); 
                           },
                         );
                       },
@@ -834,7 +834,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                           onChanged: (val) {
                             setModalState(() {
                               if (val == true) {
-                                // Max 4 clients
+                                
                                 if (_selectedClients.length >= 4) return;
                                 _selectedClients.add(client);
                               } else {
@@ -845,7 +845,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                                 );
                               }
                             });
-                            setState(() {}); // refresh outer screen
+                            setState(() {}); 
                           },
                         );
                       },
@@ -1077,7 +1077,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Selector de Habitación
+                      
                       Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
@@ -1121,7 +1121,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                         ),
                       ),
 
-                      // Selector de Anfitrionas
+                      
                       InkWell(
                         onTap: _showHostessSelectionSheet,
                         borderRadius: BorderRadius.circular(16),
@@ -1191,7 +1191,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                         ),
                       ),
 
-                      // Selector de Clientes
+                      
                       InkWell(
                         onTap: _showClientSelectionSheet,
                         borderRadius: BorderRadius.circular(16),
@@ -1260,7 +1260,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                         ),
                       ),
 
-                      // Precio del Servicio (Si la habitación NO tiene comisión predefinida)
+                      
                       if (!hasAnfitrionaComision) ...[
                         const SizedBox(height: 8),
                         Text(
@@ -1295,13 +1295,13 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                                 offset: formatted.length,
                               ),
                             );
-                            setState(() {}); // Recalculate totals
+                            setState(() {}); 
                           },
                         ),
                         const SizedBox(height: 12),
                       ],
 
-                      // Card de Carga de Prepago del Cliente
+                      
                       if (primaryClient != null) ...[
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -1379,7 +1379,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                       ),
                       const SizedBox(height: 6),
 
-                      // Selector de Forma de Pago Principal
+                      
                       Container(
                         decoration: BoxDecoration(
                           color: isDark
@@ -1445,7 +1445,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                         ),
                       ),
 
-                      // Si selecciona prepago y el saldo es insuficiente, solicita método adicional
+                      
                       if (_paymentMethod == 'prepago' &&
                           saldoPrepago < total) ...[
                         const SizedBox(height: 12),
@@ -1507,7 +1507,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                         ),
                       ],
 
-                      // UI de Pagos Mixtos
+                      
                       if (_paymentMethod == 'mixto') ...[
                         const SizedBox(height: 16),
                         Container(
@@ -1613,7 +1613,7 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                       ],
 
                       const SizedBox(height: 24),
-                      // Desglose Financiero Card
+                      
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),

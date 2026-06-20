@@ -6,14 +6,14 @@ import '../logger.dart';
 import 'models.dart';
 import 'offline_queue.dart';
 
-/// Singleton that monitors connectivity and replays queued requests when the
-/// device comes back online.
-///
-/// Mirrors the `OfflineSyncManager` class in Expo's `offlineSync.ts`.
+
+
+
+
 class OfflineSyncManager {
-  // ---------------------------------------------------------------------------
-  // Singleton
-  // ---------------------------------------------------------------------------
+  
+  
+  
   static OfflineSyncManager? _instance;
 
   OfflineSyncManager._();
@@ -22,20 +22,20 @@ class OfflineSyncManager {
     return _instance!;
   }
 
-  /// Resets the singleton (used in tests).
+  
   @visibleForTesting
   static void reset() => _instance = null;
 
-  // ---------------------------------------------------------------------------
-  // Dependencies (injected after construction)
-  // ---------------------------------------------------------------------------
+  
+  
+  
   late final Dio _dio;
   final OfflineQueue _queue = OfflineQueue();
   final Connectivity _connectivity = Connectivity();
 
-  // ---------------------------------------------------------------------------
-  // State
-  // ---------------------------------------------------------------------------
+  
+  
+  
   bool _isOnline = true;
   bool _syncInProgress = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
@@ -43,10 +43,10 @@ class OfflineSyncManager {
 
   bool _initialised = false;
 
-  /// Initialise the manager with a [Dio] instance used to replay queued
-  /// requests, and start listening for connectivity changes.
-  ///
-  /// Safe to call multiple times — subsequent calls are no-ops.
+  
+  
+  
+  
   void init({required Dio dio}) {
     if (_initialised) return;
     _initialised = true;
@@ -54,27 +54,27 @@ class OfflineSyncManager {
     _initConnectivityListener();
   }
 
-  /// Tears down the connectivity listener.
+  
   void dispose() {
     _connectivitySub?.cancel();
     _listeners.clear();
   }
 
-  // ---------------------------------------------------------------------------
-  // Public API
-  // ---------------------------------------------------------------------------
+  
+  
+  
 
-  /// Current connectivity state.
+  
   bool get isConnected => _isOnline;
 
-  /// Register a callback that fires whenever connectivity or sync state
-  /// changes. Returns a tear-off function to unregister.
+  
+  
   VoidCallback addListener(void Function() callback) {
     _listeners.add(callback);
     return () => _listeners.remove(callback);
   }
 
-  /// Queues a failed request from [options] for later replay.
+  
   void queueRequestFromOptions(RequestOptions options) {
     final request = QueuedRequest(
       id: _generateId(),
@@ -90,16 +90,16 @@ class OfflineSyncManager {
 
     Logger.warn('OfflineSync: queued $request');
 
-    // If we happen to be back online by now, try syncing immediately.
+    
     if (_isOnline) {
       triggerSync();
     }
   }
 
-  /// Returns the number of requests waiting to be replayed.
+  
   Future<int> getPendingCount() => _queue.getPendingCount();
 
-  /// Forces a sync cycle (called externally or on reconnect).
+  
   @visibleForTesting
   Future<void> triggerSync() async {
     if (!_isOnline || _syncInProgress) return;
@@ -147,18 +147,18 @@ class OfflineSyncManager {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
+  
+  
+  
 
   void _initConnectivityListener() {
-    // Check initial state
+    
     _connectivity.checkConnectivity().then((results) {
       _isOnline = !results.contains(ConnectivityResult.none);
       _notifyListeners();
     });
 
-    // Listen for changes
+    
     _connectivitySub = _connectivity.onConnectivityChanged.listen((results) {
       final wasOffline = !_isOnline;
       _isOnline = !results.contains(ConnectivityResult.none);
@@ -182,7 +182,7 @@ class OfflineSyncManager {
     if (response.statusCode != null &&
         response.statusCode! >= 200 &&
         response.statusCode! < 300) {
-      return; // success
+      return; 
     }
 
     throw Exception('Replay returned ${response.statusCode}');
@@ -195,7 +195,7 @@ class OfflineSyncManager {
   }
 
   String _generateId() {
-    // Short random ID like Expo's Math.random().toString(36).substr(2, 9)
+    
     return DateTime.now().microsecondsSinceEpoch.toRadixString(36);
   }
 }

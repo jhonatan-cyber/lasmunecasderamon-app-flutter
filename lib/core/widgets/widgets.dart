@@ -1,9 +1,9 @@
-/// Shared reusable widgets for the Flutter app.
-///
-/// Import this file to get access to all shared widgets:
-/// ```dart
-/// import 'package:lasmunecasderamon_app/core/widgets/widgets.dart';
-/// ```
+
+
+
+
+
+
 library;
 
 export 'animated_button.dart';

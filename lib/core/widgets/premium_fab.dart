@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Premium floating action button with gradient and shadow.
-///
-/// Mirrors Expo's `components/ui/PremiumFAB.tsx` — a styled FAB with an
-/// optional extended label, gradient background, and press animation.
+
+
+
+
 class PremiumFAB extends StatefulWidget {
   const PremiumFAB({
     super.key,

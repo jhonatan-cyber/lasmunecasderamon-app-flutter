@@ -30,7 +30,7 @@ void main() {
 
     group('fromExternalUrl', () {
       test('parses custom scheme URLs (defaults to garzon)', () {
-        // Use empty host (///) so pathSegments parse correctly
+        
         final uri = Uri.parse('lasmunecasderamon:///servicio/abc-123');
         expect(DeepLinks.fromExternalUrl(uri), '/garzon/servicios');
       });

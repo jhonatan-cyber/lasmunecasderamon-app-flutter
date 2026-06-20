@@ -23,7 +23,7 @@ class CajeroSolicitudesScreen extends ConsumerStatefulWidget {
 
 class _CajeroSolicitudesScreenState
     extends ConsumerState<CajeroSolicitudesScreen> {
-  String _activeFilter = 'all'; // 'all', 'anticipo', 'pedido', 'solicitud'
+  String _activeFilter = 'all'; 
 
   Timer? _pollingTimer;
   Timer? _tickTimer;
@@ -34,12 +34,12 @@ class _CajeroSolicitudesScreenState
     Future.microtask(
       () => ref.read(solicitudesListProvider.notifier).fetchData(),
     );
-    // Poll data every 10 seconds
+    
     _pollingTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => ref.read(solicitudesListProvider.notifier).fetchData(),
     );
-    // Tick every second for elapsed time
+    
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {});
@@ -54,9 +54,9 @@ class _CajeroSolicitudesScreenState
     super.dispose();
   }
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Mutations
-  // ─────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   Future<void> _handleAprobarAnticipo(SolicitudItem item) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -234,22 +234,22 @@ class _CajeroSolicitudesScreenState
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Build
-  // ─────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final state = ref.watch(solicitudesListProvider);
 
-    // Filter items
+    
     final filteredList = state.solicitudes.where((s) {
       if (_activeFilter == 'all') return true;
       return s.tipoItem == _activeFilter;
     }).toList();
 
-    // Calculate sum of approved advances (estado == 1)
+    
     final double totalAdvances = state.solicitudes
         .where((s) => s.tipoItem == 'anticipo' && s.estado == 1)
         .fold(0.0, (sum, item) => sum + item.monto);
@@ -258,7 +258,7 @@ class _CajeroSolicitudesScreenState
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
       body: Column(
         children: [
-          // Header
+          
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -399,7 +399,7 @@ class _CajeroSolicitudesScreenState
             ),
           ),
 
-          // Total Advances Banner
+          
           if (totalAdvances > 0)
             Padding(
               padding: const EdgeInsets.only(
@@ -479,7 +479,7 @@ class _CajeroSolicitudesScreenState
               ),
             ),
 
-          // Tabs Row
+          
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 16.0,
@@ -523,7 +523,7 @@ class _CajeroSolicitudesScreenState
             ),
           ),
 
-          // Urgency Header
+          
           if (filteredList.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -569,7 +569,7 @@ class _CajeroSolicitudesScreenState
               ),
             ),
 
-          // Items List
+          
           Expanded(
             child: state.isLoading
                 ? const Center(child: SkeletonCard(lines: 5))
@@ -746,7 +746,7 @@ class _CajeroSolicitudesScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Card Header
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -801,7 +801,7 @@ class _CajeroSolicitudesScreenState
               ),
               const SizedBox(height: 12),
 
-              // Card Body Details
+              
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -893,7 +893,7 @@ class _CajeroSolicitudesScreenState
                       ],
                     ),
 
-                    // Anticipo details/state
+                    
                     if (isAnt) ...[
                       const SizedBox(height: 10),
                       Container(
@@ -946,7 +946,7 @@ class _CajeroSolicitudesScreenState
               ),
               const SizedBox(height: 12),
 
-              // Action Buttons
+              
               Row(
                 children: [
                   if (isAnt) ...[
@@ -1073,9 +1073,9 @@ class _CajeroSolicitudesScreenState
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sub-component: CheckoutModalWidget
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class CheckoutModalWidget extends ConsumerStatefulWidget {
   final SolicitudItem item;
@@ -1097,7 +1097,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
   Map<String, dynamic>? _clientData;
   bool _loading = true;
 
-  // Checkout inputs
+  
   String _metodoPago = 'efectivo';
   String _metodoPagoAdicional = '';
   bool _agregarPropina = false;
@@ -1395,7 +1395,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
+                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1427,7 +1427,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Metadata
+                  
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1536,7 +1536,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Room time selector
+                  
                   if (hasHabitacion) ...[
                     Text(
                       'TIEMPO HABITACIÃ“N',
@@ -1600,7 +1600,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Products list
+                  
                   Text(
                     'PRODUCTOS',
                     style: GoogleFonts.inter(
@@ -1677,7 +1677,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Payment method
+                  
                   ..._buildPaymentSection(
                     isDark,
                     subtotalBase,
@@ -1688,7 +1688,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
                     restanteMixed,
                   ),
 
-                  // Action buttons
+                  
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -1773,7 +1773,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
     double restanteMixed,
   ) {
     return [
-      // Totals
+      
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1842,7 +1842,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
         ],
       ),
 
-      // Tip checkbox
+      
       if (existingTip <= 0) ...[
         const SizedBox(height: 12),
         CheckboxListTile(
@@ -1859,7 +1859,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
         ),
       ],
 
-      // Payment method
+      
       const SizedBox(height: 8),
       Text(
         'MÃ©todo de Pago',
@@ -1943,7 +1943,7 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
         ),
       ],
 
-      // Extra: Cliente saldo info
+      
       if (_clientData != null) ...[
         const SizedBox(height: 8),
         Container(
@@ -1985,9 +1985,9 @@ class _CheckoutModalWidgetState extends ConsumerState<CheckoutModalWidget> {
       : 0.0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sub-component: ServiceModalWidget
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class ServiceModalWidget extends ConsumerStatefulWidget {
   final SolicitudItem item;
@@ -2013,7 +2013,7 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
   @override
   void initState() {
     super.initState();
-    // Pre-select anfitriona and calculate commission
+    
     if (widget.item.anfitrionasIds != null &&
         widget.item.anfitrionasIds!.isNotEmpty) {
       _selectedAnfitriona = widget.item.anfitrionasIds!.first.toString();
@@ -2080,7 +2080,7 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -2099,7 +2099,7 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
             ),
             const SizedBox(height: 12),
 
-            // Service info
+            
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
@@ -2146,7 +2146,7 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
             ),
             const SizedBox(height: 16),
 
-            // Anfitriona assignment
+            
             Text(
               'ASIGNAR ANFITRIONA',
               style: GoogleFonts.inter(
@@ -2181,7 +2181,7 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
             ),
             const SizedBox(height: 8),
 
-            // Commission info
+            
             if (_comisionAnfitriona > 0)
               Container(
                 width: double.infinity,
@@ -2217,7 +2217,7 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
 
             const SizedBox(height: 20),
 
-            // Approve button
+            
             SizedBox(
               width: double.infinity,
               height: 48,

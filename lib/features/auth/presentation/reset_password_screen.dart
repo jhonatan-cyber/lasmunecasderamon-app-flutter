@@ -6,9 +6,9 @@ import '../../../core/theme.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../data/auth_notifier.dart';
 
-/// Paso 1 del flujo de recuperación de contraseña.
-///
-/// El usuario ingresa su email y recibe un código de verificación.
+
+
+
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 

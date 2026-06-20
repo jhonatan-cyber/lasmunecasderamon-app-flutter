@@ -1,16 +1,16 @@
-/// Form validation helpers.
-///
-/// Mirrors Expo's `packages/validations/` (Zod schemas) — provides
-/// reusable validation functions for form fields, with the same business
-/// rules as the shared validation package.
+
+
+
+
+
 class Validators {
-  /// Validates a Chilean RUN / RUT number.
-  ///
-  /// Rules:
-  /// - Must be 7-9 digits followed by an optional dash and verifier digit (0-9 or K).
-  /// - Normalizes input (removes dots, uppercase K).
-  ///
-  /// Returns `null` if valid, or an error message string if invalid.
+  
+  
+  
+  
+  
+  
+  
   static String? run(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'El RUN es obligatorio';
@@ -30,9 +30,9 @@ class Validators {
     return null;
   }
 
-  /// Validates an email address.
-  ///
-  /// Returns `null` if valid, or an error message if invalid.
+  
+  
+  
   static String? email(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'El email es obligatorio';
@@ -46,9 +46,9 @@ class Validators {
     return null;
   }
 
-  /// Validates a required field.
-  ///
-  /// Returns `null` if the field has a non-empty value, or an error message.
+  
+  
+  
   static String? required(String? value, {String fieldName = 'Este campo'}) {
     if (value == null || value.trim().isEmpty) {
       return '$fieldName es obligatorio';
@@ -56,13 +56,13 @@ class Validators {
     return null;
   }
 
-  /// Validates a password field.
-  ///
-  /// Rules:
-  /// - Minimum 6 characters.
-  /// - Must contain at least one letter and one number.
-  ///
-  /// Returns `null` if valid, or an error message.
+  
+  
+  
+  
+  
+  
+  
   static String? password(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'La contraseña es obligatoria';
@@ -79,7 +79,7 @@ class Validators {
     return null;
   }
 
-  /// Validates that two password fields match.
+  
   static String? confirmPassword(String? value, String password) {
     if (value == null || value.trim().isEmpty) {
       return 'Confirma tu contraseña';
@@ -92,7 +92,7 @@ class Validators {
     return null;
   }
 
-  /// Validates a phone number (minimum 7 digits, digits only).
+  
   static String? phone(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'El teléfono es obligatorio';
@@ -106,7 +106,7 @@ class Validators {
     return null;
   }
 
-  /// Validates a numeric value is positive.
+  
   static String? positiveNumber(num? value, {String fieldName = 'El valor'}) {
     if (value == null) {
       return '$fieldName es obligatorio';

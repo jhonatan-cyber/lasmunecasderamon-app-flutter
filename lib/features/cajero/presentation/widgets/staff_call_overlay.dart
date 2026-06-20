@@ -90,7 +90,7 @@ class _StaffCallOverlayState extends ConsumerState<StaffCallOverlay> {
     final user = ref.read(authProvider).user;
     if (user == null) return;
     
-    // Solo personal (Garzón, Cajero, Admin) ve y procesa estas notificaciones
+    
     final isStaff = user.isGarzon || user.isCajeroOrAdmin;
     if (!isStaff) return;
 
@@ -111,7 +111,7 @@ class _StaffCallOverlayState extends ConsumerState<StaffCallOverlay> {
         }
       }
     } catch (_) {
-      // Ignorar errores silenciosamente en background
+      
     }
   }
 
@@ -198,7 +198,7 @@ class _StaffCallOverlayState extends ConsumerState<StaffCallOverlay> {
 
     if (!isStaff && !isHostess) return;
 
-    // Caso 1: Nuevo llamado (Solo para personal)
+    
     if ((event.type == 'staff_call' || event.type == 'assistance_request') && isStaff) {
       final itemMap = Map<String, dynamic>.from(event.data);
       final callData = event.type == 'assistance_request'
@@ -214,7 +214,7 @@ class _StaffCallOverlayState extends ConsumerState<StaffCallOverlay> {
       }
     }
 
-    // Caso 2: Llamado aceptado (Remover para todos los miembros del personal)
+    
     else if (event.type == 'staff_call_accepted' && isStaff) {
       final callId = event.data['id']?.toString() ?? '';
       if (callId.isNotEmpty) {
@@ -230,10 +230,10 @@ class _StaffCallOverlayState extends ConsumerState<StaffCallOverlay> {
     final user = ref.watch(authProvider).user;
     if (user == null) return const SizedBox.shrink();
 
-    // Solo personal dibuja el overlay físico. Las anfitrionas solo escuchan (no ven tarjetas).
+    
     final isStaff = user.isGarzon || user.isCajeroOrAdmin;
 
-    // Escuchar el stream SSE
+    
     ref.listen<AsyncValue<SseEvent>>(sseEventStreamProvider, (prev, next) {
       next.whenData((event) {
         _listenSseEvents(event);

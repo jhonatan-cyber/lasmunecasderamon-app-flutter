@@ -22,15 +22,15 @@ class CajeroPerfilScreen extends ConsumerWidget {
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
       body: Column(
         children: [
-          // Header con Gradiente Premium
+          
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
                   Theme.of(context).colorScheme.primary,
-                  const Color(0xFF881337), // Rosa/rojo muy oscuro
-                  const Color(0xFF1A0B10), // Aún más oscuro
+                  const Color(0xFF881337), 
+                  const Color(0xFF1A0B10), 
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -53,7 +53,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 25.0),
                 child: Column(
                   children: [
-                    // Botón Atrás y Título
+                    
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -82,11 +82,11 @@ class CajeroPerfilScreen extends ConsumerWidget {
                             letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(width: 40), // Balanceador visual
+                        const SizedBox(width: 40), 
                       ],
                     ),
                     const SizedBox(height: 30),
-                    // Avatar Premium
+                    
                     Container(
                       width: 90,
                       height: 90,
@@ -114,7 +114,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Nick del Usuario
+                    
                     Text(
                       '@$nick',
                       style: GoogleFonts.inter(
@@ -127,7 +127,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    // Rol
+                    
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
@@ -153,7 +153,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
           
           const SizedBox(height: 25),
           
-          // Ficha de Información del Usuario
+          
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -227,7 +227,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          // Icono
+          
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -241,7 +241,7 @@ class CajeroPerfilScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 16),
-          // Textos
+          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

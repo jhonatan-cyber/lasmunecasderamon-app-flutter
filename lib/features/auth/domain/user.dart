@@ -57,7 +57,7 @@ class User {
     };
   }
 
-  // Role helper methods mirroring typescript/utils/userRole.ts
+  
   bool get isGarzon {
     final r = role.trim().toLowerCase();
     return r.contains('garzon') || r.contains('mesero');

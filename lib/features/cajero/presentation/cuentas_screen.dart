@@ -22,10 +22,10 @@ class CuentasScreen extends ConsumerStatefulWidget {
 class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   Timer? _timer;
   String _searchQuery = '';
-  String _activeTab = 'todas'; // 'todas' or 'pendientes'
+  String _activeTab = 'todas'; 
   final _searchController = TextEditingController();
 
-  // Active controllers for modals
+  
   final _tipController = TextEditingController();
   final _motivoAnulacionController = TextEditingController();
   final _anulacionFormKey = GlobalKey<FormState>();
@@ -33,11 +33,11 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   @override
   void initState() {
     super.initState();
-    // Use microtask to avoid assertion '!_dirty' during montaje
+    
     Future.microtask(
       () => ref.read(cuentasListProvider.notifier).fetchData(),
     );
-    // Refresh UI every second to update active timers in real time
+    
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {});
@@ -102,9 +102,9 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Mutations
-  // ─────────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   Future<void> _detenerTiempo(int idCuenta) async {
     final ok = await ref.read(cuentasListProvider.notifier).detenerTiempo(idCuenta);
@@ -170,13 +170,13 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
         ),
       );
     } else {
-      // error ya lo maneja el notifier
+      
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Modals
-  // ─────────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   void _showCuentaActionSheet(dynamic cuenta) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -658,14 +658,14 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Totals Breakdown
+                    
                     _buildBreakdownRow(
                       isDark,
                       'Subtotal Consumo',
                       _formatCurrency(totalConsumo),
                     ),
 
-                    // Tip check
+                    
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(
@@ -707,7 +707,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                       const SizedBox(height: 12),
                     ],
 
-                    // Payment Method selector
+                    
                     Text(
                       'Forma de Pago',
                       style: GoogleFonts.inter(
@@ -758,7 +758,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                         if (val != null) {
                           setLocalState(() {
                             cobroMetodoPago = val;
-                            // Add 2% card fee if card payment
+                            
                             if (cobroMetodoPago == 'tarjeta') {
                               cardFee = totalConsumo * 0.02;
                             } else {
@@ -950,9 +950,9 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Build
-  // ─────────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   @override
   Widget build(BuildContext context) {
@@ -1026,7 +1026,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Summary cards
+                      
                       Row(
                         children: [
                           Expanded(
@@ -1050,7 +1050,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Search bar
+                      
                       Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
@@ -1103,7 +1103,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                         ),
                       ),
 
-                      // Tabs
+                      
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Row(
@@ -1130,7 +1130,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                         ),
                       ),
 
-                      // Count and label
+                      
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -1395,7 +1395,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Summary cards skeleton
+            
             Row(
               children: [
                 const Expanded(child: SkeletonCard(lines: 2)),
@@ -1404,7 +1404,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            // List skeleton
+            
             ...List.generate(5, (i) => const SkeletonCard(lines: 4)),
           ],
         ),

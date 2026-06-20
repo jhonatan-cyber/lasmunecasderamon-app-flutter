@@ -93,9 +93,9 @@ class CajeroGratificacionesScreen extends ConsumerStatefulWidget {
 class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacionesScreen> {
   List<GratificacionItem> _gratificaciones = [];
   List<GratificacionEmployee> _employees = [];
-  String _filter = 'todos'; // todos, pendiente, por_pagar, pagado, rechazada
+  String _filter = 'todos'; 
 
-  // Form states for dialog
+  
   String _employeeSearch = '';
   GratificacionEmployee? _selectedEmployee;
   final TextEditingController _montoController = TextEditingController();
@@ -321,7 +321,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                           controller: scrollController,
                           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
                           children: [
-                            // Search Employee Input
+                            
                             TextField(
                               style: GoogleFonts.inter(color: Colors.white),
                               decoration: const InputDecoration(
@@ -335,7 +335,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                               },
                             ),
                             const SizedBox(height: 12),
-                            // Employees List Selector
+                            
                             Container(
                               height: 180,
                               decoration: BoxDecoration(
@@ -388,7 +388,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                               ),
                             ),
                             const SizedBox(height: 16),
-                            // Monto Input
+                            
                             TextField(
                               controller: _montoController,
                               style: GoogleFonts.inter(color: Colors.white),
@@ -402,7 +402,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                               },
                             ),
                             const SizedBox(height: 16),
-                            // Descripion Input
+                            
                             TextField(
                               controller: _descController,
                               style: GoogleFonts.inter(color: Colors.white),
@@ -413,7 +413,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                               ),
                             ),
                             const SizedBox(height: 24),
-                            // Submit Button
+                            
                             Consumer(builder: (context, ref, _) {
                               final isSubmitting = ref.watch(setStateProvider('gratificaciones')).isSubmitting;
                               return ElevatedButton(
@@ -464,7 +464,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
+                    
                     Container(
                       width: double.infinity,
                       decoration: const BoxDecoration(
@@ -513,7 +513,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
 
                     const SizedBox(height: 20),
 
-                    // Summary Card
+                    
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Container(
@@ -566,7 +566,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
 
                     const SizedBox(height: 16),
 
-                    // Filter row
+                    
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: SingleChildScrollView(
@@ -589,7 +589,7 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
 
                     const SizedBox(height: 16),
 
-                    // Main list
+                    
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: refresh.error.isNotEmpty

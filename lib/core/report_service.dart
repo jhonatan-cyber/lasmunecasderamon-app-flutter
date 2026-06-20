@@ -4,14 +4,14 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Mirror of Expo's `services/reportService.ts`.
-///
-/// Generates PDF reports (sales, attendance, services) and CSV exports,
-/// then shares them via the system share sheet.
-class ReportService {
-  // ── Public API ────────────────────────────────────────────────────────
 
-  /// Generates a sales report PDF and returns its file path, or `null` on failure.
+
+
+
+class ReportService {
+  
+
+  
   Future<String?> exportSalesReport(ReportConfig config) async {
     try {
       final pdf = pw.Document();
@@ -28,7 +28,7 @@ class ReportService {
     }
   }
 
-  /// Generates an attendance report PDF.
+  
   Future<String?> exportAttendanceReport(ReportConfig config) async {
     try {
       final pdf = pw.Document();
@@ -45,7 +45,7 @@ class ReportService {
     }
   }
 
-  /// Generates a services report PDF.
+  
   Future<String?> exportServicesReport(ReportConfig config) async {
     try {
       final pdf = pw.Document();
@@ -62,7 +62,7 @@ class ReportService {
     }
   }
 
-  /// Generates a CSV file from [data] and returns its path, or `null`.
+  
   Future<String?> exportToCSV(
     List<Map<String, dynamic>> data,
     String filename,
@@ -73,7 +73,7 @@ class ReportService {
       final headers = data.first.keys.toList();
       final csvRows = StringBuffer();
 
-      // Header row
+      
       csvRows.writeln(headers.map((h) => '"${h.replaceAll('"', '""')}"').join(','));
 
       // Data rows
@@ -95,7 +95,7 @@ class ReportService {
     }
   }
 
-  /// Opens the system share sheet for the file at [uri].
+  
   Future<bool> shareReport(String uri, String title) async {
     try {
       await Share.shareXFiles([XFile(uri)], subject: title);
@@ -105,7 +105,7 @@ class ReportService {
     }
   }
 
-  // ── PDF builders ──────────────────────────────────────────────────────
+  
 
   pw.Widget _buildHeader(pw.Context context, ReportConfig config) {
     return pw.Column(
@@ -156,7 +156,7 @@ class ReportService {
           i: const pw.FlexColumnWidth(1),
       },
       children: [
-        // Header row
+        
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.indigo),
           children: headers
@@ -173,7 +173,7 @@ class ReportService {
                   ))
               .toList(),
         ),
-        // Data rows
+        
         ...rows.asMap().entries.map((entry) {
           final i = entry.key;
           final row = entry.value;
@@ -275,7 +275,7 @@ class ReportService {
     ];
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────
+  
 
   Future<String> _savePdf(pw.Document pdf, String baseName) async {
     final bytes = await pdf.save();
@@ -294,7 +294,7 @@ class ReportService {
   }
 }
 
-/// Configuration for a report generation.
+
 class ReportConfig {
   final String title;
   final List<String> headers;
@@ -311,5 +311,5 @@ class ReportConfig {
   });
 }
 
-/// Singleton instance (mirrors Expo's `export const reportService = new ReportService()`).
+
 final reportService = ReportService();

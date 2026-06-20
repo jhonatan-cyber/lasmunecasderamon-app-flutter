@@ -4,9 +4,9 @@ import '../../../core/api_client.dart';
 import '../../auth/data/auth_notifier.dart';
 import 'solicitud_item.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class SolicitudesListState {
   final bool isLoading;
@@ -45,9 +45,9 @@ class SolicitudesListState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifier
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
   final ApiClient _apiClient;
@@ -63,7 +63,7 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
     return Future.value();
   }
 
-  /// Fetch all data: services, orders, advances, caja stats, hostesses.
+  
   Future<void> fetchData({bool isManual = false}) async {
     if (!mounted) return;
     state = state.copyWith(
@@ -114,7 +114,7 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
       final resCaja = responses[3];
       final resHostesses = responses[4];
 
-      // Parse hostesses
+      
       List<dynamic> hostesses = [];
       if (resHostesses.data != null) {
         final hostList = resHostesses.data['success'] == true
@@ -125,7 +125,7 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
         }
       }
 
-      // Caja status
+      
       bool cajaAbierta = false;
       if (resCaja.data != null &&
           resCaja.data['cajas_abiertas'] != null) {
@@ -133,7 +133,7 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
             (int.tryParse(resCaja.data['cajas_abiertas'].toString()) ?? 0) > 0;
       }
 
-      // Combine lists
+      
       List<SolicitudItem> combined = [];
 
       if (resServices.data != null &&
@@ -164,7 +164,7 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
         }
       }
 
-      // Sort newest first
+      
       combined.sort((a, b) => b.fechaOrden.compareTo(a.fechaOrden));
 
       state = state.copyWith(
@@ -181,10 +181,10 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
     }
   }
 
-  /// Approve and pay an advance (anticipo).
+  
   Future<bool> aprobarAnticipo(SolicitudItem item) async {
     try {
-      // If requires admin approval (estado == 2), approve first
+      
       if (item.estado == 2) {
         final approveRes = await _apiClient.dio.put(
           '/anticipos/${item.id}',
@@ -196,7 +196,7 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
         }
       }
 
-      // Disburse (mark paid, estado = 0)
+      
       final payRes = await _apiClient.dio.put(
         '/anticipos/${item.id}',
         data: {'estado': 0},
@@ -212,7 +212,7 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
     }
   }
 
-  /// Reject a service request or order.
+  
   Future<bool> rechazarSolicitud(SolicitudItem item) async {
     try {
       final isSrv = item.tipoItem == 'solicitud';
@@ -241,9 +241,9 @@ class SolicitudesListNotifier extends StateNotifier<SolicitudesListState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 final solicitudesListProvider =
     StateNotifierProvider.autoDispose<SolicitudesListNotifier, SolicitudesListState>(

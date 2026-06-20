@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Collapsible (expandable) section widget.
-///
-/// Mirrors Expo's `components/ui/collapsible.tsx` — a section that can be
-/// expanded/collapsed with an animated chevron.
+
+
+
+
 class Collapsible extends StatefulWidget {
   const Collapsible({
     super.key,
@@ -92,7 +92,7 @@ class _CollapsibleState extends State<Collapsible>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header (always visible)
+          
           InkWell(
             onTap: _toggle,
             borderRadius: BorderRadius.vertical(
@@ -128,7 +128,7 @@ class _CollapsibleState extends State<Collapsible>
             ),
           ),
 
-          // Collapsible content
+          
           SizeTransition(
             sizeFactor: _expandAnimation,
             alignment: const Alignment(-1.0, 0.0),

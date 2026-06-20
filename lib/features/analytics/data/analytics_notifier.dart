@@ -3,14 +3,14 @@ import '../../../core/api_client.dart';
 import '../../../core/logger.dart';
 import '../../auth/data/auth_notifier.dart';
 
-/// Datos de una estadística individual.
 
-/// Datos de una estadística individual.
+
+
 class StatData {
   final String title;
   final String value;
   final String? subtitle;
-  final String icon; // nombre del icono
+  final String icon; 
   final double valueRaw;
 
   const StatData({
@@ -22,7 +22,7 @@ class StatData {
   });
 }
 
-/// Datos de un punto del gráfico de barras.
+
 class BarChartDataPoint {
   final String label;
   final double value;
@@ -30,7 +30,7 @@ class BarChartDataPoint {
   const BarChartDataPoint({required this.label, required this.value});
 }
 
-/// Datos de un segmento del gráfico de torta.
+
 class PieChartDataPoint {
   final String label;
   final double value;
@@ -43,7 +43,7 @@ class PieChartDataPoint {
   });
 }
 
-/// Estado completo del dashboard analítico.
+
 class AnalyticsState {
   final List<StatData> stats;
   final List<BarChartDataPoint> barData;
@@ -91,7 +91,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
       final response = await _apiClient.dio.get('/analytics/dashboard');
       final raw = response.data['data'] ?? response.data;
 
-      // Parse stats from API or use demo data
+      
       final stats = _parseStats(raw);
       final barData = _parseBarData(raw);
       final pieData = _parsePieData(raw);
@@ -104,7 +104,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
       );
     } catch (e, stack) {
       Logger.captureException(e, hint: 'fetchAnalytics', stackTrace: stack);
-      // Fallback: demo data for development
+      
       state = state.copyWith(
         stats: _demoStats(),
         barData: _demoBarData(),
@@ -115,7 +115,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
   }
 
-  // ── Parsing helpers ─────────────────────────────────────────────
+  
 
   List<StatData> _parseStats(Map<String, dynamic> raw) {
     try {
@@ -187,7 +187,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
   }
 
-  // ── Demo data (fallback cuando la API no existe) ───────────────
+  
 
   List<StatData> _demoStats() => [
         const StatData(

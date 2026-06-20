@@ -8,7 +8,7 @@ import 'core/router.dart';
 import 'core/push_notification_service.dart';
 import 'features/auth/data/auth_notifier.dart';
 
-/// Sentry DSN from `--dart-define=SENTRY_DSN=...` or fallback placeholder.
+
 const _sentryDsn =
     String.fromEnvironment('SENTRY_DSN',
         defaultValue: 'https://placeholder@example.ingest.sentry.io/placeholder');
@@ -68,10 +68,10 @@ class MyApp extends ConsumerWidget {
   }
 }
 
-/// Bootstraps [PushNotificationService] after the provider scope is available.
-///
-/// Initialises Firebase, requests permissions, registers the FCM token, and
-/// sets up notification handlers — all without blocking the widget tree.
+
+
+
+
 class _PushNotificationBootstrap extends ConsumerStatefulWidget {
   const _PushNotificationBootstrap({required this.child});
 

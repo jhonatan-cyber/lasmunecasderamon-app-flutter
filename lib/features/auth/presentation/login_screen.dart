@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:lasmunecasderamon_flutter/core/theme.dart'; // Para themeModeProvider y AppTheme
+import 'package:lasmunecasderamon_flutter/core/theme.dart'; 
 import 'package:lasmunecasderamon_flutter/core/haptic_service.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../data/auth_notifier.dart';
@@ -21,7 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Biometrics and QR status
+  
   final LocalAuthentication _localAuth = LocalAuthentication();
   bool _isBiometricAvailable = false;
 
@@ -141,7 +141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if (barcodes.isNotEmpty) {
                         final qrData = barcodes.first.rawValue;
                         if (qrData != null) {
-                          Navigator.of(context).pop(); // Cerrar modal
+                          Navigator.of(context).pop(); 
                           _loginWithQR(qrData);
                         }
                       }
@@ -214,7 +214,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final labelColor = isDark ? AppTheme.darkTextSecondary : const Color(0xFF4B5563);
     final borderColor = isDark ? AppTheme.darkBorderColor : const Color(0xFFD1D5DB);
 
-    // Dynamic duration and curve for theme transition
+    
     const transitionDuration = Duration(milliseconds: 250);
     const transitionCurve = Curves.easeOutCubic;
 
@@ -224,23 +224,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       child: Scaffold(
         body: Stack(
           children: [
-            // Dark Background Gradient (base layer)
+            
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    accentColor.withValues(alpha: 0.8), // Terracotta shadow
-                    const Color(0xFF0F0F10), // Obsidian
+                    accentColor.withValues(alpha: 0.8), 
+                    const Color(0xFF0F0F10), 
                     const Color(0xFF0F0F10),
-                    const Color(0xFF140D0B), // Warm wood accent
+                    const Color(0xFF140D0B), 
                   ],
                   stops: [0.0, 0.4, 0.8, 1.0],
                 ),
               ),
             ),
-            // Light Background Gradient (fades in/out over dark layer)
+            
             AnimatedOpacity(
               opacity: isDark ? 0.0 : 1.0,
               duration: transitionDuration,
@@ -270,7 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Brand Logo/Header Area
+                      
                       Center(
                         child: Image.asset(
                           'assets/images/logo2.png',
@@ -287,13 +287,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 36),
 
-                      // No-Card Form container directly on background
+                      
                       Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Error Display
+                            
                             if (formState.error != null || authState.error != null) ...[
                               Container(
                                 padding: const EdgeInsets.all(12),
@@ -317,7 +317,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 16),
                             ],
 
-                            // Username Field
+                            
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -371,7 +371,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             const SizedBox(height: 20),
 
-                            // Password Field
+                            
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -434,7 +434,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ],
                             ),
                             
-                            // Forgot Password Link
+                            
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
@@ -451,7 +451,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Login Button (AnimatedContainer for smooth theme morphing)
+                            
                             AnimatedContainer(
                               duration: transitionDuration,
                               curve: transitionCurve,
@@ -497,7 +497,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Quick login options (QR and Fingerprint)
+                      
                       Column(
                         children: [
                           Row(
@@ -523,7 +523,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // QR Login Button
+                              
                               _buildQuickLoginButton(
                                 icon: Icons.qr_code_scanner_rounded,
                                 label: 'Código QR',
@@ -532,7 +532,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 accentColor: accentColor,
                               ),
                               
-                              // Biometrics Login Button (only show if available)
+                              
                               if (_isBiometricAvailable) ...[
                                 const SizedBox(width: 24),
                                 _buildQuickLoginButton(
@@ -553,7 +553,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             
-            // Theme Toggle Button (Top Right) — placed after SafeArea to stay on top
+            
             Positioned(
               top: 50,
               right: 20,

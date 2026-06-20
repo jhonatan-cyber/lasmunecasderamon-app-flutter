@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// A button with a subtle scale-down animation on press.
-/// Replaces plain GestureDetector/InkWell with consistent tactile feedback.
+
+
 class AnimatedButton extends StatefulWidget {
   final VoidCallback? onPressed;
   final Widget child;
@@ -140,7 +140,7 @@ class _AnimatedButtonState extends State<AnimatedButton>
   }
 }
 
-/// A primary gradient button (most common variant).
+
 class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
@@ -184,7 +184,7 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-/// An outlined button with scale animation.
+
 class OutlinedAnimatedButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;

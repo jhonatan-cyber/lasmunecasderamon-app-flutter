@@ -16,7 +16,7 @@ class AppThemeOption {
 }
 
 const List<AppThemeOption> appThemeOptions = [
-  // Tonos Cálidos
+  
   AppThemeOption(
     name: 'Terracota (Default)',
     color: Color(0xFFD84315),
@@ -37,7 +37,7 @@ const List<AppThemeOption> appThemeOptions = [
     color: Color(0xFFEAB308),
     gradient: [Color(0xFFEAB308), Color(0xFFCA8A04), Color(0xFFA16207)],
   ),
-  // Tonos Fríos
+  
   AppThemeOption(
     name: 'Esmeralda',
     color: Color(0xFF059669),
@@ -58,7 +58,7 @@ const List<AppThemeOption> appThemeOptions = [
     color: Color(0xFF8B5CF6),
     gradient: [Color(0xFF8B5CF6), Color(0xFF7C3AED), Color(0xFF6D28D9)],
   ),
-  // Tonos Neutros
+  
   AppThemeOption(
     name: 'Rosa',
     color: Color(0xFFEC4899),
@@ -72,56 +72,56 @@ const List<AppThemeOption> appThemeOptions = [
 ];
 
 class AppTheme {
-  // Semantic / Status Colors
-  static const Color errorColor = Color(0xFFEF4444); // Red - errors, delete, danger
-  static const Color successColor = Color(0xFF10B981); // Green - success, active, completed
-  static const Color warningColor = Color(0xFFF59E0B); // Amber - pending, warning
-  static const Color infoColor = Color(0xFF3B82F6); // Blue - info, processing
+  
+  static const Color errorColor = Color(0xFFEF4444); 
+  static const Color successColor = Color(0xFF10B981); 
+  static const Color warningColor = Color(0xFFF59E0B); 
+  static const Color infoColor = Color(0xFF3B82F6); 
 
-  // Semantic Dark Variants
+  
   static const Color errorDarkColor = Color(0xFF991B1B);
   static const Color successDarkColor = Color(0xFF065F46);
   static const Color infoDarkColor = Color(0xFF1E40AF);
   static const Color warningDarkColor = Color(0xFFB45309);
 
-  // Semantic Light Background Variants
+  
   static const Color errorLightBg = Color(0xFFFEE2E2);
   static const Color successLightBg = Color(0xFFD1FAE5);
   static const Color infoLightBg = Color(0xFFDBEAFE);
   static const Color warningLightBg = Color(0xFFFEF3C7);
 
-  // Additional Palette
-  static const Color nearBlackColor = Color(0xFF111111); // Alternative dark surface
-  static const Color gray500Color = Color(0xFF6B7280); // Gray 500 - alternative secondary
-  static const Color gray700Color = Color(0xFF374151); // Gray 700 - borders/dividers
-  static const Color purpleColor = Color(0xFF8B5CF6); // Purple - extras
-  static const Color lightRedColor = Color(0xFFFCA5A5); // Light red
-  static const Color darkSurfaceAltColor = Color(0xFF27272A); // Alternative dark surface
+  
+  static const Color nearBlackColor = Color(0xFF111111); 
+  static const Color gray500Color = Color(0xFF6B7280); 
+  static const Color gray700Color = Color(0xFF374151); 
+  static const Color purpleColor = Color(0xFF8B5CF6); 
+  static const Color lightRedColor = Color(0xFFFCA5A5); 
+  static const Color darkSurfaceAltColor = Color(0xFF27272A); 
 
-  // Status Dark Variants (for dark mode foreground)
-  static const Color successLightFg = Color(0xFF6EE7B7); // Light green
-  static const Color infoLightFg = Color(0xFF93C5FD); // Light blue
+  
+  static const Color successLightFg = Color(0xFF6EE7B7); 
+  static const Color infoLightFg = Color(0xFF93C5FD); 
 
-  // Brand Colors
-  static const Color primaryColor = Color(0xFFD84315); // Deep Warm Orange / Terracotta
-  static const Color secondaryColor = Color(0xFFFFB300); // Warm Amber
-  static const Color accentColor = Color(0xFFFF7043); // Lighter Coral
+  
+  static const Color primaryColor = Color(0xFFD84315); 
+  static const Color secondaryColor = Color(0xFFFFB300); 
+  static const Color accentColor = Color(0xFFFF7043); 
 
-  // Dark Mode Palette
-  static const Color darkBgColor = Color(0xFF0F0F10); // Ultra Dark Charcoal
-  static const Color darkSurfaceColor = Color(0xFF18181A); // Card background
-  static const Color darkBorderColor = Color(0xFF262629); // Borders and dividers
-  static const Color darkTextPrimary = Color(0xFFF3F4F6); // White/Gray 100
-  static const Color darkTextSecondary = Color(0xFF9CA3AF); // Gray 400
+  
+  static const Color darkBgColor = Color(0xFF0F0F10); 
+  static const Color darkSurfaceColor = Color(0xFF18181A); 
+  static const Color darkBorderColor = Color(0xFF262629); 
+  static const Color darkTextPrimary = Color(0xFFF3F4F6); 
+  static const Color darkTextSecondary = Color(0xFF9CA3AF); 
 
-  // Light Mode Palette
-  static const Color lightBgColor = Color(0xFFF9FAFB); // Gray 50
+  
+  static const Color lightBgColor = Color(0xFFF9FAFB); 
   static const Color lightSurfaceColor = Color(0xFFFFFFFF);
   static const Color lightBorderColor = Color(0xFFE5E7EB);
   static const Color lightTextPrimary = Color(0xFF111827);
   static const Color lightTextSecondary = Color(0xFF4B5563);
 
-  // Common Button Style Helper
+  
   static ButtonStyle getPrimaryButtonStyle(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     return ElevatedButton.styleFrom(
@@ -139,7 +139,7 @@ class AppTheme {
     );
   }
 
-  // Dynamic Theme Generator
+  
   static ThemeData getTheme(Brightness brightness, Color customPrimaryColor) {
     final isDark = brightness == Brightness.dark;
     final bg = isDark ? darkBgColor : lightBgColor;
@@ -210,14 +210,14 @@ class AppTheme {
     );
   }
 
-  // Backward compatibility getters
+  
   static ThemeData get darkTheme => getTheme(Brightness.dark, primaryColor);
   static ThemeData get lightTheme => getTheme(Brightness.light, primaryColor);
 }
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
 
-// Accent Color Provider with SharedPreferences Persistence
+
 final accentColorProvider = StateNotifierProvider<AccentColorNotifier, AppThemeOption>((ref) {
   return AccentColorNotifier();
 });

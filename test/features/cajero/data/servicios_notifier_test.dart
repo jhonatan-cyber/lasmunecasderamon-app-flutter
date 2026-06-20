@@ -4,7 +4,7 @@ import 'package:lasmunecasderamon_flutter/core/api_client.dart';
 import 'package:lasmunecasderamon_flutter/features/cajero/data/servicios_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Helper: creates a Dio with an interceptor that resolves immediately.
+
 Dio _dioWithResponse({
   required dynamic data,
   int statusCode = 200,
@@ -22,7 +22,7 @@ Dio _dioWithResponse({
   return dio;
 }
 
-/// Helper: builds a [ServiciosListNotifier] with a given Dio instance.
+
 ServiciosListNotifier _buildNotifier(Dio dio) {
   return ServiciosListNotifier(ApiClient(dio: dio));
 }
@@ -150,11 +150,11 @@ void main() {
         final notifier = _buildNotifier(
           _dioWithResponse(data: {'success': true}),
         );
-        // Seed state
+        
         notifier.state = notifier.state.copyWith(servicios: mockData);
         expect(notifier.state.servicios.length, 2);
 
-        // Patch /servicios/$id resolves with success
+        
         final result = await notifier.finalizarServicio(1);
         expect(result, true);
         expect(notifier.state.servicios.length, 1);
@@ -171,7 +171,7 @@ void main() {
 
         final result = await notifier.finalizarServicio(1);
         expect(result, false);
-        expect(notifier.state.servicios.length, 1); // unchanged
+        expect(notifier.state.servicios.length, 1); 
         expect(notifier.state.error, isNotEmpty);
       });
 
@@ -216,7 +216,7 @@ void main() {
           {'id_servicio': 2, 'estado': 1},
         ]);
 
-        // Missing estado defaults to 0 (active), so item 1 is active, item 2 is not
+        
         expect(state.activeServicios.length, 1);
         expect(state.activeServicios.first['id_servicio'], 1);
       });

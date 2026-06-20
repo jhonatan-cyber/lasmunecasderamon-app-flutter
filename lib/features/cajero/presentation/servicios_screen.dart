@@ -22,11 +22,11 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
   @override
   void initState() {
     super.initState();
-    // Defer to avoid Riverpod rebuild during mount cycle
+    
     Future.microtask(
       () => ref.read(serviciosListProvider.notifier).fetchServicios(),
     );
-    // Refresh active timers on the UI every second
+    
     _uiRefreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {});
@@ -151,7 +151,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final state = ref.watch(serviciosListProvider);
 
-    // Filter active services (typically estado = 0 or in progress)
+    
     final activeServicios = state.servicios
         .where((s) => (int.tryParse(s['estado']?.toString() ?? '0') ?? 0) == 0)
         .toList();

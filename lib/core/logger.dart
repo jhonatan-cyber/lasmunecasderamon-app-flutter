@@ -1,20 +1,20 @@
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-/// Centralised logging utility that mirrors the Expo logger.ts behaviour.
-///
-/// In debug builds, messages are printed to the console. In all builds
-/// they are forwarded to Sentry as breadcrumbs (info/warn) or captured
-/// exceptions (error/fatal).
-///
-/// Usage:
-/// ```dart
-/// Logger.info('User logged in');
-/// Logger.captureException(error, hint: 'fetchProducts');
-/// ```
+
+
+
+
+
+
+
+
+
+
+
 class Logger {
   Logger._();
 
-  // ── Public API ──────────────────────────────────────────────────────
+  
 
   static void debug(String message, {String? hint, Object? data}) {
     _log('DEBUG', message, hint, data);
@@ -36,10 +36,10 @@ class Logger {
     _addBreadcrumb('error', message, data);
   }
 
-  /// Report an unexpected error / exception to Sentry.
-  ///
-  /// [hint] is a short context label (e.g. the screen / operation name).
-  /// [data] is optional extra info attached to the event.
+  
+  
+  
+  
   static Future<void> captureException(
     Object error, {
     String? hint,
@@ -60,7 +60,7 @@ class Logger {
     );
   }
 
-  // ── Internals ───────────────────────────────────────────────────────
+  
 
   static void _log(String level, String message, String? hint, Object? data) {
     // ignore: avoid_print
@@ -79,7 +79,7 @@ class Logger {
                 : null,
       ));
     } catch (_) {
-      // Sentry may not be initialised yet — silently ignore.
+      
     }
   }
 }

@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage
 import 'package:lasmunecasderamon_flutter/core/api_client.dart';
 import 'package:lasmunecasderamon_flutter/features/garzon/data/servicios_notifier.dart';
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+
 
 Dio _dioWithResponse({
   List<dynamic>? roomsData,
@@ -19,7 +19,7 @@ Dio _dioWithResponse({
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
-        // Mock GET /rooms
+        
         if (options.path.contains('/rooms')) {
           handler.resolve(Response(
             requestOptions: options,
@@ -28,7 +28,7 @@ Dio _dioWithResponse({
           ));
           return;
         }
-        // Mock GET /users?anfitrionas=1
+        
         if (options.path.contains('/users')) {
           handler.resolve(Response(
             requestOptions: options,
@@ -37,7 +37,7 @@ Dio _dioWithResponse({
           ));
           return;
         }
-        // Mock GET /clients
+        
         if (options.path.contains('/clients')) {
           handler.resolve(Response(
             requestOptions: options,
@@ -46,7 +46,7 @@ Dio _dioWithResponse({
           ));
           return;
         }
-        // Mock POST
+        
         if (options.method == 'POST') {
           if (postError != null) {
             handler.reject(postError);
@@ -85,7 +85,7 @@ ServiciosFormNotifier _createNotifier({
   )));
 }
 
-// ── Fixtures ────────────────────────────────────────────────────────────────
+
 
 const _roomJson = {
   'id': 'r1',
@@ -136,9 +136,9 @@ void main() {
   });
 
   group('ServiciosFormNotifier', () {
-    // ─────────────────────────────────────────────────────────────────────
-    // Initial state
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('initial state has defaults', () {
       final notifier = _createNotifier();
@@ -153,9 +153,9 @@ void main() {
       expect(notifier.state.submitSuccess, isNull);
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // fetchFormData
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('fetchFormData loads rooms, hostesses and clients', () async {
       final notifier = _createNotifier(
@@ -171,7 +171,7 @@ void main() {
       expect(notifier.state.isLoading, isFalse);
       expect(notifier.state.error, isNull);
 
-      // Should filter out inactive rooms (price or time <= 0)
+      
       expect(notifier.state.rooms.length, 2);
       expect(notifier.state.rooms[0].name, 'Habitación 1');
       expect(notifier.state.rooms[1].name, 'VIP');
@@ -203,9 +203,9 @@ void main() {
       expect(notifier.state.error, contains('Error al cargar'));
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // selectRoom
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('selectRoom resets hostesses, clients and payment method', () async {
       final notifier = _createNotifier(
@@ -215,31 +215,31 @@ void main() {
       );
       await notifier.fetchFormData();
 
-      // Select a client first
+      
       notifier.toggleClient(notifier.state.clients[0]);
       expect(notifier.state.selectedClients, isNotEmpty);
 
-      // Select a hostess
+      
       notifier.toggleHostess(notifier.state.anfitrionas[0]);
       expect(notifier.state.selectedHostesses, isNotEmpty);
 
-      // Set payment
+      
       notifier.setPaymentMethod('efectivo');
 
-      // Now select a room
+      
       notifier.selectRoom(notifier.state.rooms[0]);
 
       expect(notifier.state.selectedRoom, isNotNull);
       expect(notifier.state.selectedRoom!.name, 'Habitación 1');
-      // Should reset on room change
+      
       expect(notifier.state.selectedHostesses, isEmpty);
       expect(notifier.state.selectedClients, isEmpty);
       expect(notifier.state.paymentMethod, isEmpty);
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // selectRoom with commission room
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('hasComision returns true for rooms with commission', () async {
       final notifier = _createNotifier(
@@ -251,14 +251,14 @@ void main() {
 
       expect(notifier.state.hasComision, isFalse);
 
-      notifier.selectRoom(notifier.state.rooms[0]); // VIP with commission
+      notifier.selectRoom(notifier.state.rooms[0]); 
       expect(notifier.state.hasComision, isTrue);
       expect(notifier.state.selectedRoom!.comisionAnfitriona, 2000);
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // toggleHostess — limits
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('toggleHostess enforces max limit for commission rooms', () async {
       final notifier = _createNotifier(
@@ -272,18 +272,18 @@ void main() {
         clientsData: [_clientJson],
       );
       await notifier.fetchFormData();
-      notifier.selectRoom(notifier.state.rooms[0]); // VIP
+      notifier.selectRoom(notifier.state.rooms[0]); 
 
-      // Commission room: max 3 hostesses
-      notifier.toggleHostess(notifier.state.anfitrionas[0]); // A
-      notifier.toggleHostess(notifier.state.anfitrionas[1]); // B
-      notifier.toggleHostess(notifier.state.anfitrionas[2]); // C
+      
+      notifier.toggleHostess(notifier.state.anfitrionas[0]); 
+      notifier.toggleHostess(notifier.state.anfitrionas[1]); 
+      notifier.toggleHostess(notifier.state.anfitrionas[2]); 
       expect(notifier.state.selectedHostesses.length, 3);
 
-      // Adding a 4th should dequeue the first
-      notifier.toggleHostess(notifier.state.anfitrionas[3]); // D
+      
+      notifier.toggleHostess(notifier.state.anfitrionas[3]); 
       expect(notifier.state.selectedHostesses.length, 3);
-      expect(notifier.state.selectedHostesses[0].name, 'B'); // A was removed
+      expect(notifier.state.selectedHostesses[0].name, 'B'); 
       expect(notifier.state.selectedHostesses[2].name, 'D');
     });
 
@@ -303,9 +303,9 @@ void main() {
       expect(notifier.state.selectedHostesses, isEmpty);
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // toggleClient — balance auto-forces prepago
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('toggleClient auto-forces prepago when client has balance', () async {
       final notifier = _createNotifier(
@@ -316,21 +316,21 @@ void main() {
       await notifier.fetchFormData();
       notifier.selectRoom(notifier.state.rooms[0]);
 
-      notifier.toggleClient(notifier.state.clients[0]); // no balance
+      notifier.toggleClient(notifier.state.clients[0]); 
       expect(notifier.state.paymentMethod, isEmpty);
 
-      notifier.toggleClient(notifier.state.clients[1]); // has 25000 balance
+      notifier.toggleClient(notifier.state.clients[1]); 
       expect(notifier.state.paymentMethod, 'prepago');
 
-      // Remove balance client
+      
       notifier.toggleClient(notifier.state.clients[1]);
       expect(notifier.state.selectedClients.length, 1);
-      expect(notifier.state.paymentMethod, isEmpty); // clears when prepago + no balance
+      expect(notifier.state.paymentMethod, isEmpty); 
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // totals calculation
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('totals returns zeros when no room selected', () {
       final notifier = _createNotifier();
@@ -350,13 +350,13 @@ void main() {
         clientsData: [_clientJson],
       );
       await notifier.fetchFormData();
-      notifier.selectRoom(notifier.state.rooms[0]); // VIP, comision=2000
-      notifier.toggleHostess(notifier.state.anfitrionas[0]); // 1 hostess
-      notifier.toggleHostess(notifier.state.anfitrionas[1]); // 2 hostesses
+      notifier.selectRoom(notifier.state.rooms[0]); 
+      notifier.toggleHostess(notifier.state.anfitrionas[0]); 
+      notifier.toggleHostess(notifier.state.anfitrionas[1]); 
 
       final totals = notifier.state.totals;
-      // subtotal = 2000 * 2 = 4000
-      // total = 15000 + 4000 = 19000
+      
+      
       expect(totals['subtotal'], 4000);
       expect(totals['roomPrice'], 15000);
       expect(totals['comision'], 4000);
@@ -370,7 +370,7 @@ void main() {
         clientsData: [_clientJson, _clientWithBalanceJson],
       );
       await notifier.fetchFormData();
-      notifier.selectRoom(notifier.state.rooms[0]); // Hab 1, price=5000
+      notifier.selectRoom(notifier.state.rooms[0]); 
       notifier.toggleHostess(notifier.state.anfitrionas[0]);
       notifier.toggleHostess(notifier.state.anfitrionas[1]);
       notifier.toggleClient(notifier.state.clients[0]);
@@ -378,19 +378,19 @@ void main() {
       notifier.setPaymentMethod('tarjeta');
 
       final totals = notifier.state.totals;
-      // manualPrice=10000, clients=1, hostesses=2 -> multiplier = 2
-      // subtotal = 10000 * 2 = 20000
-      // iva = 20000 * 0.2 = 4000
-      // total = 20000 + 5000 + 4000 = 29000 -> round up to 30000
+      
+      
+      
+      
       expect(totals['subtotal'], 20000);
       expect(totals['roomPrice'], 5000);
-      expect(totals['iva'], 5000); // 4000 + 1000 rounding diff
+      expect(totals['iva'], 5000); 
       expect(totals['total'], 30000);
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // validate
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('validate returns null when form is complete', () async {
       final notifier = _createNotifier(
@@ -437,9 +437,9 @@ void main() {
       expect(notifier.validate(), contains('método de pago'));
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // submitService
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('submitService calls API and returns success', () async {
       final notifier = _createNotifier(
@@ -490,9 +490,9 @@ void main() {
       expect(notifier.state.error, contains('Error al registrar'));
     });
 
-    // ─────────────────────────────────────────────────────────────────────
-    // resetForm / clearError
-    // ─────────────────────────────────────────────────────────────────────
+    
+    
+    
 
     test('resetForm clears all state', () async {
       final notifier = _createNotifier(
@@ -513,8 +513,8 @@ void main() {
 
     test('clearError clears error without affecting other state', () {
       final notifier = _createNotifier();
-      // Force error
-      notifier.submitService(); // validation error
+      
+      notifier.submitService(); 
 
       expect(notifier.state.error, isNotNull);
 
@@ -524,7 +524,7 @@ void main() {
   });
 }
 
-/// Simple fake for FlutterSecureStorage used in tests.
+
 class FakeSecureStorage extends FlutterSecureStoragePlatform {
   final _store = <String, String>{};
 

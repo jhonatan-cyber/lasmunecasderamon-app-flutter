@@ -53,10 +53,10 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
         password: tempAuthData['password']!,
         codigo: code,
       );
-      // Success redirect is handled automatically by the router listening to authProvider!
+      
     } catch (e) {
       ref.read(setStateProvider('verify_code').notifier).setError(e.toString().replaceAll('Exception: ', ''));
-      // Clear code inputs on error to let them retry
+      
       for (var controller in _controllers) {
         controller.clear();
       }
@@ -66,7 +66,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
 
   void _onKeyInput(int index, String value) {
     if (value.isNotEmpty) {
-      // Clean non-digits
+      
       final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
       if (digits.isEmpty) {
         _controllers[index].clear();
@@ -75,7 +75,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       
       _controllers[index].text = digits.substring(0, 1);
       
-      // Move to next field
+      
       if (index < 3) {
         _focusNodes[index + 1].requestFocus();
       } else {
@@ -94,17 +94,17 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Premium Gradient
+          
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  accentColor.withValues(alpha: 0.8), // Terracotta shadow
-                  AppTheme.darkBgColor, // Obsidian
+                  accentColor.withValues(alpha: 0.8), 
+                  AppTheme.darkBgColor, 
                   AppTheme.darkBgColor,
-                  const Color(0xFF140D0B), // Warm wood accent
+                  const Color(0xFF140D0B), 
                 ],
                 stops: [0.0, 0.4, 0.8, 1.0],
               ),
@@ -119,7 +119,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Back Button
+                    
                     Align(
                       alignment: Alignment.centerLeft,
                       child: IconButton(
@@ -131,11 +131,11 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Icon and Header
+                    
                     const Icon(
                       Icons.security_rounded,
                       size: 64,
-                      color: AppTheme.secondaryColor, // Amber
+                      color: AppTheme.secondaryColor, 
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -158,7 +158,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // Card Container
+                    
                     Container(
                       padding: const EdgeInsets.all(28.0),
                       decoration: BoxDecoration(
@@ -179,7 +179,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Error Banner
+                          
                           if (formState.error != null || authState.error != null) ...[
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -203,7 +203,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                             const SizedBox(height: 24),
                           ],
 
-                          // 4 Digits Row
+                          
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: List.generate(4, (index) {
@@ -211,7 +211,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                                 width: 56,
                                 height: 64,
                                 child: KeyboardListener(
-                                  focusNode: FocusNode(), // Dummy focus node for key listener
+                                  focusNode: FocusNode(), 
                                   onKeyEvent: (KeyEvent event) {
                                     if (event is KeyDownEvent &&
                                         event.logicalKey == LogicalKeyboardKey.backspace &&
@@ -231,7 +231,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                                     textAlign: TextAlign.center,
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [
-                                      LengthLimitingTextInputFormatter(2), // Allow 2 momentarily to catch paste/input
+                                      LengthLimitingTextInputFormatter(2), 
                                       FilteringTextInputFormatter.digitsOnly,
                                     ],
                                     textInputAction: TextInputAction.next,
@@ -255,7 +255,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                           ),
                           const SizedBox(height: 32),
 
-                          // Verify Button
+                          
                           ElevatedButton(
                             onPressed: authState.isLoading ? null : _verifyCode,
                             style: ElevatedButton.styleFrom(

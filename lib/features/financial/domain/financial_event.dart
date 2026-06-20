@@ -1,7 +1,7 @@
-/// Modelo de evento financiero (comisiones / propinas).
-///
-/// Espeja la interfaz `FinancialEvent` del hook Expo
-/// `useFinancialEvents.ts`.
+
+
+
+
 class FinancialEvent {
   final String id;
   final int? idComision;
@@ -13,8 +13,8 @@ class FinancialEvent {
   final String fechaCrea;
   final String? fechaMod;
   final String? propinaFechaCrea;
-  final int estado; // 0 = pagado, 1 = pendiente
-  final String tipo; // 'venta', 'servicio', 'otro', 'propina'
+  final int estado; 
+  final String tipo; 
   final String? subType;
   final String? clienteNombre;
   final String? habitacionNombre;
@@ -82,12 +82,12 @@ class FinancialEvent {
         if (propinaId != null) 'propina_id': propinaId,
       };
 
-  /// Texto legible del estado.
+  
   String get estadoLabel => estado == 0 ? 'Pagado' : 'Pendiente';
 
-  /// `true` si el evento está pagado.
+  
   bool get isPagado => estado == 0;
 
-  /// `true` si el evento está pendiente.
+  
   bool get isPendiente => estado == 1;
 }

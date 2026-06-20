@@ -24,7 +24,7 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch data on first load
+    
     Future.microtask(() {
       ref.read(garzonDashboardProvider.notifier).fetchDashboardData();
     });
@@ -75,7 +75,7 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Statistics Section
+                    
                     Text(
                       'Métricas del Período',
                       style: GoogleFonts.inter(
@@ -92,11 +92,11 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Payout Card
+                    
                     _buildPayoutCard(isDark, dashboardState.payoutTotal),
                     const SizedBox(height: 20),
 
-                    // Calendar Section
+                    
                     Text(
                       'Calendario Operativo',
                       style: GoogleFonts.inter(
@@ -108,7 +108,7 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                     _buildCalendarCard(isDark, dashboardState.eventDays),
                     const SizedBox(height: 24),
 
-                    // Quick Actions Row
+                    
                     Row(
                       children: [
                         Expanded(
@@ -366,10 +366,10 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
     final year = now.year;
     final month = now.month;
 
-    // Simple Monthly Calendar Calculation
+    
     final firstDayOfMonth = DateTime(year, month, 1);
     final totalDays = DateTime(year, month + 1, 0).day;
-    final startWeekday = firstDayOfMonth.weekday; // 1 = Lunes, 7 = Domingo
+    final startWeekday = firstDayOfMonth.weekday; 
 
     final monthName = DateFormat('MMMM yyyy', 'es_CL').format(now);
 
@@ -394,7 +394,7 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // Weekdays row
+          
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: ['LU', 'MA', 'MI', 'JU', 'VI', 'SÁ', 'DO'].map((day) {
@@ -415,11 +415,11 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
             }).toList(),
           ),
           const SizedBox(height: 8),
-          // Days grid
+          
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: 35, // 5 rows x 7 days
+            itemCount: 35, 
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               mainAxisSpacing: 8,

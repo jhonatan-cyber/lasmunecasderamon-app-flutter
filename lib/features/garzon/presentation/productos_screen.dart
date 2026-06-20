@@ -38,9 +38,9 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
     ref.read(productosProvider.notifier).setSearchQuery(query);
   }
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Submit Order
-  // ─────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   Future<void> _submitOrder() async {
     final cartState = ref.read(cartProvider);
@@ -49,7 +49,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
 
     final notifier = ref.read(productosProvider.notifier);
 
-    // Validate
+    
     final validationError = notifier.validateOrder(cartState.items);
     if (validationError != null) {
       if (!mounted) return;
@@ -116,9 +116,9 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Modals
-  // ─────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   void _showClientSelection() {
     final cartState = ref.watch(cartProvider);
@@ -441,9 +441,9 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Build
-  // ─────────────────────────────────────────────────────────────────────
+  
+  
+  
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +622,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
             ),
           ),
 
-          // Cart Summary Bar
+          
           if (cartState.items.isNotEmpty) _buildCartSummaryBar(cartState),
         ],
       ),
@@ -753,7 +753,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
 
     return Column(
       children: [
-        // Search bar
+        
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
@@ -792,7 +792,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
           ),
         ),
 
-        // Products count
+        
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Row(
@@ -810,7 +810,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
         ),
         const SizedBox(height: 8),
 
-        // Products grid
+        
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
@@ -857,7 +857,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product icon placeholder
+              
               Container(
                 width: 40,
                 height: 40,
@@ -926,7 +926,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Header row ──────────────────────────────────────────
+            
             Row(
               children: [
                 Expanded(
@@ -978,7 +978,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
               ],
             ),
 
-            // ── Cart items ─────────────────────────────────────────
+            
             if (cartState.items.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -1007,7 +1007,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                       ),
                       child: Row(
                         children: [
-                          // Info
+                          
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1034,7 +1034,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                             ),
                           ),
 
-                          // Config buttons
+                          
                           if (hasCommission || state.rooms.isNotEmpty) ...[
                             if (hasCommission)
                               _buildConfigBadge(
@@ -1062,7 +1062,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                             ],
                           ],
 
-                          // Remove
+                          
                           const SizedBox(width: 4),
                           GestureDetector(
                             onTap: () => ref
@@ -1090,7 +1090,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
               ),
             ],
 
-            // ── Client & tip row ────────────────────────────────────
+            
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Divider(color: Color(0xFF262629)),

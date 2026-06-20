@@ -5,16 +5,16 @@ import '../../../core/logger.dart';
 import '../../auth/data/auth_notifier.dart';
 import '../domain/financial_event.dart';
 
-// ────────────────────────────────────────────────────────────────
-// State
-// ────────────────────────────────────────────────────────────────
+
+
+
 
 class FinancialState {
   final List<FinancialEvent> events;
   final bool isLoading;
   final bool isRefreshing;
   final String? error;
-  final String filter; // 'all', 'pendiente', 'pagado'
+  final String filter; 
   final bool hasChanges;
 
   const FinancialState({
@@ -45,7 +45,7 @@ class FinancialState {
     );
   }
 
-  /// Eventos filtrados según [filter].
+  
   List<FinancialEvent> get filteredEvents {
     if (filter == 'all') return events;
     final target = filter == 'pagado' ? 0 : 1;
@@ -53,13 +53,13 @@ class FinancialState {
   }
 }
 
-// ────────────────────────────────────────────────────────────────
-// Notifier
-// ────────────────────────────────────────────────────────────────
+
+
+
 
 class FinancialNotifier extends StateNotifier<FinancialState> {
   final ApiClient _apiClient;
-  final String _type; // 'comisiones' | 'propinas'
+  final String _type; 
   String _dataHash = '';
 
   FinancialNotifier(this._apiClient, this._type) : super(const FinancialState());
@@ -83,7 +83,7 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
         jsonList = [];
       }
 
-      // Para comisiones filtrar solo tipo 'venta' (como en Expo)
+      
       var items = jsonList
           .map((j) => FinancialEvent.fromJson(j as Map<String, dynamic>))
           .toList();
@@ -92,7 +92,7 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
         items = items.where((e) => e.tipo == 'venta').toList();
       }
 
-      // Data hash para detectar cambios
+      
       final serialized = items.map((e) => e.id).join(',');
       final hasChanges = _dataHash.isNotEmpty && _dataHash != serialized;
       _dataHash = serialized;
@@ -127,9 +127,9 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
   }
 }
 
-// ────────────────────────────────────────────────────────────────
-// Provider
-// ────────────────────────────────────────────────────────────────
+
+
+
 
 final financialProvider =
     StateNotifierProvider.family<FinancialNotifier, FinancialState, String>(

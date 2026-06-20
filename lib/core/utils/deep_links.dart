@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-/// Deep-link route definitions matching the app's routing structure.
-///
-/// Mirrors Expo's `utils/deepLinks.ts` — maps notification types and
-/// external URLs to in-app navigation routes.
+
+
+
+
 class DeepLinks {
-  // ── Screen paths ──────────────────────────────────────────────────────
+  
 
   static const String login = '/login';
   static const String garzonHome = '/garzon';
@@ -13,15 +13,15 @@ class DeepLinks {
   static const String anfitrionaHome = '/anfitriona';
   static const String perfil = '/garzon/perfil';
 
-  // ── Path builders ──────────────────────────────────────────────────────
+  
 
-  /// Builds a route path for notification-based deep linking.
-  ///
-  /// Supports paths like:
-  /// - `servicio/{id}` → `/cajero/servicios`
-  /// - `venta/{id}` → `/cajero/ventas`
-  /// - `solicitud/{id}` → `/cajero/solicitudes`
-  /// - `anticipo/{id}` → `/garzon/anticipos` (role-dependent)
+  
+  
+  
+  
+  
+  
+  
   static String fromNotificationType(String type, String? id, {String? role}) {
     switch (type) {
       case 'servicio':
@@ -47,14 +47,14 @@ class DeepLinks {
     }
   }
 
-  /// Parses an external URL and returns the corresponding in-app route.
-  ///
-  /// Supports URLs like:
-  /// - `lasmunecasderamon://servicio/{id}`
-  /// - `lasmunecasderamon://venta/{id}`
-  /// - `https://lasmunecasderamon.app/servicio/{id}`
+  
+  
+  
+  
+  
+  
   static String fromExternalUrl(Uri uri) {
-    // Custom scheme: lasmunecasderamon://{path}
+    
     if (uri.scheme == 'lasmunecasderamon') {
       final segments = uri.pathSegments;
       if (segments.isNotEmpty) {
@@ -63,7 +63,7 @@ class DeepLinks {
       }
     }
 
-    // Web URL: https://lasmunecasderamon.app/{path}
+    
     if (uri.host.contains('lasmunecasderamon')) {
       final segments = uri.pathSegments;
       if (segments.isNotEmpty) {

@@ -31,7 +31,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
       }
     }
 
-    return const SizedBox.shrink(); // Invisible widget
+    return const SizedBox.shrink(); 
   }
 
   void _showExpiredTimerAlert(ActiveTimer timer) {
@@ -85,7 +85,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
                 ],
               ),
             ),
-            // Info section
+            
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -147,7 +147,7 @@ class _GlobalTimerAlertState extends ConsumerState<GlobalTimerAlert> {
                 ],
               ),
             ),
-            // Button
+            
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),

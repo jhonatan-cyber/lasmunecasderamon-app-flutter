@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../timer_service.dart';
 
-/// A compact pill-shaped widget that displays the remaining time for a timer.
-/// Used in Ventas and Servicios lists to show real-time countdown.
+
+
 class TimerPill extends ConsumerWidget {
   final ActiveTimer timer;
 
@@ -30,12 +30,12 @@ class TimerPill extends ConsumerWidget {
       textColor = Colors.orange;
       text = 'PAUSADO ${timer.formatRemaining(timerState.serverOffset)}';
     } else if (remaining <= 300) {
-      // Less than 5 minutes - urgent
+      
       bgColor = Colors.redAccent.withValues(alpha: 0.15);
       textColor = Colors.redAccent;
       text = timer.formatRemaining(timerState.serverOffset);
     } else if (remaining <= 600) {
-      // Less than 10 minutes - warning
+      
       bgColor = Colors.orange.withValues(alpha: 0.15);
       textColor = Colors.orange;
       text = timer.formatRemaining(timerState.serverOffset);
@@ -83,7 +83,7 @@ class TimerPill extends ConsumerWidget {
   }
 }
 
-/// A standalone countdown timer widget used in CuentaTimer and other detail views.
+
 class CuentaTimerWidget extends ConsumerWidget {
   final ActiveTimer timer;
   final double fontSize;

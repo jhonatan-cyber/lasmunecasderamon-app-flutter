@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../auth/data/auth_notifier.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class VentasListState {
   final bool isLoading;
@@ -51,16 +51,16 @@ class VentasListState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifier
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class VentasListNotifier extends StateNotifier<VentasListState> {
   final ApiClient _apiClient;
 
   VentasListNotifier(this._apiClient) : super(VentasListState());
 
-  /// Fetch sales list + summary in parallel.
+  
   Future<void> fetchData({bool isManual = false}) async {
     if (!mounted) return;
     state = state.copyWith(
@@ -114,7 +114,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
     }
   }
 
-  /// Fetch detail for a single venta.
+  
   Future<void> fetchDetail(int ventaId) async {
     state = state.copyWith(loadingDetail: true, clearError: true);
 
@@ -142,7 +142,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
     }
   }
 
-  /// Finalizar a venta (estado = 1).
+  
   Future<bool> finalizarVenta(int ventaId) async {
     try {
       final response = await _apiClient.dio.put(
@@ -151,7 +151,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
       );
 
       if (response.data != null && response.data['success'] == true) {
-        // Update the venta locally to reflect estado=1
+        
         _updateLocalEstado(ventaId, 1);
         return true;
       }
@@ -161,7 +161,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
     }
   }
 
-  /// Solicitar anulación de una venta.
+  
   Future<bool> anularVenta(int ventaId, String motivo, double monto) async {
     state = state.copyWith(anulandoVenta: true, clearError: true);
 
@@ -193,7 +193,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
     }
   }
 
-  /// Reset selected venta (close detail modal).
+  
   void clearSelectedVenta() {
     state = VentasListState(
       isLoading: state.isLoading,
@@ -207,7 +207,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
     );
   }
 
-  // ── Helpers ──
+  
 
   void _updateLocalEstado(int ventaId, int newEstado) {
     final updated = state.ventas.map((v) {
@@ -221,9 +221,9 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Providers
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 final ventasListProvider =
     StateNotifierProvider.autoDispose<VentasListNotifier, VentasListState>((ref) {

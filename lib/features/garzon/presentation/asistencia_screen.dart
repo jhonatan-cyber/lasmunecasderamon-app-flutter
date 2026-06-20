@@ -16,8 +16,8 @@ class AsistenciaScreen extends ConsumerStatefulWidget {
 }
 
 class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
-  String _activeTab = 'asistencias'; // 'asistencias' or 'gratificaciones'
-  String _filter = 'all'; // 'all', 'pendiente', 'pagado'
+  String _activeTab = 'asistencias'; 
+  String _filter = 'all'; 
   List<dynamic> _asistencias = [];
   List<dynamic> _gratificaciones = [];
   DateTime _currentDate = DateTime.now();
@@ -134,7 +134,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
         ? _asistencias
         : _gratificaciones;
 
-    // Filter logic
+    
     final filteredData = currentData.where((item) {
       if (_activeTab == 'asistencias') {
         final estado = _normalizeEstado(item['estado']);
@@ -144,7 +144,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
       return true;
     }).toList();
 
-    // Calculations
+    
     final pendingShifts = _asistencias.where(
       (a) => _normalizeEstado(a['estado']) == 'pendiente',
     );
@@ -194,7 +194,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     vertical: 12.0,
                   ),
                   children: [
-                    // Tab Buttons (Turnos / Gratificaciones)
+                    
                     Row(
                       children: [
                         Expanded(
@@ -231,7 +231,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Summary Card
+                    
                     _buildSummaryCard(
                       isDark: isDark,
                       totalACobrar: totalACobrar,
@@ -241,7 +241,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Filter Row (only for turnos)
+                    
                     if (_activeTab == 'asistencias') ...[
                       Row(
                         children: [
@@ -320,7 +320,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
                         ),
                       )
                     else
-                      // ListView inside parent ListView: Disable nested scroll
+                      
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),

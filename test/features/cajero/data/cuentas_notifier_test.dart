@@ -4,9 +4,9 @@ import 'package:lasmunecasderamon_flutter/core/api_client.dart';
 import 'package:lasmunecasderamon_flutter/features/cajero/data/cuentas_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Dio _dioWithResponse({
   required dynamic data,
@@ -70,9 +70,9 @@ CuentasListNotifier _buildNotifier(Dio dio) {
   return CuentasListNotifier(ApiClient(dio: dio));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Test data
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Map<String, dynamic> successCuentas() => {
       'success': true,
@@ -121,9 +121,9 @@ Map<String, dynamic> failResponse() => {
       'message': 'Error de servidor',
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void main() {
   setUp(() {
@@ -288,7 +288,7 @@ void main() {
       );
 
       expect(result, true);
-      // Cuenta should be removed from local list
+      
       expect(notifier.state.cuentas.length, 1);
       expect(
         notifier.state.cuentas.every((c) =>

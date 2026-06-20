@@ -30,7 +30,7 @@ void main() {
     test('copyWith clearError takes precedence over error param', () {
       final state = const FormUIState(error: 'viejoo')
           .copyWith(clearError: true, error: 'nuevoo');
-      expect(state.error, isNull); // clearError gana
+      expect(state.error, isNull); 
     });
 
     test('copyWith updates flags', () {

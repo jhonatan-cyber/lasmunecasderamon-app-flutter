@@ -182,19 +182,19 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets
-                    .zero, // Quitamos el padding global para que el Header vaya de borde a borde
+                    .zero, 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header con Gradiente Premium y Dos Niveles (Acciones y Perfil)
+                    
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             Theme.of(context).colorScheme.primary,
-                            const Color(0xFF881337), // Rosa/rojo muy oscuro
-                            const Color(0xFF1A0B10), // AÃºn mÃ¡s oscuro
+                            const Color(0xFF881337), 
+                            const Color(0xFF1A0B10), 
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -396,7 +396,7 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
                                                 shape: BoxShape.circle,
                                                 color: Color(
                                                   0xFF10B981,
-                                                ), // Disponible / Verde
+                                                ), 
                                               ),
                                             ),
                                             const SizedBox(width: 6),

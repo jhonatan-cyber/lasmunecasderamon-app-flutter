@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../offline/providers.dart';
 
-/// An animated banner that appears at the top of the screen when the device
-/// loses connectivity and disappears when connectivity is restored.
-///
-/// Usage — wrap any screen or layout that should show the banner:
-/// ```dart
-/// Column(
-///   children: [
-///     const OfflineBanner(),
-///     Expanded(child: yourContent),
-///   ],
-/// )
-/// ```
+
+
+
+
+
+
+
+
+
+
+
+
 class OfflineBanner extends ConsumerWidget {
   const OfflineBanner({super.key});
 

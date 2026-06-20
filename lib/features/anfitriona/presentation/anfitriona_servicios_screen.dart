@@ -18,7 +18,7 @@ class AnfitrionaServiciosScreen extends ConsumerStatefulWidget {
 
 class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosScreen> {
   List<dynamic> _servicios = [];
-  String _filter = 'all'; // all, pendiente, pagado, cobrado
+  String _filter = 'all'; 
 
   @override
   void initState() {
@@ -144,7 +144,7 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
     final textSecondary = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
     final borderColor = isDark ? accentColor.withValues(alpha: 0.25) : Colors.grey.shade200;
 
-    // Métricas
+    
     final finalizados = _servicios.where((s) => s != null && int.tryParse(s['estado']?.toString() ?? '0') == 1);
     final cobrados = _servicios.where((s) => s != null && int.tryParse(s['estado']?.toString() ?? '0') == 0);
     final pendientes = _servicios.where((s) => s != null && [2, 3, 4].contains(int.tryParse(s['estado']?.toString() ?? '0')));
@@ -180,7 +180,7 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
           Expanded(
             child: Column(
               children: [
-                // Summary Card
+                
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Container(
@@ -233,7 +233,7 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
               ),
             ),
 
-            // Filters
+            
             Container(
               height: 48,
               margin: const EdgeInsets.symmetric(vertical: 8),
@@ -280,7 +280,7 @@ class _AnfitrionaServiciosScreenState extends ConsumerState<AnfitrionaServiciosS
               ),
             ),
 
-            // Services list
+            
             Expanded(
               child: refresh.isLoading
                   ? Center(child: CircularProgressIndicator(color: accentColor))

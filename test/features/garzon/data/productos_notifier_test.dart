@@ -7,9 +7,9 @@ import 'package:lasmunecasderamon_flutter/features/garzon/data/productos_notifie
 import 'package:lasmunecasderamon_flutter/features/garzon/domain/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Dio _dioWithConditionalResponse({
   required Map<String, dynamic> routeToData,
@@ -105,9 +105,9 @@ CartItem _makeCartItem({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Test data
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Map<String, dynamic> categoriesData() => {
       'success': true,
@@ -181,9 +181,9 @@ Map<String, dynamic> failResponse() => {
       'message': 'Error del servidor',
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void main() {
   setUp(() {
@@ -191,9 +191,9 @@ void main() {
     FlutterSecureStoragePlatform.instance = FakeSecureStorage();
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // Initial state
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('initial state', () {
     test('has correct defaults', () {
@@ -215,9 +215,9 @@ void main() {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // fetchInitialData
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('fetchInitialData', () {
     test('populates all catalogs on success', () async {
@@ -288,7 +288,7 @@ void main() {
         }),
       );
 
-      // Set some state first
+      
       notifier.setSearchQuery('test');
       await notifier.fetchInitialData();
 
@@ -309,9 +309,9 @@ void main() {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // fetchProducts
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('fetchProducts', () {
     test('populates products on success', () async {
@@ -366,9 +366,9 @@ void main() {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // Search & selection
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('search and selection', () {
     test('setSearchQuery updates searchQuery', () {
@@ -484,7 +484,7 @@ void main() {
     test('selectedCategory returns null for invalid category id', () {
       final notifier = _buildNotifier(Dio());
 
-      // Manually set an invalid category id
+      
       notifier.state = notifier.state.copyWith(
         selectedCategoryId: 'nonexistent',
       );
@@ -493,9 +493,9 @@ void main() {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // Helpers: isChampagne
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('isChampagne', () {
     test('returns true for champagne category', () {
@@ -525,9 +525,9 @@ void main() {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // Helpers: getMaxHostesses
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('getMaxHostesses', () {
     test('returns 5 for champagne >= 240000', () {
@@ -589,14 +589,14 @@ void main() {
       final notifier = _buildNotifier(Dio());
       final item = _makeCartItem(categoria: 'Bebidas');
 
-      expect(notifier.getMaxHostesses(item), 1); // quantity = 1
+      expect(notifier.getMaxHostesses(item), 1); 
       notifier.dispose();
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // Helper: generateCode
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('generateCode', () {
     test('returns 8-character code', () {
@@ -605,7 +605,7 @@ void main() {
       final code = notifier.generateCode();
 
       expect(code.length, 8);
-      // Only alphanumeric uppercase
+      
       expect(code, matches(RegExp(r'^[A-Z0-9]{8}$')));
       notifier.dispose();
     });
@@ -616,15 +616,15 @@ void main() {
       final code1 = notifier.generateCode();
       final code2 = notifier.generateCode();
 
-      // Note: could theoretically be the same, but extremely unlikely
+      
       expect(code1, isNot(code2));
       notifier.dispose();
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // validateOrder
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('validateOrder', () {
     test('returns error for empty cart', () {
@@ -705,14 +705,14 @@ void main() {
 
       final error = notifier.validateOrder(items);
       expect(error, isNotNull);
-      expect(error, contains('Bad Item')); // First commission item without hostesses
+      expect(error, contains('Bad Item')); 
       notifier.dispose();
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────
-  // submitOrder
-  // ─────────────────────────────────────────────────────────────────
+  
+  
+  
 
   group('submitOrder', () {
     test('returns true on success', () async {
@@ -764,7 +764,7 @@ void main() {
   });
 }
 
-/// Simple fake for FlutterSecureStorage used in tests.
+
 class FakeSecureStorage extends FlutterSecureStoragePlatform {
   final _store = <String, String>{};
 

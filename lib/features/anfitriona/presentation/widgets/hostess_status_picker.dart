@@ -27,11 +27,11 @@ class HostessStatusPicker extends StatelessWidget {
   Color _getStatusColor(int status, bool isDark) {
     switch (status) {
       case 1:
-        return const Color(0xFF10B981); // Emerald/Green
+        return const Color(0xFF10B981); 
       case 2:
-        return const Color(0xFFEF4444); // Red
+        return const Color(0xFFEF4444); 
       case 3:
-        return const Color(0xFFF59E0B); // Amber/Yellow
+        return const Color(0xFFF59E0B); 
       default:
         return Colors.grey;
     }

@@ -5,11 +5,11 @@ import 'package:lasmunecasderamon_flutter/core/api_client.dart';
 import 'package:lasmunecasderamon_flutter/features/garzon/data/dashboard_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
-/// Creates a Dio with an interceptor that resolves based on request path.
+
+
+
+
 Dio _dioWithConditionalResponse({
   required Map<String, dynamic> routeToData,
   int statusCode = 200,
@@ -41,7 +41,7 @@ Dio _dioWithConditionalResponse({
   return dio;
 }
 
-/// Creates a Dio that throws on all requests.
+
 Dio _dioWithError() {
   final dio = Dio();
   dio.interceptors.add(
@@ -60,9 +60,9 @@ GarzonDashboardNotifier _buildNotifier(Dio dio) {
   return GarzonDashboardNotifier(ApiClient(dio: dio));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Fixtures
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Map<String, dynamic> successEvents() => {
       'success': true,
@@ -130,9 +130,9 @@ const List<Map<String, dynamic>> rawEventsList = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void main() {
   setUp(() {
@@ -200,7 +200,7 @@ void main() {
       expect(notifier.state.salesWithTips, 5);
       expect(notifier.state.payoutTotal, 200000);
       expect(notifier.state.events.length, 2);
-      // eventDays should have today's day since both events have today's date
+      
       expect(notifier.state.eventDays.length, 1);
       expect(notifier.state.eventDays, contains(DateTime.now().day));
 
@@ -252,7 +252,7 @@ void main() {
 
     test('parses events when API returns raw list instead of wrapped format',
         () async {
-      // Dio that returns a raw List for /events/user
+      
       final dio = Dio();
       dio.interceptors.add(
         InterceptorsWrapper(
@@ -316,7 +316,7 @@ void main() {
 
       await notifier.fetchDashboardData();
 
-      // When success=false, data keys are nullish, so parsing yields defaults
+      
       expect(notifier.state.totalEarnings, 0);
       expect(notifier.state.salesWithTips, 0);
       expect(notifier.state.payoutTotal, 0);
@@ -361,7 +361,7 @@ void main() {
 
       await notifier.fetchDashboardData();
 
-      // When success=false, data keys are nullish, so parsing yields defaults
+      
       expect(notifier.state.totalEarnings, 0);
       expect(notifier.state.salesWithTips, 0);
       expect(notifier.state.payoutTotal, 0);
@@ -385,7 +385,7 @@ void main() {
                 ),
               );
             } else {
-              // Reject all others (simulates partial failure)
+              
               handler.reject(
                 DioException(
                   requestOptions: options,
@@ -400,7 +400,7 @@ void main() {
 
       await notifier.fetchDashboardData();
 
-      // Events should still be loaded, others should be defaults
+      
       expect(notifier.state.totalEarnings, 0);
       expect(notifier.state.salesWithTips, 0);
       expect(notifier.state.payoutTotal, 0);
@@ -422,22 +422,22 @@ void main() {
 
       await notifier.fetchDashboardData();
 
-      // payout should remain 0 since data['stats'] exists but has no montoAnticipoMaximo
+      
       expect(notifier.state.payoutTotal, 0);
 
       notifier.dispose();
     });
 
     test('returns defaults when all endpoints silently fail', () async {
-      // When each endpoint has its own catchError returning null,
-      // the notifier does not set an error but keeps defaults.
+      
+      
       final notifier = _buildNotifier(_dioWithError());
 
       await notifier.fetchDashboardData();
 
       expect(notifier.state.isLoading, false);
       expect(notifier.state.isRefreshing, false);
-      expect(notifier.state.error, ''); // No error propagates
+      expect(notifier.state.error, ''); 
       expect(notifier.state.totalEarnings, 0);
       expect(notifier.state.events, isEmpty);
 
@@ -485,7 +485,7 @@ void main() {
 
       await notifier.fetchDashboardData();
 
-      // Only the current month's event should be in eventDays
+      
       expect(notifier.state.eventDays.length, 1);
       expect(notifier.state.eventDays, contains(now.day));
 
@@ -493,8 +493,8 @@ void main() {
     });
 
     test('clears error before new fetch on a retry notifier', () async {
-      // Create a notifier that simulates a retry scenario:
-      // first fetch returns success=false, second fetch resets error.
+      
+      
       final notifier = _buildNotifier(
         _dioWithConditionalResponse(
           routeToData: {
@@ -505,11 +505,11 @@ void main() {
         ),
       );
 
-      // First fetch returns defaults (no error propagates from catchError)
+      
       await notifier.fetchDashboardData();
       expect(notifier.state.error, '');
 
-      // Override Dio to return success
+      
       final successDio = _dioWithConditionalResponse(
         routeToData: {
           '/events/user': successEvents(),
@@ -530,9 +530,9 @@ void main() {
 }
 
 
-/// Simple fake for FlutterSecureStorage used in tests.
 
-/// Simple fake for FlutterSecureStorage used in tests.
+
+
 class FakeSecureStorage extends FlutterSecureStoragePlatform {
   final _store = <String, String>{};
 

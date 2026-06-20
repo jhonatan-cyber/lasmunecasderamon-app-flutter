@@ -57,8 +57,8 @@ class CajeroHorasExtrasAdminScreen extends ConsumerStatefulWidget {
 
 class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtrasAdminScreen> {
   List<OvertimeRecord> _records = [];
-  String _statusFilter = 'all'; // all, pendiente, pagado
-  String _userFilter = 'all'; // all or userId as string
+  String _statusFilter = 'all'; 
+  String _userFilter = 'all'; 
 
   @override
   void initState() {
@@ -103,7 +103,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
-  // Derived properties using useMemo pattern
+  
   List<Map<String, dynamic>> get _employees {
     final Map<int, String> map = {};
     for (var r in _records) {
@@ -202,7 +202,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Status Banner
+              
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -227,7 +227,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                 ),
               ),
               const SizedBox(height: 16),
-              // Info Card
+              
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -244,7 +244,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                 ),
               ),
               const SizedBox(height: 12),
-              // Total Card
+              
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -270,7 +270,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                 ),
               ),
               const SizedBox(height: 12),
-              // Metadata
+              
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -334,7 +334,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
+                    
                     Container(
                       width: double.infinity,
                       decoration: const BoxDecoration(
@@ -383,7 +383,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
 
                     const SizedBox(height: 20),
 
-                    // Stats Cards Row
+                    
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
@@ -420,7 +420,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
 
                     const SizedBox(height: 16),
 
-                    // Per-employee Stats horizontal list
+                    
                     SizedBox(
                       height: 90,
                       child: ListView.builder(
@@ -515,7 +515,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
 
                     const SizedBox(height: 16),
 
-                    // Filter Row Buttons (All, Por cobrar, Pagado)
+                    
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
@@ -531,7 +531,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
 
                     const SizedBox(height: 16),
 
-                    // Main list
+                    
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: refresh.error.isNotEmpty
@@ -715,7 +715,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
         child: Column(
           children: [
             const SizedBox(height: 100),
-            // Stats row skeleton
+            
             Row(
               children: const [
                 Expanded(child: SkeletonCard(lines: 2)),

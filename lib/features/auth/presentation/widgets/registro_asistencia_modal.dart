@@ -68,7 +68,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
               backgroundColor: alreadyReg ? Colors.orangeAccent : AppTheme.successColor,
             ),
           );
-          Navigator.of(context).pop(); // Cerrar modal de asistencia
+          Navigator.of(context).pop(); 
           widget.onRegistered();
         }
       } else {
@@ -121,13 +121,13 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
                       if (barcodes.isNotEmpty) {
                         final qrData = barcodes.first.rawValue;
                         if (qrData != null) {
-                          Navigator.of(context).pop(); // Cerrar modal del scanner
-                          _registrarAsistencia(qrData); // Registrar asistencia
+                          Navigator.of(context).pop(); 
+                          _registrarAsistencia(qrData); 
                         }
                       }
                     },
                   ),
-                  // Border overlay indicator for QR Scanner
+                  
                   Center(
                     child: Container(
                       width: 220,
@@ -165,7 +165,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    // Temas dinamicos
+    
     final accentTheme = ref.watch(accentColorProvider);
     final accentColor = accentTheme.color;
     
@@ -198,7 +198,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle visual bar on top
+          
           Center(
             child: Container(
               width: 40,
@@ -211,7 +211,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           ),
           const SizedBox(height: 16),
           
-          // Header del Modal
+          
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -257,7 +257,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           ),
           const SizedBox(height: 20),
 
-          // Informacion del Perfil del Usuario
+          
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
@@ -317,7 +317,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           ),
           const SizedBox(height: 24),
 
-          // Input del Codigo Manual
+          
           Text(
             'Código de Asistencia',
             style: GoogleFonts.inter(
@@ -346,7 +346,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           ),
           const SizedBox(height: 12),
           
-          // Boton Confirmar Codigo (rounded pill)
+          
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -385,7 +385,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           
           const SizedBox(height: 16),
 
-          // Divisor con "O"
+          
           Row(
             children: [
               Expanded(child: Divider(color: borderColor)),
@@ -405,7 +405,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           ),
           const SizedBox(height: 16),
 
-          // Boton de Escanear QR Premium (Tarjeta ancha)
+          
           InkWell(
             onTap: _openCameraScanner,
             borderRadius: BorderRadius.circular(20),
@@ -459,7 +459,7 @@ class _RegistroAsistenciaModalState extends ConsumerState<RegistroAsistenciaModa
           
           const SizedBox(height: 16),
           
-          // Boton Continuar sin asistencia (Omitir)
+          
           Center(
             child: TextButton(
               onPressed: () {

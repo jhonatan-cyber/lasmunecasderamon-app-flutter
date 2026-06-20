@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Reusable success/error snackbars matching the app's design system.
-/// Eliminates duplicated _showErrorSnackBar/_showSuccessSnackBar across screens.
+
+
 class AppSnackBar {
   static void showSuccess(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -50,7 +50,7 @@ class Client {
 
 class ClientHistory {
   final String id;
-  final String category; // 'CARGA', 'SERVICIO', 'CONSUMO'
+  final String category; 
   final double monto;
   final String metodoPago;
   final DateTime fechaCrea;
@@ -103,14 +103,14 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
     }
   }
 
-  // Form controllers
+  
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _runCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
 
-  // Charge controllers
+  
   final _amountCtrl = TextEditingController();
   final _primaryAmountCtrl = TextEditingController();
   final _secondaryAmountCtrl = TextEditingController();
@@ -696,7 +696,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                           ),
                         )
                       else ...[
-                        // Totals summary row
+                        
                         Row(
                           children: [
                             Expanded(
@@ -1140,7 +1140,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
           c.phone.toLowerCase().contains(s);
     }).toList();
 
-    // Calculate totals
+    
     double totalSaldo = 0.0;
     double totalDeuda = 0.0;
     for (var c in filteredClients) {
@@ -1152,7 +1152,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
       body: Column(
         children: [
-          // Shared gradient header
+          
           PremiumHeader(
             title: 'Clientes',
             showBackButton: true,
@@ -1163,12 +1163,12 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
 
           ),
 
-          // Buscador y Totales
+          
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Column(
               children: [
-                // Buscador
+                
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
@@ -1201,7 +1201,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Summary metrics
+                
                 Row(
                   children: [
                     Expanded(
@@ -1257,7 +1257,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
             ),
           ),
 
-          // Main list
+          
           Expanded(
             child: FadeLoadingSwitcher(
               isLoading: ref.watch(refreshProvider('clientes')).isLoading,
@@ -1311,7 +1311,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                                     padding: const EdgeInsets.all(12.0),
                                     child: Row(
                                       children: [
-                                        // Left info
+                                        
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1353,7 +1353,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                                                 ],
                                               ),
                                               const Spacer(),
-                                              // Saldo pill
+                                              
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                 decoration: BoxDecoration(
@@ -1376,7 +1376,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                                                 ),
                                               ),
                                               const SizedBox(height: 4),
-                                              // Deuda pill
+                                              
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                 decoration: BoxDecoration(
@@ -1402,7 +1402,7 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        // Actions Sidebar
+                                        
                                         Container(
                                           width: 1,
                                           height: double.infinity,

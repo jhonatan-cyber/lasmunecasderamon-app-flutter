@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../auth/data/auth_notifier.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class ServiciosListState {
   final bool isLoading;
@@ -34,7 +34,7 @@ class ServiciosListState {
     );
   }
 
-  /// Servicios con estado = 0 (en curso)
+  
   List<dynamic> get activeServicios {
     return servicios
         .where((s) => (int.tryParse(s['estado']?.toString() ?? '0') ?? 0) == 0)
@@ -42,16 +42,16 @@ class ServiciosListState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifier
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class ServiciosListNotifier extends StateNotifier<ServiciosListState> {
   final ApiClient _apiClient;
 
   ServiciosListNotifier(this._apiClient) : super(ServiciosListState(isLoading: true));
 
-  // ── Fetch ────────────────────────────────────────────────────────────────
+  
 
   Future<void> fetchServicios({bool isManual = false}) async {
     state = state.copyWith(
@@ -85,7 +85,7 @@ class ServiciosListNotifier extends StateNotifier<ServiciosListState> {
     }
   }
 
-  // ── Finalizar ────────────────────────────────────────────────────────────
+  
 
   Future<bool> finalizarServicio(int idServicio) async {
     try {
@@ -95,7 +95,7 @@ class ServiciosListNotifier extends StateNotifier<ServiciosListState> {
       );
 
       if (response.data != null && response.data['success'] == true) {
-        // Remove from local state optimistically
+        
         state = state.copyWith(
           servicios: [
             for (final s in state.servicios)
@@ -119,9 +119,9 @@ class ServiciosListNotifier extends StateNotifier<ServiciosListState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 final serviciosListProvider =
     StateNotifierProvider.autoDispose<ServiciosListNotifier, ServiciosListState>(

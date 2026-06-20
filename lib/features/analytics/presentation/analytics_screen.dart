@@ -8,9 +8,9 @@ import '../../../core/theme.dart';
 import '../../../core/widgets/staggered_fade_in.dart';
 import '../data/analytics_notifier.dart';
 
-/// Dashboard analítico con gráficos y estadísticas.
-///
-/// Espeja `AnalyticsDashboard.tsx` de Expo.
+
+
+
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
 
@@ -53,17 +53,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Error banner
+                          
                           if (state.error != null)
                             _buildErrorBanner(state.error!, accentTheme),
 
-                          // Stat cards
+                          
                           _buildStatGrid(
                               state, accentTheme, cardBg, textPrimary, textSecondary, isDark),
 
                           const SizedBox(height: 28),
 
-                          // Sales chart
+                          
                           _buildSectionTitle(
                               'Ventas Semanales', textPrimary),
                           const SizedBox(height: 12),
@@ -72,7 +72,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
                           const SizedBox(height: 28),
 
-                          // Distribution pie
+                          
                           _buildSectionTitle(
                               'Distribución', textPrimary),
                           const SizedBox(height: 12),
@@ -88,7 +88,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  // ── Header ──────────────────────────────────────────────────────
+  
 
   Widget _buildHeader(dynamic accentTheme) {
     return Container(
@@ -141,7 +141,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  // ── Error Banner ────────────────────────────────────────────────
+  
 
   Widget _buildErrorBanner(String error, accentTheme) {
     return Container(
@@ -173,7 +173,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  // ── Section title ───────────────────────────────────────────────
+  
 
   Widget _buildSectionTitle(String title, Color textPrimary) {
     return Text(
@@ -186,9 +186,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // STAT CARDS (2x2 grid)
-  // ═══════════════════════════════════════════════════════════════
+  
+  
+  
 
   Widget _buildStatGrid(
     AnalyticsState state,
@@ -275,9 +275,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // BAR CHART (7-day sales)
-  // ═══════════════════════════════════════════════════════════════
+  
+  
+  
 
   Widget _buildBarChart(
     AnalyticsState state,
@@ -413,9 +413,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // PIE CHART (distribution)
-  // ═══════════════════════════════════════════════════════════════
+  
+  
+  
 
   Widget _buildPieChart(
     AnalyticsState state,
@@ -444,7 +444,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       ),
       child: Row(
         children: [
-          // Pie chart
+          
           SizedBox(
             width: 140,
             height: 140,
@@ -472,7 +472,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             ),
           ),
           const SizedBox(width: 24),
-          // Legend
+          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

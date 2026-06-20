@@ -16,7 +16,7 @@ class PropinasScreen extends ConsumerStatefulWidget {
 }
 
 class _PropinasScreenState extends ConsumerState<PropinasScreen> {
-  String _filter = 'all'; // 'all', 'pendiente', 'pagado'
+  String _filter = 'all'; 
   List<dynamic> _propinas = [];
 
   @override
@@ -201,7 +201,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Division Card
+                      
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -265,7 +265,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // General Commission Info
+                      
                       Text(
                         'DATOS DE LA ATENCIÓN',
                         style: GoogleFonts.inter(
@@ -297,7 +297,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Products list in sale
+                      
                       if (products.isNotEmpty) ...[
                         Text(
                           'PRODUCTOS',
@@ -366,7 +366,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Total Sale Amount
+                      
                       if (saleDetail['total'] != null)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -515,7 +515,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
       return true;
     }).toList();
 
-    // Calculations
+    
     final double totalPendiente = _propinas
         .where((a) => a['estado']?.toString() == '1')
         .fold(
@@ -567,7 +567,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
                   children: [
                     StaggeredFadeIn(
                       children: [
-                        // Summary Card
+                        
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(24),
@@ -645,7 +645,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Filter Row
+                        
                         Row(
                           children: [
                             _buildFilterButton(
@@ -720,7 +720,7 @@ class _PropinasScreenState extends ConsumerState<PropinasScreen> {
                             ),
                           )
                         else
-                          // ListView of items
+                          
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),

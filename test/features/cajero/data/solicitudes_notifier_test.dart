@@ -4,9 +4,9 @@ import 'package:lasmunecasderamon_flutter/core/api_client.dart';
 import 'package:lasmunecasderamon_flutter/features/cajero/data/solicitudes_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Dio _dioWithConditionalResponse({
   required Map<String, dynamic> routeToData,
@@ -53,9 +53,9 @@ SolicitudesListNotifier _buildNotifier(Dio dio) {
   return SolicitudesListNotifier(ApiClient(dio: dio));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Test data
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Map<String, dynamic> emptySuccess() => {'success': true, 'data': []};
 
@@ -134,9 +134,9 @@ Map<String, dynamic> failResponse() => {
       'message': 'Error del servidor',
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void main() {
   setUp(() {
@@ -171,7 +171,7 @@ void main() {
       await notifier.fetchData();
 
       expect(notifier.state.isLoading, false);
-      // 1 service + 1 order + 2 advances (estado 1&2) = 4
+      
       expect(notifier.state.solicitudes.length, 4);
       expect(notifier.state.cajaAbierta, true);
       expect(notifier.state.allHostesses.length, 2);
@@ -218,13 +218,13 @@ void main() {
     });
 
     test('handles all failed requests gracefully with catchError', () async {
-      // Cada request individual tiene catchError que retorna fallback
+      
       final notifier = _buildNotifier(_dioWithError());
 
       await notifier.fetchData();
 
       expect(notifier.state.isLoading, false);
-      // catchError evita que llegue al catch del try/catch externo
+      
       expect(notifier.state.error, '');
       expect(notifier.state.solicitudes, []);
       notifier.dispose();
@@ -251,7 +251,7 @@ void main() {
 
       await notifier.fetchData();
 
-      // Only estado 1 should be included
+      
       expect(notifier.state.solicitudes.length, 1);
       expect(notifier.state.solicitudes.first.id, '101');
       notifier.dispose();
@@ -281,7 +281,7 @@ void main() {
       await notifier.fetchData();
       expect(notifier.state.solicitudes.length, 1);
 
-      // Use a re-created item matching the one on the list
+      
       final item = notifier.state.solicitudes.first;
       final result = await notifier.aprobarAnticipo(item);
 
@@ -298,7 +298,7 @@ void main() {
           ? notifier.state.solicitudes.first
           : null;
       if (item == null) {
-        // No items loaded, can't test meaningfully
+        
         expect(true, true);
         notifier.dispose();
         return;
@@ -368,7 +368,7 @@ void main() {
 
       await notifier.fetchData();
       final item = notifier.state.solicitudes.first;
-      // No mock for the reject endpoint -> DioException
+      
       final result = await notifier.rechazarSolicitud(item);
 
       expect(result, false);

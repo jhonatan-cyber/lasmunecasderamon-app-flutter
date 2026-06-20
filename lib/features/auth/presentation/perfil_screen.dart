@@ -28,7 +28,7 @@ class PerfilScreen extends ConsumerStatefulWidget {
 class _PerfilScreenState extends ConsumerState<PerfilScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controllers
+  
   final _nickController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
@@ -115,7 +115,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
         });
       }
     } catch (_) {
-      // Fallback local en caso de error de red
+      
       final user = ref.read(authProvider).user;
       if (user != null) {
         _nickController.text = user.nick;
@@ -146,7 +146,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
         });
       }
     } catch (_) {
-      // Ignorar
+      
     }
   }
 
@@ -336,7 +336,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
       backgroundColor: bg,
       body: Column(
         children: [
-          // Premium Header with Gradient
+          
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -395,7 +395,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Avatar and Edit Badge
+                    
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -509,7 +509,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Apariencia del Sistema
+                          
                           _buildInputLabel('Apariencia del Sistema', subColor),
                           const SizedBox(height: 4),
                           SingleChildScrollView(
@@ -559,7 +559,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                           Divider(color: borderColor, height: 1, thickness: 1),
                           const SizedBox(height: 20),
 
-                          // Scene Name / Nickname
+                          
                           _buildInputLabel('Nickname / Nombre de Escena', subColor),
                           _buildTextField(
                             controller: _nickController,
@@ -572,7 +572,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
           ),
           const SizedBox(height: 20),
 
-                          // Phone
+                          
                           _buildInputLabel('Teléfono', subColor),
                           _buildTextField(
                             controller: _phoneController,
@@ -586,7 +586,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
           ),
           const SizedBox(height: 20),
 
-                          // Address
+                          
                           _buildInputLabel('Dirección', subColor),
                           _buildTextField(
                             controller: _addressController,
@@ -599,7 +599,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
           ),
           const SizedBox(height: 20),
 
-                          // Marital Status (Estado Civil)
+                          
                           _buildInputLabel('Estado Civil', subColor),
                           Container(
                             height: 56,
@@ -645,7 +645,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // New Password
+                          
                           _buildInputLabel('Nueva Contraseña (Opcional)', subColor),
                           _buildTextField(
                             controller: _passwordController,
@@ -659,7 +659,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
           ),
           const SizedBox(height: 35),
                           
-                          // Save Button
+                          
                           SizedBox(
                             width: double.infinity,
                             height: 60,
@@ -686,7 +686,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Biometric Auth Toggle
+                          
                           if (_isBiometricAvailable) ...[
                             Container(
                               decoration: BoxDecoration(
@@ -756,7 +756,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                             const SizedBox(height: 20),
                           ],
 
-                          // Logout button
+                          
                           Center(
                             child: TextButton.icon(
                               onPressed: _handleLogout,

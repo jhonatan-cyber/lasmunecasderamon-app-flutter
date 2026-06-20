@@ -12,32 +12,32 @@ import '../../../features/auth/data/auth_notifier.dart';
 const double _kZoomNormal = 0.0;
 const double _kZoomMacro = 0.15;
 
-/// A full‑screen, reusable QR scanner modal.
-///
-/// Matches the Expo `QRScannerModal.tsx` behaviour:
-/// - Camera preview with animated corner frame
-/// - Torch and zoom toggles
-/// - Current code badge (from `/codigo/actual`)
-/// - Permission‑denied fallback
-///
-/// Usage:
-/// ```dart
-/// final result = await QRScannerModal.show<String>(context, onScanned: (code) async {
-///   // process scanned code
-///   return code;
-/// });
-/// ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class QRScannerModal<T> extends ConsumerStatefulWidget {
   const QRScannerModal({
     super.key,
     required this.onScanned,
   });
 
-  /// Called with the raw scanned QR data.
-  /// Return a value to close the modal with that result, or throw to show an error.
+  
+  
   final Future<T> Function(String data) onScanned;
 
-  /// Show the scanner as a full‑screen route and return the processed result.
+  
   static Future<T?> show<T>(
     BuildContext context, {
     required Future<T> Function(String data) onScanned,
@@ -89,7 +89,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
 
-    // Delay camera activation so the route transition completes first
+    
     _cameraTimer = Timer(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _cameraActive = true);
     });
@@ -160,7 +160,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
       body: SafeArea(
         child: Stack(
           children: [
-            // ── Camera preview ──────────────────────────────────────────
+            
             if (_cameraActive)
               MobileScanner(
                 controller: _controller,
@@ -170,14 +170,14 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
                   final window = _scanWindow(ctx);
                   return Stack(
                     children: [
-                      // Dimmed overlay + border
+                      
                       ScanWindowOverlay(
                         controller: _controller,
                         scanWindow: window,
                         color: Colors.black.withValues(alpha: 0.65),
                         borderWidth: 0,
                       ),
-                      // Animated corner frame
+                      
                       AnimatedBuilder(
                         animation: _pulse,
                         builder: (ctx, _) => CustomPaint(
@@ -194,7 +194,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
                 },
               ),
 
-            // ── Top header ──────────────────────────────────────────────
+            
             Positioned(
               top: 16,
               left: 0,
@@ -204,7 +204,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Close button
+                    
                     _HeaderButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: const Icon(Icons.close_rounded, color: Colors.white, size: 26),
@@ -217,7 +217,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    // Zoom + Torch
+                    
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -251,7 +251,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
               ),
             ),
 
-            // ── Bottom section ──────────────────────────────────────────
+            
             Positioned(
               bottom: 32,
               left: 20,
@@ -259,7 +259,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Code badge
+                  
                   if (_codigo != null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -295,7 +295,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
                       ),
                     ),
 
-                  // Help text
+                  
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -321,7 +321,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
 
                   const SizedBox(height: 12),
 
-                  // Close button
+                  
                   SizedBox(
                     width: double.infinity,
                     child: TextButton(
@@ -364,7 +364,7 @@ class _QRScannerModalState<T> extends ConsumerState<QRScannerModal<T>>
   }
 }
 
-// ── Shared small header button ─────────────────────────────────────────────
+
 
 class _HeaderButton extends StatelessWidget {
   const _HeaderButton({
@@ -395,7 +395,7 @@ class _HeaderButton extends StatelessWidget {
   }
 }
 
-// ── Animated corner frame painter ─────────────────────────────────────────
+
 
 class _CornerFramePainter extends CustomPainter {
   _CornerFramePainter({
@@ -419,7 +419,7 @@ class _CornerFramePainter extends CustomPainter {
     const cornerLen = 40.0;
     final inset = 2.0;
 
-    // Top‑left
+    
     canvas.drawLine(
       Offset(scanWindow.left - inset, scanWindow.top - inset),
       Offset(scanWindow.left - inset + cornerLen * scale, scanWindow.top - inset),
@@ -431,7 +431,7 @@ class _CornerFramePainter extends CustomPainter {
       paint,
     );
 
-    // Top‑right
+    
     canvas.drawLine(
       Offset(scanWindow.right + inset, scanWindow.top - inset),
       Offset(scanWindow.right + inset - cornerLen * scale, scanWindow.top - inset),
@@ -443,7 +443,7 @@ class _CornerFramePainter extends CustomPainter {
       paint,
     );
 
-    // Bottom‑right
+    
     canvas.drawLine(
       Offset(scanWindow.right + inset, scanWindow.bottom + inset),
       Offset(scanWindow.right + inset - cornerLen * scale, scanWindow.bottom + inset),
@@ -455,7 +455,7 @@ class _CornerFramePainter extends CustomPainter {
       paint,
     );
 
-    // Bottom‑left
+    
     canvas.drawLine(
       Offset(scanWindow.left - inset, scanWindow.bottom + inset),
       Offset(scanWindow.left - inset + cornerLen * scale, scanWindow.bottom + inset),

@@ -3,9 +3,9 @@ import 'package:lasmunecasderamon_flutter/core/utils/money_utils.dart';
 
 void main() {
   group('MoneyUtils', () {
-    // Note: es_PE locale formats as "1.500,00 S/" (non-breaking space
-    // between number and symbol, period for thousands, comma for decimals).
-    // We match the actual locale output in tests.
+    
+    
+    
 
     group('format', () {
       test('formats whole number with decimals', () {

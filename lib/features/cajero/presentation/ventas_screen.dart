@@ -22,10 +22,10 @@ class VentasScreen extends ConsumerStatefulWidget {
 }
 
 class _VentasScreenState extends ConsumerState<VentasScreen> {
-  String _activeTab = 'historial'; // 'historial' or 'proceso'
+  String _activeTab = 'historial'; 
   Timer? _tickTimer;
   dynamic _activeVenta;
-  // Anulacion state
+  
   String _montoAnulacion = '';
 
   final _motivoController = TextEditingController();
@@ -50,14 +50,14 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     super.dispose();
   }
 
-  // --- Venta filtering ---
+  
   List<dynamic> get _filteredVentas {
     final state = ref.read(ventasListProvider);
     final timerState = ref.read(timerProvider);
     if (_activeTab == 'historial') {
       return state.ventas;
     }
-    // Proceso tab: show ventas with estado=2 or active timers
+    
     return state.ventas.where((v) {
       final estado = int.tryParse(v['estado']?.toString() ?? '1') ?? 1;
       if (estado == 2) return true;
@@ -88,7 +88,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     }
   }
 
-  // --- Action Sheet ---
+  
   void _showActionSheet(dynamic venta) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final int estado = int.tryParse(venta['estado']?.toString() ?? '1') ?? 1;
@@ -245,7 +245,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     );
   }
 
-  // --- Finalize ---
+  
   void _handleFinalizarVenta(dynamic venta) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
@@ -316,7 +316,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     }
   }
 
-  // --- Anulacion ---
+  
   void _openAnulacionModal(dynamic venta) {
     final double total =
         double.tryParse(venta['total']?.toString() ?? '0') ?? 0.0;
@@ -392,7 +392,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     }
   }
 
-  // --- Detail Modal ---
+  
   Future<void> _showVentaDetailModal(dynamic ventaShort) async {
     final int ventaId =
         int.tryParse(ventaShort['id_venta']?.toString() ?? '') ?? 0;
@@ -485,7 +485,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                 color: Theme.of(context).colorScheme.primary,
                 child: Column(
                   children: [
-                    // Tab bar
+                    
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                       child: Row(
@@ -516,7 +516,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                       ),
                     ),
 
-                    // Stats row (only on historial)
+                    
                     if (_activeTab == 'historial')
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -554,7 +554,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
 
                     const SizedBox(height: 12),
 
-                    // List
+                    
                     Expanded(
                       child: filteredList.isEmpty
                           ? Center(
@@ -698,7 +698,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     final ventaId = venta['id_venta']?.toString() ?? '';
     final isProceso = estado == 2;
 
-    // Find active timer for this venta
+    
     ActiveTimer? activeTimer;
     try {
       activeTimer = timerState.timers.firstWhere(
@@ -706,7 +706,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
       );
     } catch (_) {}
 
-    // Status colors
+    
     Color statusColor;
     String statusLabel;
     switch (estado) {
@@ -735,7 +735,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
         side: BorderSide(
           color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
         ),
-        // Left accent border
+        
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -743,7 +743,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
         child: IntrinsicHeight(
           child: Row(
             children: [
-              // Left accent bar
+              
               Container(
                 width: 5,
                 decoration: BoxDecoration(
@@ -753,7 +753,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                   ),
                 ),
               ),
-              // Main content
+              
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -847,7 +847,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                         const SizedBox(height: 8),
                         _buildTimerPill(activeTimer, timerState, isDark),
                       ],
-                      // Bottom row with total
+                      
                       const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1018,7 +1018,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     );
   }
 
-  // --- Anulacion Modal ---
+  
   Widget _buildAnulacionModal(bool isDark) {
     return Stack(
       children: [
@@ -1049,7 +1049,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Icon
+                    
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -1083,7 +1083,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Info card
+                    
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
@@ -1123,7 +1123,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Monto field
+                    
                     Text(
                       'Monto solicitado *',
                       style: GoogleFonts.inter(
@@ -1149,7 +1149,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Motivo field
+                    
                     Text(
                       'Motivo de la anulación *',
                       style: GoogleFonts.inter(
@@ -1172,7 +1172,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Action buttons
+                    
                     Row(
                       children: [
                         Expanded(
@@ -1284,7 +1284,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
 
     return Column(
       children: [
-        // Header
+        
         Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -1321,13 +1321,13 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
           ),
         ),
 
-        // Scrollable content
+        
         Expanded(
           child: ListView(
             controller: scrollController,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             children: [
-              // Info grid
+              
               Row(
                 children: [
                   Expanded(
@@ -1368,7 +1368,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
               ],
               const SizedBox(height: 20),
 
-              // Origin
+              
               if (venta['pedido_id'] != null)
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -1416,7 +1416,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                   ),
                 ),
 
-              // Products
+              
               const SizedBox(height: 20),
               Text(
                 'PRODUCTOS',
@@ -1491,7 +1491,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
                 );
               }),
 
-              // Totals
+              
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(18),
@@ -1554,7 +1554,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
           ),
         ),
 
-        // Close button
+        
         Padding(
           padding: const EdgeInsets.all(20),
           child: SizedBox(

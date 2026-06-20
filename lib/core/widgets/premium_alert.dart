@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Premium alert dialog with themed styling.
-///
-/// Mirrors Expo's `components/ui/PremiumAlert.tsx` — a styled alert
-/// dialog with an optional icon, gradient header, and action buttons.
+
+
+
+
 class PremiumAlert {
-  /// Shows a premium confirmation/alert dialog.
-  ///
-  /// Returns `true` if the user confirmed, `false` if cancelled.
+  
+  
+  
   static Future<bool?> show(
     BuildContext context, {
     required String title,
@@ -35,7 +35,7 @@ class PremiumAlert {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header with optional icon
+              
               if (icon != null)
                 Container(
                   width: double.infinity,
@@ -53,7 +53,7 @@ class PremiumAlert {
                   child: Icon(icon, color: Colors.white, size: 48),
                 ),
 
-              // Title
+              
               Padding(
                 padding: EdgeInsets.fromLTRB(24, icon != null ? 16 : 24, 24, 8),
                 child: Text(
@@ -67,7 +67,7 @@ class PremiumAlert {
                 ),
               ),
 
-              // Message
+              
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
                 child: Text(
@@ -81,7 +81,7 @@ class PremiumAlert {
                 ),
               ),
 
-              // Actions
+              
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 child: Row(
@@ -136,7 +136,7 @@ class PremiumAlert {
     );
   }
 
-  /// Shows a simple success toast-like notification.
+  
   static void showToast(
     BuildContext context, {
     required String message,

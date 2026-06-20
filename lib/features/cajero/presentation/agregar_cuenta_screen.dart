@@ -21,15 +21,15 @@ class AgregarCuentaScreen extends ConsumerStatefulWidget {
 
 class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
 
-  // Original Cuenta details
+  
   Map<String, dynamic>? _cuentaOriginal;
 
-  // Catalog assets
+  
   List<dynamic> _categories = [];
   List<dynamic> _products = [];
   dynamic _selectedCategory;
 
-  // Added items state
+  
   final Map<int, int> _addedCart = {};
 
   @override
@@ -263,11 +263,11 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                    // Account context info card
+                    
                     _buildAccountHeader(isDark),
                     const SizedBox(height: 16),
 
-                    // Product Catalog
+                    
                     Text(
                       'Productos a Añadir',
                       style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold),
@@ -276,7 +276,7 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
                     _buildCategoriesBar(isDark),
                     const SizedBox(height: 12),
 
-                    // Products Grid
+                    
                     Expanded(
                       child: _buildProductsGrid(isDark),
                     ),

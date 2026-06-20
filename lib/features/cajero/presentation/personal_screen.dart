@@ -117,7 +117,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
         setState(() => _users = staff);
         notifier.endRefresh();
 
-        // Actualizar el usuario seleccionado en caso de que estÃ© abierto para reflejar cambios
+        
         if (_selectedUser != null) {
           final updatedSelected = staff.firstWhere(
             (u) => u.id == _selectedUser!.id,
@@ -128,7 +128,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
             setState(() {
               _selectedUser = updatedSelected;
             });
-            // Si el QR ya no estÃ¡ o cambiÃ³ a null, significa que fue usado
+            
             if (oldToken != null && updatedSelected.qrToken == null) {
               _closeQrModal();
               if (mounted) AppSnackBar.showSuccess(context, 'Asistencia registrada correctamente.');
@@ -196,7 +196,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
           if (updatedRaw != null) {
             final updatedUser = UserStaff.fromJson(updatedRaw);
             
-            // Si el token QR se limpiÃ³ en el servidor, significa que fue escaneado/usado
+            
             if (_selectedUser?.id == userId && _selectedUser?.qrToken != null && updatedUser.qrToken == null) {
               _pollingTimer?.cancel();
               setState(() {
@@ -242,7 +242,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header del modal con botÃ³n de cierre
+                      
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -264,7 +264,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      // Avatar y datos
+                      
                       Container(
                         width: 70,
                         height: 70,
@@ -303,7 +303,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Cuerpo dinÃ¡mico (CÃ³digo QR o botÃ³n de generar)
+                      
                       if (hasQR) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -362,7 +362,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                           ),
                         ],
                         const SizedBox(height: 24),
-                        // BotÃ³n regenerar
+                        
                         SizedBox(
                           width: double.infinity,
                           height: 46,
@@ -391,7 +391,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                           ),
                         ),
                       ] else ...[
-                        // Vista sin QR
+                        
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
@@ -456,7 +456,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
       setState(() {
         _selectedUser = null;
       });
-      // Si el dialogo sigue abierto por el Navigator, lo cerramos
+      
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
@@ -506,7 +506,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
       body: Column(
         children: [
-          // Shared gradient header
+          
           PremiumHeader(
             title: 'Personal',
             showBackButton: true,
@@ -520,7 +520,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
 
           ),
 
-          // Buscador
+          
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Container(
@@ -556,7 +556,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
             ),
           ),
 
-          // Contenido principal (Listado)
+          
           Expanded(
             child: FadeLoadingSwitcher(
               isLoading: ref.watch(refreshProvider('personal')).isLoading,
@@ -613,7 +613,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                                   onTap: () => _openQrModal(u),
                                   child: Column(
                                     children: [
-                                      // Header de Rol
+                                      
                                       Container(
                                         width: double.infinity,
                                         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -640,7 +640,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                                       ),
                                       const SizedBox(height: 10),
 
-                                      // Avatar con indicador de estado QR
+                                      
                                       Stack(
                                         alignment: Alignment.center,
                                         children: [
@@ -679,7 +679,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                                       ),
                                       const SizedBox(height: 8),
 
-                                      // Datos del trabajador
+                                      
                                       Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 10.0),
                                         child: Text(
@@ -698,7 +698,7 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
                                       ),
                                       const Spacer(),
 
-                                      // Estado QR
+                                      
                                       Container(
                                         margin: const EdgeInsets.only(bottom: 8),
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

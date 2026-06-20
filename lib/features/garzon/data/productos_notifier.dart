@@ -8,9 +8,9 @@ import '../domain/product.dart';
 import 'productos_models.dart';
 import 'cart_notifier.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class ProductosState {
   final bool isLoading;
@@ -70,17 +70,17 @@ class ProductosState {
     );
   }
 
-  /// Filtered products based on search query.
+  
   List<Product> get filteredProducts {
     if (searchQuery.isEmpty) return products;
     final query = searchQuery.toLowerCase();
     return products.where((p) => p.name.toLowerCase().contains(query)).toList();
   }
 
-  /// Whether a category is currently selected.
+  
   bool get isCategorySelected => selectedCategoryId != null;
 
-  /// The currently selected category object, if any.
+  
   Category? get selectedCategory {
     if (selectedCategoryId == null) return null;
     try {
@@ -91,18 +91,18 @@ class ProductosState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifier
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class ProductosNotifier extends StateNotifier<ProductosState> {
   final ApiClient _apiClient;
 
   ProductosNotifier(this._apiClient) : super(ProductosState());
 
-  // ── Data fetching ───────────────────────────────────────────────────────
+  
 
-  /// Fetch initial catalog data: categories, hostesses, rooms, clients.
+  
   Future<void> fetchInitialData({bool isManual = false}) async {
     if (!mounted) return;
     state = state.copyWith(
@@ -126,7 +126,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
       final roomRes = responses[2];
       final clientRes = responses[3];
 
-      // Parse categories
+      
       List<Category> categories = [];
       if (catRes.data?['success'] == true && catRes.data?['data'] is List) {
         categories = (catRes.data['data'] as List)
@@ -135,7 +135,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
       }
       categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
-      // Parse hostesses
+      
       List<LocalHostess> hostesses = [];
       final anfData = anfRes.data;
       if (anfData != null) {
@@ -147,7 +147,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
         }
       }
 
-      // Parse rooms
+      
       List<LocalRoom> rooms = [];
       if (roomRes.data?['success'] == true &&
           roomRes.data?['data'] is List) {
@@ -156,7 +156,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
             .toList();
       }
 
-      // Parse clients
+      
       List<LocalClient> clients = [];
       final cData = clientRes.data;
       if (cData != null) {
@@ -189,7 +189,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
     }
   }
 
-  /// Fetch products for a specific category.
+  
   Future<void> fetchProducts(String categoryId) async {
     if (!mounted) return;
     state = state.copyWith(isLoading: true, clearError: true, searchQuery: '');
@@ -224,14 +224,14 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
     }
   }
 
-  // ── Search & selection ─────────────────────────────────────────────────
+  
 
-  /// Update search query (called from search field onChange).
+  
   void setSearchQuery(String query) {
     state = state.copyWith(searchQuery: query);
   }
 
-  /// Select a category and fetch its products.
+  
   void selectCategory(Category category) {
     state = state.copyWith(
       selectedCategoryId: category.id,
@@ -240,7 +240,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
     fetchProducts(category.id);
   }
 
-  /// Clear category selection and go back to category grid.
+  
   void clearCategorySelection() {
     state = state.copyWith(
       clearSelectedCategory: true,
@@ -249,10 +249,10 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
     );
   }
 
-  // ── Order submission ───────────────────────────────────────────────────
+  
 
-  /// Validates the cart before submitting.
-  /// Returns null if valid, or an error message string if invalid.
+  
+  
   String? validateOrder(List<CartItem> items) {
     if (items.isEmpty) return 'El carrito está vacío';
 
@@ -265,7 +265,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
     return null;
   }
 
-  /// Submit an order.
+  
   Future<bool> submitOrder({
     required String meseroId,
     required String codigo,
@@ -283,9 +283,9 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────
+  
 
-  /// Whether a product is a champagne category.
+  
   bool isChampagne(Product product) {
     final cat = product.categoria.toLowerCase();
     return cat.contains('champaña') ||
@@ -293,7 +293,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
         cat.contains('shampaña');
   }
 
-  /// Maximum number of hostesses allowed for a cart item.
+  
   int getMaxHostesses(CartItem item) {
     if (isChampagne(item.product)) {
       final p = item.product.price;
@@ -306,7 +306,7 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
     return item.quantity;
   }
 
-  /// Generate a random 8-character order code.
+  
   String generateCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final rng = Random();
@@ -316,9 +316,9 @@ class ProductosNotifier extends StateNotifier<ProductosState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 final productosProvider =
     StateNotifierProvider.autoDispose<ProductosNotifier, ProductosState>((ref) {

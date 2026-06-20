@@ -59,7 +59,7 @@ class GarzonNotifier extends StateNotifier<GarzonState> {
             .where((c) => c.status == 1)
             .toList();
             
-        // Sort by display order
+        
         categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
         state = state.copyWith(
@@ -123,7 +123,7 @@ class GarzonNotifier extends StateNotifier<GarzonState> {
   }
 }
 
-// Providers definition
+
 final garzonProvider = StateNotifierProvider<GarzonNotifier, GarzonState>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return GarzonNotifier(apiClient);

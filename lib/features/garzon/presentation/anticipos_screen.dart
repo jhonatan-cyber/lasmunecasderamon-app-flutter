@@ -17,13 +17,13 @@ class AnticiposScreen extends ConsumerStatefulWidget {
 }
 
 class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
-  String _viewMode = 'solicitudes'; // 'solicitudes' or 'anticipos'
-  String _filter = 'todos'; // 'todos', 'pendiente', 'aprobado', 'rechazado'
+  String _viewMode = 'solicitudes'; 
+  String _filter = 'todos'; 
 
   List<dynamic> _solicitudes = [];
   List<dynamic> _pagos = [];
 
-  // Limit / Breakdown Details
+  
   double _montoMaximo = 0;
   double _montoAsistencia = 0;
   double _montoComisiones = 0;
@@ -281,7 +281,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Available breakdown card
+                    
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -343,7 +343,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Monto Input
+                    
                     TextFormField(
                       controller: montoController,
                       keyboardType: TextInputType.number,
@@ -368,7 +368,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Motivo Input
+                    
                     TextFormField(
                       controller: motivoController,
                       maxLines: 2,
@@ -379,7 +379,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Submit Button
+                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -468,7 +468,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
       return true;
     }).toList();
 
-    // Summary calculations
+    
     final double totalPendiente = _solicitudes
         .where((s) => _normalizeEstado(s['estado']) == 'pendiente')
         .fold(
@@ -529,7 +529,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                     vertical: 12.0,
                   ),
                   children: [
-                    // Tab Buttons (Solicitudes / Historial)
+                    
                     Row(
                       children: [
                         Expanded(
@@ -561,7 +561,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Summary Card
+                    
                     _buildSummaryCard(
                       isDark: isDark,
                       activeSummaryAmount: activeSummaryAmount,
@@ -571,7 +571,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Filter Row (only for solicitudes)
+                    
                     if (_viewMode == 'solicitudes') ...[
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -648,7 +648,7 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
                         ),
                       )
                     else
-                      // ListView inside parent ListView: Disable nested scroll
+                      
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),

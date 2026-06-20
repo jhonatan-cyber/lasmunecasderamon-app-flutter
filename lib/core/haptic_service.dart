@@ -1,21 +1,21 @@
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Servicio de feedback háptico que espeja el `useHaptics.ts` de Expo.
-///
-/// Usa [HapticFeedback] de Flutter (built‑in) en lugar de `expo‑haptics`.
-/// El estado habilitado/deshabilitado se persiste en SharedPreferences.
+
+
+
+
 class HapticService {
   static const _enabledKey = 'haptics_enabled';
   static bool _enabled = true;
 
-  /// Carga la preferencia desde disco.
+  
   static Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _enabled = prefs.getBool(_enabledKey) ?? true;
   }
 
-  /// Persiste y aplica el estado.
+  
   static Future<void> setEnabled(bool enabled) async {
     _enabled = enabled;
     final prefs = await SharedPreferences.getInstance();
@@ -24,7 +24,7 @@ class HapticService {
 
   static bool get enabled => _enabled;
 
-  // ── Impact ──────────────────────────────────────────────────────
+  
 
   static Future<void> light() async {
     if (!_enabled) return;
@@ -47,7 +47,7 @@ class HapticService {
     } catch (_) {}
   }
 
-  // ── Selection ───────────────────────────────────────────────────
+  
 
   static Future<void> selection() async {
     if (!_enabled) return;
@@ -56,12 +56,12 @@ class HapticService {
     } catch (_) {}
   }
 
-  // ── Generic trigger ─────────────────────────────────────────────
+  
 
-  /// Dispara un haptic por nombre de tipo.
-  ///
-  /// Tipos aceptados: `light`, `medium`, `heavy`, `selection`.
-  /// Cualquier otro valor se ignora silenciosamente.
+  
+  
+  
+  
   static Future<void> trigger(String type) async {
     switch (type) {
       case 'light':

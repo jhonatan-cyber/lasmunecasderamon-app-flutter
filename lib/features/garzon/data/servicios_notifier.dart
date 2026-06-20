@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../auth/data/auth_notifier.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Domain models
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class Room {
   final String id;
@@ -67,9 +67,9 @@ class Client {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class ServiciosFormState {
   final bool isLoading;
@@ -81,7 +81,7 @@ class ServiciosFormState {
   final Room? selectedRoom;
   final List<Anfitriona> selectedHostesses;
   final List<Client> selectedClients;
-  final String paymentMethod; // '' | 'efectivo' | 'tarjeta' | 'transferencia' | 'prepago'
+  final String paymentMethod; 
   final double manualPrice;
   final bool? submitSuccess;
 
@@ -132,7 +132,7 @@ class ServiciosFormState {
     );
   }
 
-  // ── Computed properties ──────────────────────────────────────────────────
+  
 
   bool get hasComision =>
       selectedRoom != null && selectedRoom!.comisionAnfitriona > 0;
@@ -208,16 +208,16 @@ class ServiciosFormState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifier
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class ServiciosFormNotifier extends StateNotifier<ServiciosFormState> {
   final ApiClient _apiClient;
 
   ServiciosFormNotifier(this._apiClient) : super(ServiciosFormState());
 
-  // ── Fetch ────────────────────────────────────────────────────────────────
+  
 
   Future<void> fetchFormData() async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -269,7 +269,7 @@ class ServiciosFormNotifier extends StateNotifier<ServiciosFormState> {
     }
   }
 
-  // ── Selections ───────────────────────────────────────────────────────────
+  
 
   void selectRoom(Room? room) {
     state = state.copyWith(
@@ -309,7 +309,7 @@ class ServiciosFormNotifier extends StateNotifier<ServiciosFormState> {
       current.add(client);
     }
 
-    // Auto-force "prepago" if any client has balance
+    
     final hasBalance = current.any((c) => c.saldo > 0);
     final newPaymentMethod = hasBalance
         ? 'prepago'
@@ -331,7 +331,7 @@ class ServiciosFormNotifier extends StateNotifier<ServiciosFormState> {
     state = state.copyWith(manualPrice: price);
   }
 
-  // ── Submit ───────────────────────────────────────────────────────────────
+  
 
   String? validate() {
     if (state.selectedRoom == null) return 'Por favor, selecciona una habitación.';
@@ -382,7 +382,7 @@ class ServiciosFormNotifier extends StateNotifier<ServiciosFormState> {
     }
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  
 
   String _generateRandomCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -399,9 +399,9 @@ class ServiciosFormNotifier extends StateNotifier<ServiciosFormState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 final serviciosFormProvider =
     StateNotifierProvider.autoDispose<ServiciosFormNotifier, ServiciosFormState>(

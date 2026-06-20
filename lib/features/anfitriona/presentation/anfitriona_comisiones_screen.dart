@@ -16,7 +16,7 @@ class AnfitrionaComisionesScreen extends ConsumerStatefulWidget {
 
 class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisionesScreen> {
   List<dynamic> _comisiones = [];
-  String _filter = 'all'; // all, pendiente, pagado
+  String _filter = 'all'; 
 
   @override
   void initState() {
@@ -35,7 +35,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
 
       if (data != null && data['success'] == true) {
         final List<dynamic> rawList = data['data'] ?? [];
-        // Filtramos solo las de tipo 'venta' para visual parity con la app original
+        
         final ventaComisiones = rawList.where((c) => c != null && c['tipo'] == 'venta').toList();
 
         if (!mounted) return;
@@ -247,7 +247,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
     final textPrimary = isDark ? Colors.white : AppTheme.lightTextPrimary;
     final borderColor = isDark ? accentColor.withValues(alpha: 0.25) : Colors.grey.shade200;
 
-    // Totales
+    
     final pendientes = _comisiones.where((c) => c != null && (int.tryParse(c['estado']?.toString() ?? '0') ?? 0) == 1);
     final cobrados = _comisiones.where((c) => c != null && (int.tryParse(c['estado']?.toString() ?? '0') ?? 0) != 1);
 
@@ -283,7 +283,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
           Expanded(
             child: Column(
               children: [
-                // Resumen de comisiones
+                
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Container(
@@ -336,7 +336,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
               ),
             ),
 
-            // Filters
+            
             Container(
               height: 48,
               margin: const EdgeInsets.symmetric(vertical: 8),
@@ -374,7 +374,7 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
               ),
             ),
 
-            // Commissions list
+            
             Expanded(
               child: refresh.isLoading
                   ? Center(child: CircularProgressIndicator(color: accentColor))

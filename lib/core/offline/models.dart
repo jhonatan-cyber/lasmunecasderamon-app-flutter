@@ -1,6 +1,6 @@
-/// Represents an API request queued for later replay when connectivity is restored.
-///
-/// Mirrors the `QueuedRequest` interface in the Expo app's `offlineSync.ts`.
+
+
+
 class QueuedRequest {
   final String id;
   final String endpoint;

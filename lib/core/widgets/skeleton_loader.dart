@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-// ---------------------------------------------------------------------------
-// ShimmerController – drives the gradient sweep for all descendant skeletons
-// ---------------------------------------------------------------------------
 
-/// InheritedNotifier that exposes a single [AnimationController] to every
-/// [SkeletonLoader] descendant so all bars shimmer in perfect sync.
+
+
+
+
+
 class _ShimmerProvider extends InheritedNotifier<AnimationController> {
   const _ShimmerProvider({
     required AnimationController notifier,
@@ -20,12 +20,12 @@ class _ShimmerProvider extends InheritedNotifier<AnimationController> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// ShimmerWrapper – wraps child widgets and provides the shared controller
-// ---------------------------------------------------------------------------
 
-/// Wraps a subtree so that every [SkeletonLoader] inside shares one
-/// synchronized shimmer animation.
+
+
+
+
+
 class ShimmerWrapper extends StatefulWidget {
   final Widget child;
   final Duration duration;
@@ -63,14 +63,14 @@ class _ShimmerWrapperState extends State<ShimmerWrapper>
   }
 }
 
-// ---------------------------------------------------------------------------
-// SkeletonLoader – a single shimmer bar
-// ---------------------------------------------------------------------------
 
-/// A single skeleton element with a smooth shimmer animation.
-///
-/// If used inside a [ShimmerWrapper] the animation is shared; otherwise it
-/// creates its own controller as a fallback.
+
+
+
+
+
+
+
 class SkeletonLoader extends StatefulWidget {
   final double? width;
   final double height;
@@ -96,12 +96,12 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
   AnimationController? _fallbackController;
 
   AnimationController _resolveController(BuildContext context) {
-    // Try to get the shared controller from the nearest ShimmerWrapper.
+    
     try {
       return _ShimmerProvider.of(context);
     } catch (_) {
-      // No provider – create a local fallback so the widget still works
-      // standalone (e.g. in tests or isolated use).
+      
+      
       _fallbackController ??= AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 1800),
@@ -136,7 +136,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        // Smooth gradient sweep using stops derived from the controller value.
+        
         final t = controller.value;
         return Container(
           width: widget.width,
@@ -160,11 +160,11 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
   }
 }
 
-// ---------------------------------------------------------------------------
-// SkeletonCard – a pre-built card-shaped skeleton
-// ---------------------------------------------------------------------------
 
-/// A pre-built skeleton layout for card-style content.
+
+
+
+
 class SkeletonCard extends StatelessWidget {
   final bool showAvatar;
   final int lines;
@@ -225,22 +225,22 @@ class SkeletonCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// FadeLoadingSwitcher – wraps content with AnimatedSwitcher for fade transitions
-// ---------------------------------------------------------------------------
 
-/// Wraps content in an [AnimatedSwitcher] with a fade transition.
-/// Use when switching between a loading skeleton and the real content.
-///
-/// ```dart
-/// FadeLoadingSwitcher(
-///   isLoading: _loading,
-///   skeleton: _buildSkeletonGrid(),
-///   content: RefreshIndicator(
-///     child: ListView(...),
-///   ),
-/// )
-/// ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class FadeLoadingSwitcher extends StatelessWidget {
   final bool isLoading;
   final Widget skeleton;
@@ -279,35 +279,35 @@ class FadeLoadingSwitcher extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// StaggeredFadeIn – wraps children with staggered fade-in animations
-// ---------------------------------------------------------------------------
 
-/// Wraps a list of children and staggers their appearance with a fade + slide-up
-/// animation. Each child appears shortly after the previous one.
-///
-/// Use inside a [FadeLoadingSwitcher]'s `content` to make content sections
-/// appear one after another when loading completes.
-///
-/// ```dart
-/// FadeLoadingSwitcher(
-///   isLoading: _loading,
-///   skeleton: _buildSkeleton(),
-///   content: RefreshIndicator(
-///     child: ListView(
-///       children: [
-///         StaggeredFadeIn(
-///           children: [
-///             _buildSummaryCard(),
-///             _buildFilterRow(),
-///             _buildList(),
-///           ],
-///         ),
-///       ],
-///     ),
-///   ),
-/// )
-/// ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class StaggeredFadeIn extends StatefulWidget {
   final List<Widget> children;
   final Duration staggerDelay;
@@ -405,11 +405,11 @@ class _StaggeredFadeInState extends State<StaggeredFadeIn>
   }
 }
 
-// ---------------------------------------------------------------------------
-// SkeletonStatCard – a pre-built skeleton for stat/dashboard cards
-// ---------------------------------------------------------------------------
 
-/// A pre-built skeleton for stat cards (like the ones in GarzonHomeScreen).
+
+
+
+
 class SkeletonStatCard extends StatelessWidget {
   const SkeletonStatCard({super.key});
 

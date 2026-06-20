@@ -16,7 +16,7 @@ class HorasExtrasScreen extends ConsumerStatefulWidget {
 }
 
 class _HorasExtrasScreenState extends ConsumerState<HorasExtrasScreen> {
-  String _filter = 'all'; // 'all', 'pendiente', 'pagado'
+  String _filter = 'all'; 
   List<dynamic> _horasExtras = [];
 
   @override
@@ -83,7 +83,7 @@ class _HorasExtrasScreenState extends ConsumerState<HorasExtrasScreen> {
       return true;
     }).toList();
 
-    // Calculations
+    
     final pendientes = _horasExtras.where(
       (a) => a['estado']?.toString() == '1',
     );
@@ -124,7 +124,7 @@ class _HorasExtrasScreenState extends ConsumerState<HorasExtrasScreen> {
                   children: [
                     StaggeredFadeIn(
                       children: [
-                        // Summary Card
+                        
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(24),
@@ -177,7 +177,7 @@ class _HorasExtrasScreenState extends ConsumerState<HorasExtrasScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Filter Row
+                        
                         Row(
                           children: [
                             _buildFilterButton(
@@ -252,7 +252,7 @@ class _HorasExtrasScreenState extends ConsumerState<HorasExtrasScreen> {
                             ),
                           )
                         else
-                          // ListView of items
+                          
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),

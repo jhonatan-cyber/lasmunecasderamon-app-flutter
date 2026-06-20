@@ -160,7 +160,7 @@ class CartNotifier extends StateNotifier<CartState> {
       (sum, item) => sum + ((item.product.commission) * item.quantity),
     );
 
-    // Collect all unique selected hostess IDs
+    
     final allHostessIds = state.items
         .flatMap((i) => i.selectedHostesses)
         .toSet()
@@ -193,14 +193,14 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 }
 
-// Extension to easily flatten lists of lists in Dart
+
 extension _IterableFlatMap<T> on Iterable<T> {
   Iterable<R> flatMap<R>(Iterable<R> Function(T) transform) {
     return map(transform).expand((element) => element);
   }
 }
 
-// Riverpod Provider
+
 final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
   return CartNotifier();
 });

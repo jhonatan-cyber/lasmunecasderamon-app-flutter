@@ -195,7 +195,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
       backgroundColor: bg,
       body: Column(
         children: [
-          // Header Premium con Gradiente
+          
           Container(
             padding: EdgeInsets.fromLTRB(20, paddingTop + 10, 20, 24),
             decoration: BoxDecoration(
@@ -219,11 +219,11 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Acciones Rápidas del Header
+                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    // QR Scanner Button
+                    
                     Container(
                       margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
@@ -239,7 +239,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                         },
                       ),
                     ),
-                    // Perfil Settings Button
+                    
                     Container(
                       margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
@@ -251,7 +251,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                         onPressed: () => context.push('/anfitriona/perfil'),
                       ),
                     ),
-                    // Theme Switcher Button
+                    
                     Container(
                       margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
@@ -270,7 +270,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                         },
                       ),
                     ),
-                    // Logout Button
+                    
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.15),
@@ -286,10 +286,10 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                // Perfil de Usuario Premium
+                
                 Row(
                   children: [
-                    // Avatar Circular
+                    
                     GestureDetector(
                       onTap: () => context.push('/anfitriona/perfil'),
                       child: Container(
@@ -330,7 +330,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    // Informacion de perfil
+                    
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +367,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                             ),
                           ],
                           const SizedBox(height: 6),
-                          // Estado de disponibilidad
+                          
                           Row(
                             children: [
                               Container(
@@ -401,7 +401,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                     ),
                   ],
                 ),
-                // Boton Solicitar Servicio integrado en Header (si no hay servicio activo)
+                
                 if (_activeService == null) ...[
                   Padding(
                     padding: const EdgeInsets.only(top: 20.0),
@@ -433,7 +433,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
               ],
             ),
           ),
-          // Scrollable Content
+          
           Expanded(
             child: RefreshIndicator(
               onRefresh: () => _loadData(isManual: true),
@@ -443,7 +443,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 20.0),
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  // Active Service Card (si tiene habitacion asignada)
+                  
                   if (_activeService != null) ...[
                     ActiveServiceCard(
                       habitacion: _activeService['habitacion']?.toString() ?? '',
@@ -458,7 +458,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                     const SizedBox(height: 15),
                   ],
 
-                  // Analytics section
+                  
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Text(
@@ -477,7 +477,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Row(
                       children: [
-                        // Weekly goal card
+                        
                         Expanded(
                           child: Card(
                             color: cardBg,
@@ -537,7 +537,7 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Growth card
+                        
                         Expanded(
                           child: Card(
                             color: cardBg,

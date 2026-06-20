@@ -46,7 +46,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
     try {
       final client = ref.read(apiClientProvider);
 
-      // Concurrently fetch cashregister status and stats summary
+      
       final responses = await Future.wait([
         client.dio.get('/cashregister/status'),
         client.dio.get('/cashregister?resumen=1'),
@@ -590,7 +590,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Breakdown items
+              
               _buildBreakdownRow(
                 isDark,
                 'Monto Apertura (Base)',
@@ -804,7 +804,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                             ),
                             const SizedBox(height: 16),
                           ],
-                          // Status Card
+                          
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -824,7 +824,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    // Status pill
+                                    
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
@@ -869,7 +869,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                                         ],
                                       ),
                                     ),
-                                    // Shift Action Buttons
+                                    
                                     Row(
                                       children: [
                                         if (_cajaAbierta) ...[
@@ -997,7 +997,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                           const SizedBox(height: 20),
 
                           if (_cajaAbierta && _stats != null) ...[
-                            // Metrics Cards Grid
+                            
                             GridView(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
@@ -1057,7 +1057,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                             ),
                             const SizedBox(height: 20),
 
-                            // Shift Breakdown Section
+                            
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -1179,7 +1179,7 @@ class _CajaScreenState extends ConsumerState<CajaScreen> {
                               ),
                             ),
                           ] else ...[
-                            // Empty state / Open shift suggestion
+                            
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Widget de entrada con fade‑in + slide‑up escalonado.
-///
-/// Cada instancia recibe un [index] que determina el delay:
-/// `index * 80ms`. Ideal para animar listas de tarjetas.
-///
-/// Uso:
-/// ```dart
-/// StaggeredFadeIn(
-///   index: index,
-///   child: MyCard(...),
-/// )
-/// ```
+
+
+
+
+
+
+
+
+
+
+
+
 class StaggeredFadeIn extends StatefulWidget {
   final Widget child;
   final int index;

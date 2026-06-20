@@ -9,13 +9,13 @@ import '../../auth/data/auth_notifier.dart';
 import '../data/financial_notifier.dart';
 import '../domain/financial_event.dart';
 
-/// Pantalla de eventos financieros (comisiones / propinas).
-///
-/// Espeja `FinancialEventsScreen.tsx` de Expo.
+
+
+
 class FinancialEventsScreen extends ConsumerStatefulWidget {
   final String title;
   final String subtitle;
-  final String type; // 'comisiones' | 'propinas'
+  final String type; 
 
   const FinancialEventsScreen({
     super.key,
@@ -54,9 +54,9 @@ class _FinancialEventsScreenState
       backgroundColor: bg,
       body: Column(
         children: [
-          // ── Header ──────────────────────────────────────────────
+          
           _buildHeader(accentTheme, textSecondary),
-          // ── Filter chips ────────────────────────────────────────
+          
           _buildFilterChips(
             state.filter,
             accentTheme,
@@ -65,7 +65,7 @@ class _FinancialEventsScreenState
             textPrimary,
             textSecondary,
           ),
-          // ── Content ─────────────────────────────────────────────
+          
           Expanded(
             child: state.isLoading
                 ? _buildSkeleton(accentTheme)
@@ -87,7 +87,7 @@ class _FinancialEventsScreenState
     );
   }
 
-  // ── Header ──────────────────────────────────────────────────────
+  
 
   Widget _buildHeader(dynamic accentTheme, Color textSecondary) {
     return Container(
@@ -159,7 +159,7 @@ class _FinancialEventsScreenState
     );
   }
 
-  // ── Filter chips ────────────────────────────────────────────────
+  
 
   Widget _buildFilterChips(
     String currentFilter,
@@ -215,7 +215,7 @@ class _FinancialEventsScreenState
     );
   }
 
-  // ── List ────────────────────────────────────────────────────────
+  
 
   Widget _buildList(
     FinancialState state,
@@ -237,7 +237,7 @@ class _FinancialEventsScreenState
         itemCount: state.filteredEvents.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
-            // Toast de cambios detectados
+            
             if (state.hasChanges) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -287,7 +287,7 @@ class _FinancialEventsScreenState
                 ),
                 child: Row(
                   children: [
-                    // Icono según estado
+                    
                     Container(
                       width: 44,
                       height: 44,
@@ -308,7 +308,7 @@ class _FinancialEventsScreenState
                       ),
                     ),
                     const SizedBox(width: 14),
-                    // Info
+                    
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +332,7 @@ class _FinancialEventsScreenState
                         ],
                       ),
                     ),
-                    // Monto + badge
+                    
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -377,16 +377,16 @@ class _FinancialEventsScreenState
     );
   }
 
-  // ── Detail modal ────────────────────────────────────────────────
+  
 
   void _showDetail(FinancialEvent event) {
-    // Local state for the bottom sheet
+    
     bool detailLoading = true;
     Map<String, dynamic>? detailSale;
     Map<String, dynamic>? detailPropina;
     void Function(VoidCallback)? triggerRebuild;
 
-    // Open sheet FIRST with loading=true
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -409,7 +409,7 @@ class _FinancialEventsScreenState
       },
     );
 
-    // Fire fetch AFTER sheet opens
+    
     _fetchDetailData(event).then((result) {
       if (!mounted) return;
       triggerRebuild?.call(() {
@@ -467,7 +467,7 @@ class _FinancialEventsScreenState
     return null;
   }
 
-  // ── Skeleton ────────────────────────────────────────────────────
+  
 
   Widget _buildSkeleton(dynamic accentTheme) {
     return ListView.builder(
@@ -490,7 +490,7 @@ class _FinancialEventsScreenState
     );
   }
 
-  // ── Error ───────────────────────────────────────────────────────
+  
 
   Widget _buildError(String error, dynamic accentTheme) {
     return Center(
@@ -526,7 +526,7 @@ class _FinancialEventsScreenState
     );
   }
 
-  // ── Empty ───────────────────────────────────────────────────────
+  
 
   Widget _buildEmpty(dynamic accentTheme, Color textSecondary) {
     return Center(
@@ -557,7 +557,7 @@ class _FinancialEventsScreenState
     );
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────
+  
 
   String _formatDate(String dateStr) {
     if (dateStr.isEmpty) return 'Sin fecha';
@@ -570,16 +570,16 @@ class _FinancialEventsScreenState
   }
 }
 
-/// Data holder returned by the detail fetch methods.
+
 class _DetailData {
   final Map<String, dynamic>? saleDetail;
   final Map<String, dynamic>? parentPropina;
   const _DetailData({this.saleDetail, this.parentPropina});
 }
 
-// ════════════════════════════════════════════════════════════════════
-// Detail Bottom Sheet
-// ════════════════════════════════════════════════════════════════════
+
+
+
 
 class _DetailSheet extends StatelessWidget {
   final FinancialEvent event;
@@ -616,7 +616,7 @@ class _DetailSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
+          
           Padding(
             padding: const EdgeInsets.only(top: 12, bottom: 4),
             child: Container(
@@ -628,7 +628,7 @@ class _DetailSheet extends StatelessWidget {
               ),
             ),
           ),
-          // Header
+          
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
             child: Row(
@@ -652,7 +652,7 @@ class _DetailSheet extends StatelessWidget {
           ),
           Divider(height: 1,
               color: isDark ? AppTheme.darkBorderColor : Colors.grey.shade200),
-          // Content
+          
           Flexible(
             child: loadingDetail
                 ? const Center(child: CircularProgressIndicator())

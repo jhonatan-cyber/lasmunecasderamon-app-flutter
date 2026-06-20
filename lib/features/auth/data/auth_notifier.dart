@@ -74,8 +74,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Performs the login request.
-  /// Returns `true` if verification code (OTP) is required, `false` if successfully authenticated.
+  
+  
     Future<bool> login({
     String? username,
     String? password,
@@ -110,7 +110,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final data = response.data;
 
-      // Handle "verification code required" flow
+      
       if (data['requiereCodigo'] == true && username != null && password != null) {
         state = state.copyWith(
           isLoading: false,
@@ -119,14 +119,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       }
 
-      // Handle successful authentication
+      
       final String? token = data['token'];
       final Map<String, dynamic>? userJson = data['user'];
 
       if (token != null && userJson != null) {
         final user = User.fromJson(userJson);
         
-        // Save to persistent storage
+        
         await _secureStorage.write(key: 'auth_token', value: token);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user', jsonEncode(userJson));
@@ -152,7 +152,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  // Biometric methods
+  
   Future<bool> isBiometricEnabled() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('biometric_enabled') ?? false;
@@ -193,17 +193,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     state = state.copyWith(isLoading: true);
-    // Attempt backend logout (optional)
+    
     try {
       await _apiClient.dio.post('/auth/logout');
     } catch (_) {}
 
-    // Clear local storage
+    
     await _secureStorage.delete(key: 'auth_token');
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user');
 
-    state = AuthState(); // Reset state
+    state = AuthState(); 
   }
 
   Future<void> updateProfile(User updatedUser) async {
@@ -212,8 +212,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(user: updatedUser);
   }
 
-  /// Sends a password reset request to the backend.
-  /// The backend should send a verification code to the user's email.
+  
+  
   Future<void> requestPasswordReset(String email) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -227,7 +227,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Confirms a password reset with the verification code and new password.
+  
   Future<void> confirmPasswordReset(String code, String newPassword) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -245,29 +245,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-// Providers definition
 
-/// Persistent HTTP cache store (Hive‑backed).
-///
-/// Initialised lazily; the first read creates the store on disk under
-/// the app's documents directory.
+
+
+
+
+
 final cacheStoreProvider = FutureProvider<HiveCacheStore>((ref) {
   return ApiClient.createDefaultStore();
 });
 
-/// Pre‑configured API client with auth + cache + offline interceptors.
-///
-/// The cache store is injected when available — if initialisation fails
-/// the client still works without caching.
-/// The offline sync manager replays failed requests when connectivity
-/// is restored.
+
+
+
+
+
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final cacheStore = ref.watch(cacheStoreProvider).valueOrNull;
   final offlineSync = ref.watch(offlineSyncManagerProvider);
   final client = ApiClient(cacheStore: cacheStore, offlineSync: offlineSync);
 
-  // Initialise the sync manager with this client's Dio instance so it
-  // can replay queued requests.
+  
+  
   offlineSync.init(dio: client.dio);
 
   return client;

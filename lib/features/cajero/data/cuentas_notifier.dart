@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../auth/data/auth_notifier.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class CuentasListState {
   final bool isLoading;
@@ -39,16 +39,16 @@ class CuentasListState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifier
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 class CuentasListNotifier extends StateNotifier<CuentasListState> {
   final ApiClient _apiClient;
 
   CuentasListNotifier(this._apiClient) : super(CuentasListState());
 
-  /// Fetch accounts list + summary in parallel.
+  
   Future<void> fetchData({bool isManual = false}) async {
     if (!mounted) return;
     state = state.copyWith(
@@ -94,12 +94,12 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
     }
   }
 
-  /// Stop timer for a cuenta.
+  
   Future<bool> detenerTiempo(int idCuenta) async {
     try {
       final response = await _apiClient.dio.post('/cuentas/$idCuenta/stop');
       if (response.data != null && response.data['success'] == true) {
-        // Re-fetch to get updated data
+        
         await fetchData();
         return true;
       }
@@ -109,7 +109,7 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
     }
   }
 
-  /// Cobrar / facturar una cuenta.
+  
   Future<bool> cobrarCuenta({
     required int idCuenta,
     required String metodoPago,
@@ -129,7 +129,7 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
       );
 
       if (response.data != null && response.data['success'] == true) {
-        // Remove cuenta locally optimistically
+        
         _removeLocalCuenta(idCuenta);
         return true;
       }
@@ -139,7 +139,7 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
     }
   }
 
-  /// Anular una cuenta.
+  
   Future<bool> anularCuenta(int idCuenta, String motivo) async {
     try {
       final response = await _apiClient.dio.post(
@@ -148,7 +148,7 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
       );
 
       if (response.data != null && response.data['success'] == true) {
-        // Remove cuenta locally optimistically
+        
         _removeLocalCuenta(idCuenta);
         return true;
       }
@@ -161,7 +161,7 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
     }
   }
 
-  // ── Helpers ──
+  
 
   void _removeLocalCuenta(int idCuenta) {
     final updated = state.cuentas.where((c) {
@@ -173,9 +173,9 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Providers
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 final cuentasListProvider =
     StateNotifierProvider.autoDispose<CuentasListNotifier, CuentasListState>((ref) {

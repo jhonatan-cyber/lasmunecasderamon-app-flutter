@@ -20,20 +20,20 @@ class NuevaCuentaScreen extends ConsumerStatefulWidget {
 
 class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
 
-  // Asset lists
+  
   List<dynamic> _anfitrionas = [];
   List<dynamic> _rooms = [];
   List<dynamic> _clients = [];
   List<dynamic> _categories = [];
   List<dynamic> _products = [];
 
-  // Selections
+  
   dynamic _selectedAnfitriona;
   dynamic _selectedRoom;
   dynamic _selectedClient;
   dynamic _selectedCategory;
 
-  // Cart (Initial items)
+  
   final Map<int, int> _cart = {};
 
   @override
@@ -353,11 +353,11 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      // Form Pickers
+                      
                       _buildFormPickers(isDark),
                       const SizedBox(height: 16),
 
-                      // Product Catalog
+                      
                       Text(
                         'Agregar Consumos Iniciales',
                         style: GoogleFonts.inter(
@@ -369,7 +369,7 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
                       _buildCategoriesBar(isDark),
                       const SizedBox(height: 12),
 
-                      // Products Grid
+                      
                       Expanded(child: _buildProductsGrid(isDark)),
                     ],
                   );

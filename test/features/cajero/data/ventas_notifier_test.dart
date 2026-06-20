@@ -4,11 +4,11 @@ import 'package:lasmunecasderamon_flutter/core/api_client.dart';
 import 'package:lasmunecasderamon_flutter/features/cajero/data/ventas_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
-/// Creates a Dio with an interceptor that resolves immediately with [data].
+
+
+
+
 Dio _dioWithResponse({
   required dynamic data,
   int statusCode = 200,
@@ -26,7 +26,7 @@ Dio _dioWithResponse({
   return dio;
 }
 
-/// Creates a Dio with an interceptor that throws a DioException.
+
 Dio _dioWithError() {
   final dio = Dio();
   dio.interceptors.add(
@@ -41,7 +41,7 @@ Dio _dioWithError() {
   return dio;
 }
 
-/// Creates a Dio that can return different responses depending on path.
+
 Dio _dioWithConditionalResponse({
   required Map<String, dynamic> routeToData,
   int statusCode = 200,
@@ -77,9 +77,9 @@ VentasListNotifier _buildNotifier(Dio dio) {
   return VentasListNotifier(ApiClient(dio: dio));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Test data
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Map<String, dynamic> successSales() => {
       'success': true,
@@ -158,9 +158,9 @@ Map<String, dynamic> successDetail() => {
       },
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void main() {
   setUp(() {
@@ -268,13 +268,13 @@ void main() {
     test('clears error before new fetch', () async {
       final notifier = _buildNotifier(_dioWithError());
 
-      // First fetch fails
+      
       await notifier.fetchData();
       expect(notifier.state.error, isNotEmpty);
 
       notifier.dispose();
 
-      // Second fetch succeeds
+      
       final notifier2 = _buildNotifier(
         _dioWithConditionalResponse(
           routeToData: {

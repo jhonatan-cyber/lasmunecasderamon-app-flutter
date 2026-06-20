@@ -6,10 +6,10 @@ import 'package:path_provider/path_provider.dart';
 import 'offline/offline_interceptor.dart';
 import 'offline/offline_sync_manager.dart';
 
-/// Default cache options for non‑critical GET requests.
-///
-/// Responses are cached for 5 minutes and stored on disk via Hive.
-/// [store] is set at construction time via [copyWith].
+
+
+
+
 CacheOptions _defaultCacheOptions(CacheStore store) => CacheOptions(
   store: store,
   policy: CachePolicy.forceCache,
@@ -36,7 +36,7 @@ class ApiClient {
                 },
               ),
             ) {
-    // ── Auth interceptor ──────────────────────────────────────────────
+    
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -52,7 +52,7 @@ class ApiClient {
       ),
     );
 
-    // ── Cache interceptor ─────────────────────────────────────────────
+    
     if (cacheStore != null) {
       _dio.interceptors.add(
         DioCacheInterceptor(
@@ -61,7 +61,7 @@ class ApiClient {
       );
     }
 
-    // ── Offline interceptor (last = catches errors first on response) ─
+    
     if (offlineSync != null) {
       _dio.interceptors.add(OfflineInterceptor(offlineSync));
     }
@@ -69,7 +69,7 @@ class ApiClient {
 
   Dio get dio => _dio;
 
-  /// Helper: create a [CacheStore] backed by Hive on the app's documents dir.
+  
   static Future<HiveCacheStore> createDefaultStore() async {
     final dir = await getApplicationDocumentsDirectory();
     return HiveCacheStore(dir.path, hiveBoxName: 'dio_cache');

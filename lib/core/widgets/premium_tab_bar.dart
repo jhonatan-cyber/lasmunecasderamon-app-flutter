@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Premium animated tab bar with indicator and optional icons.
-///
-/// Mirrors Expo's `components/ui/PremiumTabBar.tsx` — a styled tab bar
-/// with animated indicator and accent color theming.
+
+
+
+
 class PremiumTabBar extends StatelessWidget {
   const PremiumTabBar({
     super.key,
@@ -141,7 +141,7 @@ class PremiumTabBar extends StatelessWidget {
   }
 }
 
-/// A single tab definition for [PremiumTabBar].
+
 class PremiumTab {
   final String label;
   final IconData? icon;

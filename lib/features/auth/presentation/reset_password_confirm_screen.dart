@@ -6,9 +6,9 @@ import '../../../core/theme.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../data/auth_notifier.dart';
 
-/// Paso 2 del flujo de recuperación de contraseña.
-///
-/// El usuario ingresa el código recibido por email y su nueva contraseña.
+
+
+
 class ResetPasswordConfirmScreen extends ConsumerStatefulWidget {
   const ResetPasswordConfirmScreen({super.key});
 
@@ -108,7 +108,7 @@ class _ResetPasswordConfirmScreenState extends ConsumerState<ResetPasswordConfir
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Code field
+                      
                       Text(
                         'Código de verificación',
                         style: GoogleFonts.inter(
@@ -147,7 +147,7 @@ class _ResetPasswordConfirmScreenState extends ConsumerState<ResetPasswordConfir
                         },
                       ),
                       const SizedBox(height: 20),
-                      // New password field
+                      
                       Text(
                         'Nueva contraseña',
                         style: GoogleFonts.inter(
@@ -194,7 +194,7 @@ class _ResetPasswordConfirmScreenState extends ConsumerState<ResetPasswordConfir
                         },
                       ),
                       const SizedBox(height: 16),
-                      // Confirm password field
+                      
                       Text(
                         'Confirmar contraseña',
                         style: GoogleFonts.inter(

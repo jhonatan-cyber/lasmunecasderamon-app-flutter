@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-/// Formats a double value as Chilean peso currency string.
+
 String formatCurrency(double amount) {
   final formatter = NumberFormat.currency(
     locale: 'es_CL',
@@ -12,7 +12,7 @@ String formatCurrency(double amount) {
   return formatter.format(amount);
 }
 
-/// A styled currency text widget with consistent typography.
+
 class CurrencyText extends StatelessWidget {
   final double amount;
   final double? fontSize;
@@ -50,7 +50,7 @@ class CurrencyText extends StatelessWidget {
   }
 }
 
-/// A currency display with label and colored background pill.
+
 class CurrencyPill extends StatelessWidget {
   final String label;
   final double amount;
