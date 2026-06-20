@@ -151,9 +151,9 @@ class SetStateNotifier extends StateNotifier<FormUIState> {
   }
 
   
-  void toggleFlag(String key) {
+  void toggleFlag(String key, {bool defaultValue = false}) {
     state = state.copyWith(
-      flags: {...state.flags, key: !(state.flags[key] ?? false)},
+      flags: {...state.flags, key: !(state.flags[key] ?? defaultValue)},
     );
   }
 

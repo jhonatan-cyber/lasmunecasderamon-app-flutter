@@ -402,7 +402,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: labelColor,
                                       ),
                                       onPressed: () {
-                                        ref.read(setStateProvider('login').notifier).toggleFlag('obscurePassword');
+                                        ref.read(setStateProvider('login').notifier).toggleFlag('obscurePassword', defaultValue: true);
                                       },
                                     ),
                                     hintText: '••••••••',
