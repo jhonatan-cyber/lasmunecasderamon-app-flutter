@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../features/auth/data/auth_notifier.dart';
 import 'api_client.dart';
 import 'sse_event.dart';
@@ -25,6 +26,15 @@ class SseService {
     if (_isClosed) return;
 
     try {
+      // El access token vence a los 15 min: en cada (re)conexión se lee el
+      // vigente, que puede haber sido renovado por el refresh automático.
+      final token =
+          await const FlutterSecureStorage().read(key: 'auth_token') ?? _token;
+      if (token.isEmpty) {
+        _scheduleReconnect();
+        return;
+      }
+
       _client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 15);
       
@@ -32,7 +42,7 @@ class SseService {
       _request = await _client!.getUrl(url);
       
       
-      _request!.headers.add('Authorization', 'Bearer $_token');
+      _request!.headers.add('Authorization', 'Bearer $token');
       _request!.headers.add('Accept', 'text/event-stream');
       _request!.headers.add('Cache-Control', 'no-cache');
       _request!.headers.add('Connection', 'keep-alive');

@@ -8,6 +8,7 @@ class User {
   final String address;
   final String estadoCivil;
   final String foto;
+  final bool forcePasswordChange;
 
   User({
     required this.id,
@@ -19,6 +20,7 @@ class User {
     this.address = '',
     this.estadoCivil = 'Soltero/a',
     this.foto = '',
+    this.forcePasswordChange = false,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,9 @@ class User {
       address: json['address']?.toString() ?? json['direccion']?.toString() ?? '',
       estadoCivil: json['maritalStatus']?.toString() ?? json['estado_civil']?.toString() ?? 'Soltero/a',
       foto: json['foto']?.toString() ?? '',
+      forcePasswordChange: json['forcePasswordChange'] == true ||
+          json['force_password_change'] == true ||
+          json['force_password_change'] == 1,
     );
   }
 
@@ -54,7 +59,34 @@ class User {
       'address': address,
       'maritalStatus': estadoCivil,
       'foto': foto,
+      'forcePasswordChange': forcePasswordChange,
     };
+  }
+
+  User copyWith({
+    String? id,
+    String? email,
+    String? nombre,
+    String? role,
+    String? nick,
+    String? phone,
+    String? address,
+    String? estadoCivil,
+    String? foto,
+    bool? forcePasswordChange,
+  }) {
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      nombre: nombre ?? this.nombre,
+      role: role ?? this.role,
+      nick: nick ?? this.nick,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
+      estadoCivil: estadoCivil ?? this.estadoCivil,
+      foto: foto ?? this.foto,
+      forcePasswordChange: forcePasswordChange ?? this.forcePasswordChange,
+    );
   }
 
   
@@ -79,4 +111,9 @@ class User {
   }
 
   bool get isCajeroOrAdmin => isCajero || isAdmin;
+
+  bool get isBarman {
+    final r = role.trim().toLowerCase();
+    return r.contains('barman') || r.contains('bartender');
+  }
 }

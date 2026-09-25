@@ -300,15 +300,45 @@ void main() {
     
     
 
-    test('requestPasswordReset calls API and resets loading state', () async {
+    test('requestPasswordReset calls API with run and resets loading state', () async {
       final notifier = await _createNotifier(response: {'success': true});
 
       expect(notifier.state.isLoading, isFalse);
 
-      await notifier.requestPasswordReset('test@test.com');
+      await notifier.requestPasswordReset('12345678-9');
 
       expect(notifier.state.isLoading, isFalse);
       expect(notifier.state.error, isNull);
+    });
+
+    test('requestPasswordReset sends {run} to /auth/reset-password', () async {
+      Map<String, dynamic>? sentBody;
+      String? sentPath;
+      final dio = Dio(BaseOptions(baseUrl: 'http://test'));
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            sentPath = options.path;
+            sentBody = options.data is Map<String, dynamic>
+                ? options.data as Map<String, dynamic>
+                : null;
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: {'success': true},
+              ),
+            );
+          },
+        ),
+      );
+      final notifier = AuthNotifier(ApiClient(dio: dio));
+      await Future<void>.delayed(Duration.zero);
+
+      await notifier.requestPasswordReset('12345678-9');
+
+      expect(sentPath, '/auth/reset-password');
+      expect(sentBody, {'run': '12345678-9'});
     });
 
     test('requestPasswordReset sets error on DioException', () async {
@@ -341,16 +371,7 @@ void main() {
       expect(notifier2.state.isLoading, isFalse);
     });
 
-    test('confirmPasswordReset calls API with code and password', () async {
-      final notifier = await _createNotifier(response: {'success': true});
-
-      await notifier.confirmPasswordReset('ABC123', 'newPass123!');
-
-      expect(notifier.state.isLoading, isFalse);
-      expect(notifier.state.error, isNull);
-    });
-
-    test('confirmPasswordReset sets error on DioException', () async {
+    test('requestPasswordReset surfaces backend validation message', () async {
       final failingDio = Dio(BaseOptions(baseUrl: 'http://test'));
       failingDio.interceptors.add(
         InterceptorsWrapper(
@@ -361,7 +382,7 @@ void main() {
                 response: Response(
                   requestOptions: options,
                   statusCode: 400,
-                  data: {'message': 'Código inválido'},
+                  data: {'message': 'Usuario no encontrado'},
                 ),
               ),
             );
@@ -373,10 +394,10 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       await expectLater(
-        notifier2.confirmPasswordReset('BAD', 'pass'),
+        notifier2.requestPasswordReset('00000000-0'),
         throwsA(isA<DioException>()),
       );
-      expect(notifier2.state.error, contains('Código inválido'));
+      expect(notifier2.state.error, contains('Usuario no encontrado'));
       expect(notifier2.state.isLoading, isFalse);
     });
 

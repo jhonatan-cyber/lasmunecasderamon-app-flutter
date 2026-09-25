@@ -84,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           
           if (requiere2FA) {
             notifier.endSubmit();
-            if (mounted) context.push('/login-code');
+            if (mounted) context.push('/verify-code');
           } else {
             notifier.endSubmit();
           }
@@ -110,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final requiere2FA = await authNotifier.login(username: u, password: p);
 
       if (requiere2FA && mounted) {
-        context.push('/login-code');
+        context.push('/verify-code');
       } else if (_isBiometricAvailable) {
         await authNotifier.saveCredentials(u, p);
         await authNotifier.setBiometricEnabled(true);
@@ -192,7 +192,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref.read(setStateProvider('login').notifier).guard(() async {
       final authNotifier = ref.read(authProvider.notifier);
       final requiere2FA = await authNotifier.login(qrToken: qrToken);
-      if (requiere2FA && mounted) context.push('/login-code');
+      if (requiere2FA && mounted) context.push('/verify-code');
     });
   }
 

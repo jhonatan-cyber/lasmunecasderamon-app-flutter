@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
 import '../../../core/hooks/set_state_provider.dart';
+import '../../../core/refresh_bus.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../../core/widgets/skeleton_loader.dart';
@@ -27,6 +28,7 @@ class _CajeroSolicitudesScreenState
 
   Timer? _pollingTimer;
   Timer? _tickTimer;
+  StreamSubscription<RefreshChannel>? _refreshSub;
 
   @override
   void initState() {
@@ -34,6 +36,12 @@ class _CajeroSolicitudesScreenState
     Future.microtask(
       () => ref.read(solicitudesListProvider.notifier).fetchData(),
     );
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.requests ||
+          channel == RefreshChannel.dashboard) {
+        ref.read(solicitudesListProvider.notifier).fetchData();
+      }
+    });
     
     _pollingTimer = Timer.periodic(
       const Duration(seconds: 10),
@@ -49,6 +57,7 @@ class _CajeroSolicitudesScreenState
 
   @override
   void dispose() {
+    _refreshSub?.cancel();
     _pollingTimer?.cancel();
     _tickTimer?.cancel();
     super.dispose();
@@ -2025,9 +2034,8 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
     await ref.read(setStateProvider('service_modal').notifier).guard(() async {
       final client = ref.read(apiClientProvider);
       final response = await client.dio.patch(
-        '/solicitudes-servicios/${widget.item.id}',
+        '/solicitudes-servicios/${widget.item.id}/aprobar',
         data: {
-          'estado': 1,
           'anfitriona_id': _selectedAnfitriona.isNotEmpty
               ? int.tryParse(_selectedAnfitriona)
               : null,

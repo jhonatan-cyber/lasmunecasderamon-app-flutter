@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import 'package:dio/dio.dart';
 import '../../../core/api_client.dart';
 import '../../../core/theme.dart';
 import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/refresh_bus.dart';
 import '../../auth/data/auth_notifier.dart';
 import 'widgets/attendance_code_display.dart';
 import 'widgets/active_service_card.dart';
@@ -24,11 +26,23 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
   Map<String, dynamic> _stats = {'totalEarnings': 0, 'svcCount': 0};
   dynamic _activeService;
   int _userStatus = 1;
+  StreamSubscription<RefreshChannel>? _refreshSub;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => _loadData());
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.dashboard) {
+        _loadData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData({bool isManual = false}) async {

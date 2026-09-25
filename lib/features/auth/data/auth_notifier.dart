@@ -49,7 +49,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final _secureStorage = const FlutterSecureStorage();
 
   AuthNotifier(this._apiClient) : super(AuthState()) {
+    _apiClient.onUnauthorized = _handleUnauthorized;
     checkAuth();
+  }
+
+  /// El refresh token ya no sirve: se cierra la sesión localmente sin volver a
+  /// llamar a la API (cualquier llamada seguiría respondiendo 401).
+  void _handleUnauthorized() {
+    if (state.user == null && state.token == null) return;
+    _secureStorage.delete(key: 'auth_token');
+    _secureStorage.delete(key: 'refresh_token');
+    SharedPreferences.getInstance().then((prefs) => prefs.remove('user'));
+    state = AuthState();
   }
 
   Future<void> checkAuth() async {
@@ -121,13 +132,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       
       final String? token = data['token'];
-      final Map<String, dynamic>? userJson = data['user'];
-
-      if (token != null && userJson != null) {
+      final Map<String, dynamic>? userJson = data['user'];      if (token != null && userJson != null) {
         final user = User.fromJson(userJson);
         
-        
         await _secureStorage.write(key: 'auth_token', value: token);
+        final refreshToken = data['refreshToken'];
+        if (refreshToken is String && refreshToken.isNotEmpty) {
+          await _secureStorage.write(key: 'refresh_token', value: refreshToken);
+        } else {
+          await _secureStorage.delete(key: 'refresh_token');
+        }
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user', jsonEncode(userJson));
 
@@ -200,6 +214,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     
     await _secureStorage.delete(key: 'auth_token');
+    await _secureStorage.delete(key: 'refresh_token');
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user');
 
@@ -212,31 +227,55 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(user: updatedUser);
   }
 
-  
-  
-  Future<void> requestPasswordReset(String email) async {
-    state = state.copyWith(isLoading: true, error: null);
+  /// Reconsulta /auth/me y actualiza el usuario local; false si el servidor ya
+  /// no lo resuelve (rol eliminado o cuenta desactivada) para que el llamador
+  /// cierre la sesión.
+  Future<bool> refreshUser() async {
     try {
-      await _apiClient.dio.post('/auth/reset-password', data: {'email': email});
-    } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? 'Error al solicitar el reset';
-      state = state.copyWith(isLoading: false, error: message);
-      rethrow;
-    } finally {
-      state = state.copyWith(isLoading: false);
+      final res = await _apiClient.dio.get('/auth/me');
+      final body = res.data;
+      if (body is! Map || body['success'] != true) return false;
+
+      final servidor = body['user'] is Map
+          ? body['user'] as Map
+          : (body['data'] is Map ? body['data'] : null);
+      final currentUser = state.user;
+      if (servidor == null || servidor['id'] == null || currentUser == null) {
+        return false;
+      }
+
+      final updated = currentUser.copyWith(
+        nombre: servidor['name']?.toString() ??
+            servidor['nombre']?.toString() ??
+            currentUser.nombre,
+        email: servidor['email']?.toString() ?? currentUser.email,
+        role: servidor['role']?.toString() ?? currentUser.role,
+        nick: servidor['nick']?.toString() ?? currentUser.nick,
+        phone: servidor['phone']?.toString() ?? currentUser.phone,
+        address: servidor['address']?.toString() ?? currentUser.address,
+        estadoCivil: servidor['estado_civil']?.toString() ??
+            servidor['maritalStatus']?.toString() ??
+            currentUser.estadoCivil,
+        foto: servidor['foto']?.toString() ?? currentUser.foto,
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user', jsonEncode(updated.toJson()));
+      state = state.copyWith(user: updated);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
   
-  Future<void> confirmPasswordReset(String code, String newPassword) async {
+  
+  Future<void> requestPasswordReset(String run) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await _apiClient.dio.post('/auth/reset-password/confirm', data: {
-        'code': code,
-        'password': newPassword,
-      });
+      await _apiClient.dio.post('/auth/reset-password', data: {'run': run});
     } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? 'Error al restablecer la contraseña';
+      final message = e.response?.data?['message'] ?? 'Error al resetear la contraseña';
       state = state.copyWith(isLoading: false, error: message);
       rethrow;
     } finally {

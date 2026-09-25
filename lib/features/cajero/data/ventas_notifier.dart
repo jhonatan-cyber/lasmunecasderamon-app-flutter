@@ -145,7 +145,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
   
   Future<bool> finalizarVenta(int ventaId) async {
     try {
-      final response = await _apiClient.dio.put(
+      final response = await _apiClient.dio.patch(
         '/ventas/$ventaId',
         data: {'estado': 1},
       );

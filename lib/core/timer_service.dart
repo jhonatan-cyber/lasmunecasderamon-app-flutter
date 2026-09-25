@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'api_client.dart';
 import 'sse_event.dart';
 import 'sse_service.dart';
+import '../features/auth/data/auth_notifier.dart';
 
 
 class ActiveTimer {
@@ -216,7 +218,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
   }
 
   final _dio = Dio(BaseOptions(
-    baseUrl: 'https://dashboard.xn--lasmuecasderamon-bub.com/api',
+    baseUrl: '${ApiClient.baseDomain}/api',
     connectTimeout: const Duration(seconds: 20),
     receiveTimeout: const Duration(seconds: 20),
   ));
@@ -236,12 +238,14 @@ class TimerNotifier extends StateNotifier<TimerState> {
 
     try {
       final token = await _getAuthToken();
+      if (!mounted) return;
       final response = await _dio.get(
         '/timers/active?source=mobile',
         options: Options(headers: {
           if (token != null) 'Authorization': 'Bearer $token',
         }),
       );
+      if (!mounted) return;
 
       final data = response.data;
       if (data['success'] == true && data['data'] is List) {
@@ -265,14 +269,20 @@ class TimerNotifier extends StateNotifier<TimerState> {
         );
       }
     } catch (_) {
-      
-      if (!_isClosed) {
+      // Reintento solo si el notifier sigue vivo: si se disposeó con la petición
+      // en vuelo, reprogramarlo moriría al volver a escribir `state`.
+      if (!_isClosed && mounted) {
         Future.delayed(const Duration(seconds: 5), () {
-          if (!_isClosed) fetchActiveTimers();
+          if (!_isClosed && mounted) fetchActiveTimers();
         });
       }
     } finally {
-      state = state.copyWith(loading: false);
+      // El `finally` se ejecuta también si el provider se disposeó durante el
+      // await (invalidación al cambiar auth/SSE): sin esta guarda revienta con
+      // "Tried to use TimerNotifier after dispose was called".
+      if (mounted) {
+        state = state.copyWith(loading: false);
+      }
     }
   }
 
@@ -284,12 +294,6 @@ class TimerNotifier extends StateNotifier<TimerState> {
         break;
       case 'timer_stopped':
         _handleTimerStopped(event.data);
-        break;
-      case 'timer_paused':
-        _handleTimerPaused(event.data);
-        break;
-      case 'timer_resumed':
-        _handleTimerResumed(event.data);
         break;
       case 'timer_updated':
         _handleTimerUpdated(event.data);
@@ -319,96 +323,6 @@ class TimerNotifier extends StateNotifier<TimerState> {
           .where((t) =>
               !(t.servicioId == servicioId && t.tipoTransaccion == tipo))
           .toList(),
-    );
-  }
-
-  void _handleTimerPaused(Map<String, dynamic> data) {
-    final servicioId = data['servicioId']?.toString() ?? '';
-    final tipo = data['tipoTransaccion']?.toString() ?? 'servicio';
-    state = state.copyWith(
-      timers: state.timers.map((t) {
-        if (t.servicioId == servicioId && t.tipoTransaccion == tipo) {
-          return ActiveTimer(
-            id: t.id,
-            servicioId: t.servicioId,
-            roomId: t.roomId,
-            roomName: t.roomName,
-            duration: t.duration,
-            remainingTime: t.calculateRemaining(state.serverOffset),
-            isActive: t.isActive,
-            isPaused: true,
-            startTime: t.startTime,
-            servicioCode: t.servicioCode,
-            clienteId: t.clienteId,
-            clienteNombre: t.clienteNombre,
-            tipoTransaccion: t.tipoTransaccion,
-            anfitrionas: t.anfitrionas,
-            precioServicio: t.precioServicio,
-            precioHabitacion: t.precioHabitacion,
-            iva: t.iva,
-            total: t.total,
-            metodoPago: t.metodoPago,
-            waiterName: t.waiterName,
-            solicitanteName: t.solicitanteName,
-            habitacionComision: t.habitacionComision,
-            anfitrionasIds: t.anfitrionasIds,
-            createdAt: t.createdAt,
-            estado: 3,
-            totalUsuarios: t.totalUsuarios,
-            comisionIndividual: t.comisionIndividual,
-            esTemporal: t.esTemporal,
-            servicioOriginalId: t.servicioOriginalId,
-          );
-        }
-        return t;
-      }).toList(),
-    );
-  }
-
-  void _handleTimerResumed(Map<String, dynamic> data) {
-    final servicioId = data['servicioId']?.toString() ?? '';
-    final tipo = data['tipoTransaccion']?.toString() ?? 'servicio';
-    final newStartTime = data['newStartTime'] != null
-        ? DateTime.tryParse(data['newStartTime'].toString())?.toLocal()
-        : null;
-
-    state = state.copyWith(
-      timers: state.timers.map((t) {
-        if (t.servicioId == servicioId && t.tipoTransaccion == tipo) {
-          return ActiveTimer(
-            id: t.id,
-            servicioId: t.servicioId,
-            roomId: t.roomId,
-            roomName: t.roomName,
-            duration: t.duration,
-            remainingTime: t.duration * 60,
-            isActive: t.isActive,
-            isPaused: false,
-            startTime: newStartTime ?? t.startTime,
-            servicioCode: t.servicioCode,
-            clienteId: t.clienteId,
-            clienteNombre: t.clienteNombre,
-            tipoTransaccion: t.tipoTransaccion,
-            anfitrionas: t.anfitrionas,
-            precioServicio: t.precioServicio,
-            precioHabitacion: t.precioHabitacion,
-            iva: t.iva,
-            total: t.total,
-            metodoPago: t.metodoPago,
-            waiterName: t.waiterName,
-            solicitanteName: t.solicitanteName,
-            habitacionComision: t.habitacionComision,
-            anfitrionasIds: t.anfitrionasIds,
-            createdAt: t.createdAt,
-            estado: 2,
-            totalUsuarios: t.totalUsuarios,
-            comisionIndividual: t.comisionIndividual,
-            esTemporal: t.esTemporal,
-            servicioOriginalId: t.servicioOriginalId,
-          );
-        }
-        return t;
-      }).toList(),
     );
   }
 
@@ -479,19 +393,29 @@ class TimerNotifier extends StateNotifier<TimerState> {
 
 
 final timerProvider = StateNotifierProvider<TimerNotifier, TimerState>((ref) {
+  // Recrear el notifier al cambiar de sesión (login/logout): limpia timers
+  // stale y relanza el fetch del constructor. Antes se watcheaba
+  // sseEventStreamProvider, que también depende de auth, pero eso implicaba
+  // recrearlo en CADA evento SSE (dispose con fetches en vuelo + refetch
+  // constante).
+  ref.watch(authProvider);
+
   final notifier = TimerNotifier();
 
-  
-  final sseAsync = ref.watch(sseEventStreamProvider);
-  sseAsync.whenData((event) {
-    if (event.type.startsWith('timer_') || event.type == 'timers_updated') {
-      notifier.handleSSEEvent(event);
-    }
+  // ref.listen en lugar de ref.watch: los eventos se derivan al notifier vivo
+  // sin invalidar el provider.
+  ref.listen<AsyncValue<SseEvent>>(sseEventStreamProvider, (prev, next) {
+    next.whenData((event) {
+      if (event.type.startsWith('timer_') || event.type == 'timers_updated') {
+        notifier.handleSSEEvent(event);
+      }
+    });
   });
 
-  ref.onDispose(() {
-    notifier.dispose();
-  });
+  // No registrar ref.onDispose(notifier.dispose): StateNotifierProvider ya
+  // disposea el notifier internamente (riverpod base.dart). Hacerlo a mano
+  // provocaba doble dispose y StateError "Tried to use TimerNotifier after
+  // dispose was called".
 
   return notifier;
 });

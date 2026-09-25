@@ -97,7 +97,7 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
   
   Future<bool> detenerTiempo(int idCuenta) async {
     try {
-      final response = await _apiClient.dio.post('/cuentas/$idCuenta/stop');
+      final response = await _apiClient.dio.patch('/cuentas/$idCuenta/stop');
       if (response.data != null && response.data['success'] == true) {
         
         await fetchData();

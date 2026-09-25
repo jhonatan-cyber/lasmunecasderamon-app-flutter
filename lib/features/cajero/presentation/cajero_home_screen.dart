@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../../core/api_client.dart';
 import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/refresh_bus.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../auth/data/auth_notifier.dart';
 
@@ -18,11 +20,24 @@ class CajeroHomeScreen extends ConsumerStatefulWidget {
 class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
   Map<String, dynamic> _stats = {};
   int _pendingCount = 0;
+  StreamSubscription<RefreshChannel>? _refreshSub;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => _fetchData());
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.requests ||
+          channel == RefreshChannel.dashboard) {
+        _fetchData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchData({bool isManual = false}) async {

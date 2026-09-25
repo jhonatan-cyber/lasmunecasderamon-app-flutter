@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
+import '../../../core/refresh_bus.dart';
 import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../../../core/widgets/skeleton_loader.dart';
@@ -100,15 +102,22 @@ class _CajeroGratificacionesScreenState extends ConsumerState<CajeroGratificacio
   GratificacionEmployee? _selectedEmployee;
   final TextEditingController _montoController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
+  StreamSubscription<RefreshChannel>? _refreshSub;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => _fetchData());
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.gratificaciones) {
+        _fetchData();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _refreshSub?.cancel();
     _montoController.dispose();
     _descController.dispose();
     super.dispose();

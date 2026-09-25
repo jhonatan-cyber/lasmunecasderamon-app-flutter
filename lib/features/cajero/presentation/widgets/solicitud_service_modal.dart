@@ -44,7 +44,7 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
     await ref.read(setStateProvider('service_modal').notifier).guard(() async {
       final client = ref.read(apiClientProvider);
       final response = await client.dio.patch(
-        '/solicitudes-servicios/${widget.item.id}',
+        '/solicitudes-servicios/${widget.item.id}/aprobar',
         data: {
           'estado': 1,
           'anfitriona_id': _selectedAnfitriona.isNotEmpty

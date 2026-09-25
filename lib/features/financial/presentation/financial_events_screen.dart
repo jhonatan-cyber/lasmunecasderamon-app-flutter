@@ -436,9 +436,10 @@ class _FinancialEventsScreenState
           saleDetail =
               await _fetchSaleDetailData(parentPropina!['venta_id'] as int);
         }
-      } else if (event.codigoVenta != null) {
-        saleDetail = await _fetchSaleDetailByCodeData(event.codigoVenta!);
       }
+      // Igual que en Expo, si el evento no trae venta asociada el modal muestra
+      // solo los datos del evento: no hay endpoint de búsqueda por código
+      // (`/ventas?codigo=` no existe en el dashboard).
     } catch (_) {}
 
     return _DetailData(saleDetail: saleDetail, parentPropina: parentPropina);
@@ -452,19 +453,6 @@ class _FinancialEventsScreenState
     } catch (_) {
       return null;
     }
-  }
-
-  Future<Map<String, dynamic>?> _fetchSaleDetailByCodeData(
-      String code) async {
-    try {
-      final apiClient = ref.read(apiClientProvider);
-      final res = await apiClient.dio.get('/ventas?codigo=$code');
-      final data = res.data['data'] ?? res.data;
-      if (data is List && data.isNotEmpty) {
-        return data[0] as Map<String, dynamic>?;
-      }
-    } catch (_) {}
-    return null;
   }
 
   

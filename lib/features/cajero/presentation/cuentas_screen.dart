@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme.dart';
+import '../../../core/refresh_bus.dart';
 import '../../../core/widgets/premium_fab.dart';
 import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
@@ -21,6 +22,7 @@ class CuentasScreen extends ConsumerStatefulWidget {
 
 class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   Timer? _timer;
+  StreamSubscription<RefreshChannel>? _refreshSub;
   String _searchQuery = '';
   String _activeTab = 'todas'; 
   final _searchController = TextEditingController();
@@ -37,6 +39,11 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     Future.microtask(
       () => ref.read(cuentasListProvider.notifier).fetchData(),
     );
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.cuentas) {
+        ref.read(cuentasListProvider.notifier).fetchData();
+      }
+    });
     
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
@@ -47,6 +54,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
 
   @override
   void dispose() {
+    _refreshSub?.cancel();
     _timer?.cancel();
     _tipController.dispose();
     _motivoAnulacionController.dispose();

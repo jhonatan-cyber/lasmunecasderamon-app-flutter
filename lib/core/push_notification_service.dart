@@ -16,6 +16,34 @@ import 'utils/deep_links.dart';
 
 final GlobalKey<NavigatorState> pushNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Notificación local genérica para los handlers SSE en primer plano
+/// (equivalente a `showLocalNotification` de la app Expo). Si el plugin de
+/// notificaciones aún no está inicializado simplemente se omite.
+Future<void> showLocalNotification(String title, String body) async {
+  try {
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'default_channel',
+        'Notificaciones',
+        channelDescription: 'Notificaciones de Las Muñecas de Ramón',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        enableVibration: true,
+      ),
+      iOS: const DarwinNotificationDetails(),
+    );
+    await FlutterLocalNotificationsPlugin().show(
+      id: title.hashCode ^ body.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
+  } catch (_) {
+    // Sin canal inicializado o sin permisos: el aviso en pantalla ya existe.
+  }
+}
+
 
 
 
@@ -48,27 +76,33 @@ class PushNotificationService {
     if (_initialised) return;
     _initialised = true;
 
-    await Firebase.initializeApp();
-    _initialiseLocalNotifications();
-    _setupForegroundHandler();
+    // Sin Firebase disponible (Windows, web sin config, tests) las push no
+    // aplican: se aborta en silencio y la app sigue funcionando sin notificaciones.
+    try {
+      await Firebase.initializeApp();
+      _initialiseLocalNotifications();
+      _setupForegroundHandler();
 
-    
-    
-    final RemoteMessage? initialMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
       
-      Future.microtask(() => _handleNotificationTap(initialMessage));
+      
+      final RemoteMessage? initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        
+        Future.microtask(() => _handleNotificationTap(initialMessage));
+      }
+
+      
+      await _registerForPushNotifications();
+
+      
+      FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
+
+      
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+    } catch (e) {
+      debugPrint('Push: Firebase no disponible en esta plataforma ($e)');
     }
-
-    
-    await _registerForPushNotifications();
-
-    
-    FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
-
-    
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
   }
 
   

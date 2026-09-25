@@ -88,23 +88,28 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await _apiClient.dio.get('/analytics/dashboard');
-      final raw = response.data['data'] ?? response.data;
+      final results = await Future.wait([
+        _apiClient.dio.get('/stats/dashboard-summary'),
+        _apiClient.dio.get('/stats/sales-by-week'),
+      ]);
 
-      
-      final stats = _parseStats(raw);
-      final barData = _parseBarData(raw);
-      final pieData = _parsePieData(raw);
+      final summary = _dataOf(results[0].data);
+      final week = _dataOf(results[1].data);
+
+      final stats = _parseStats(summary ?? const {});
+      final barData = _parseBarData(week ?? const {});
+      final pieData = _parsePieData(week ?? const {});
 
       state = state.copyWith(
         stats: stats,
         barData: barData,
         pieData: pieData,
         isLoading: false,
+        clearError: true,
       );
     } catch (e, stack) {
       Logger.captureException(e, hint: 'fetchAnalytics', stackTrace: stack);
-      
+
       state = state.copyWith(
         stats: _demoStats(),
         barData: _demoBarData(),
@@ -115,37 +120,44 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
   }
 
+  Map<String, dynamic>? _dataOf(dynamic body) {
+    if (body is Map && body['data'] is Map) {
+      return body['data'] as Map<String, dynamic>;
+    }
+    if (body is Map) return body.cast<String, dynamic>();
+    return null;
+  }
+
   
 
-  List<StatData> _parseStats(Map<String, dynamic> raw) {
+  List<StatData> _parseStats(Map<String, dynamic> s) {
     try {
-      final s = raw['stats'] as Map<String, dynamic>?;
-      if (s == null) return _demoStats();
       return [
         StatData(
-          title: 'Ventas',
-          value: _fmt((s['total_ventas'] ?? 0).toDouble()),
+          title: 'A cobrar',
+          value: _money((s['totalACobrar'] ?? 0).toDouble()),
           icon: 'trending_up',
-          valueRaw: (s['total_ventas'] ?? 0).toDouble(),
+          valueRaw: (s['totalACobrar'] ?? 0).toDouble(),
         ),
         StatData(
           title: 'Servicios',
-          value: _fmt((s['total_servicios'] ?? 0).toDouble()),
+          value: _count(s['totalServicios']),
           icon: 'miscellaneous_services',
-          valueRaw: (s['total_servicios'] ?? 0).toDouble(),
+          valueRaw: (s['totalServicios'] ?? 0).toDouble(),
         ),
         StatData(
           title: 'Comisiones',
-          value: _fmt((s['total_comisiones'] ?? 0).toDouble()),
+          value: _count(s['totalComisiones']),
+          subtitle: 'Registradas',
           icon: 'attach_money',
-          valueRaw: (s['total_comisiones'] ?? 0).toDouble(),
+          valueRaw: (s['totalComisiones'] ?? 0).toDouble(),
         ),
         StatData(
           title: 'Propinas',
-          value: _fmt((s['total_propinas'] ?? 0).toDouble()),
-          subtitle: 'Acumulado',
+          value: _count(s['totalPropinas']),
+          subtitle: 'Recibidas',
           icon: 'card_giftcard',
-          valueRaw: (s['total_propinas'] ?? 0).toDouble(),
+          valueRaw: (s['totalPropinas'] ?? 0).toDouble(),
         ),
       ];
     } catch (_) {
@@ -153,14 +165,16 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
   }
 
-  List<BarChartDataPoint> _parseBarData(Map<String, dynamic> raw) {
+  List<BarChartDataPoint> _parseBarData(Map<String, dynamic> week) {
     try {
-      final days = raw['ventas_por_dia'] as List?;
+      final days = week['data'] as List?;
       if (days == null || days.isEmpty) return _demoBarData();
       return days.map((d) {
         final map = d as Map<String, dynamic>;
         return BarChartDataPoint(
-          label: map['dia']?.toString() ?? '',
+          label: map['dia_espanol']?.toString() ??
+              map['dia_semana']?.toString() ??
+              '',
           value: (map['total'] ?? 0).toDouble(),
         );
       }).toList();
@@ -169,22 +183,46 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
   }
 
-  List<PieChartDataPoint> _parsePieData(Map<String, dynamic> raw) {
+  List<PieChartDataPoint> _parsePieData(Map<String, dynamic> week) {
     try {
-      final dist = raw['distribucion'] as List?;
-      if (dist == null || dist.isEmpty) return _demoPieData();
-      final colors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
-      return dist.asMap().entries.map((e) {
-        final map = e.value as Map<String, dynamic>;
+      final days = week['data'] as List?;
+      if (days == null || days.isEmpty) return _demoPieData();
+      final colors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
+      final parsed = days.map((d) {
+        final map = d as Map<String, dynamic>;
         return PieChartDataPoint(
-          label: map['nombre']?.toString() ?? '',
+          label: map['dia_espanol']?.toString() ??
+              map['dia_semana']?.toString() ??
+              '',
           value: (map['total'] ?? 0).toDouble(),
-          color: colors[e.key % colors.length],
+          color: '#000000',
         );
-      }).toList();
+      }).where((p) => p.value > 0).toList();
+
+      return [
+        for (var i = 0; i < parsed.length; i++)
+          PieChartDataPoint(
+            label: parsed[i].label,
+            value: parsed[i].value,
+            color: colors[i % colors.length],
+          )
+      ];
     } catch (_) {
       return _demoPieData();
     }
+  }
+
+  static String _count(dynamic v) {
+    final n = (v ?? 0).toDouble();
+    return n == n.roundToDouble() ? n.toStringAsFixed(0) : n.toStringAsFixed(1);
+  }
+
+  static String _money(double v) {
+    final formatted = v.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'\B(?=(\d{3})+(?!\d))'),
+          (m) => '.',
+        );
+    return '\$$formatted';
   }
 
   
@@ -235,12 +273,6 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
             label: 'Propinas', value: 3150, color: '#EF4444'),
       ];
 
-  static String _fmt(double v) {
-    if (v >= 1000) {
-      return '\$${(v / 1000).toStringAsFixed(1)}k';
-    }
-    return '\$${v.toStringAsFixed(0)}';
-  }
 }
 
 final analyticsProvider =

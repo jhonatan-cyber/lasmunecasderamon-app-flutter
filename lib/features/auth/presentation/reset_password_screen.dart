@@ -6,9 +6,6 @@ import '../../../core/theme.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../data/auth_notifier.dart';
 
-
-
-
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -18,26 +15,48 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _runController = TextEditingController();
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _runController.dispose();
     super.dispose();
   }
 
   Future<void> _requestReset() async {
     if (!_formKey.currentState!.validate()) return;
 
-    await ref.read(setStateProvider('reset_password').notifier).guard(() async {
+    final ok = await ref.read(setStateProvider('reset_password').notifier).guard(() async {
       await ref.read(authProvider.notifier).requestPasswordReset(
-        _emailController.text.trim(),
-      );
-
-      if (mounted) {
-        context.push('/auth/reset-password/confirm', extra: _emailController.text.trim());
-      }
+            _runController.text.trim(),
+          );
     });
+
+    if (!ok || !mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Contraseña restablecida',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Tu contraseña ahora es tu número de RUN. Inicia sesión con ella y '
+          'podrás definir una nueva.',
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => dialogContext.pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+
+    if (mounted) context.go('/login');
   }
 
   @override
@@ -80,7 +99,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Ingresa tu correo electrónico y te enviaremos un código de verificación.',
+                  'Ingresa tu RUN y tu contraseña pasará a ser tu número de RUN. '
+                  'Al iniciar sesión podrás cambiarla.',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: isDark ? AppTheme.darkTextSecondary : Colors.grey.shade600,
@@ -97,7 +117,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Correo electrónico',
+                        'RUN',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -106,13 +126,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
+                        controller: _runController,
+                        keyboardType: TextInputType.text,
+                        textCapitalization: TextCapitalization.characters,
                         style: TextStyle(color: textColor),
                         decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.email_outlined, color: isDark ? AppTheme.darkTextSecondary : Colors.grey),
-                          hintText: 'tu@correo.com',
-                          hintStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : Colors.grey.shade400),
+                          prefixIcon: Icon(Icons.badge_outlined,
+                              color: isDark ? AppTheme.darkTextSecondary : Colors.grey),
+                          hintText: '12345678-9',
+                          hintStyle: TextStyle(
+                              color: isDark ? AppTheme.darkTextSecondary : Colors.grey.shade400),
                           filled: true,
                           fillColor: isDark ? AppTheme.darkSurfaceColor : Colors.white,
                           border: OutlineInputBorder(
@@ -129,8 +152,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                           ),
                         ),
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Ingresa tu correo';
-                          if (!v.contains('@')) return 'Ingresa un correo válido';
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return 'Ingresa tu RUN';
+                          if (value.length < 4) return 'El RUN debe tener al menos 4 caracteres';
                           return null;
                         },
                       ),
@@ -186,7 +210,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                             ),
                           )
                         : Text(
-                            'Enviar código',
+                            'Restablecer contraseña',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,

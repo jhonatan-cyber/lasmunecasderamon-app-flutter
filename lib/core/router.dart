@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/data/auth_notifier.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
-import '../features/auth/presentation/reset_password_confirm_screen.dart';
+import '../features/auth/presentation/change_password_screen.dart';
 import '../features/auth/presentation/verify_code_screen.dart';
 import 'widgets/offline_banner.dart';
 import '../features/garzon/presentation/productos_screen.dart';
@@ -36,6 +36,11 @@ import '../features/anfitriona/presentation/anfitriona_home_screen.dart';
 import '../features/anfitriona/presentation/anfitriona_servicios_screen.dart';
 import '../features/anfitriona/presentation/anfitriona_comisiones_screen.dart';
 import '../features/anfitriona/presentation/anfitriona_tabs_layout.dart';
+import '../features/barman/presentation/barman_home_screen.dart';
+import '../features/barman/presentation/barman_tabs_layout.dart';
+import '../features/barman/presentation/bar_screen.dart';
+import '../features/barman/presentation/barman_ventas_screen.dart';
+import '../features/barman/presentation/barman_servicios_screen.dart';
 import '../features/financial/presentation/financial_events_screen.dart';
 import '../features/analytics/presentation/analytics_screen.dart';
 
@@ -49,13 +54,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loggedIn = user != null;
       final isLoggingIn =
           state.matchedLocation == '/login' ||
-          state.matchedLocation == '/verify-code';
+          state.matchedLocation == '/verify-code' ||
+          state.matchedLocation == '/auth/change-password';
 
       if (!loggedIn) {
         return isLoggingIn ? null : '/login';
       }
+      // Contraseña reseteada al RUN: obligatoria antes de entrar a la app.
+      if (user.forcePasswordChange) {
+        return state.matchedLocation == '/auth/change-password'
+            ? null
+            : '/auth/change-password';
+      }
       if (isLoggingIn || state.matchedLocation == '/') {
-        if (user.isGarzon) {
+        if (user.isBarman) {
+          return '/barman';
+        } else if (user.isGarzon) {
           return '/garzon';
         } else if (user.isHostess) {
           return '/anfitriona';
@@ -78,12 +92,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const VerifyCodeScreen(),
       ),
       GoRoute(
-        path: '/auth/reset-password',
-        builder: (context, state) => const ResetPasswordScreen(),
+        path: '/auth/change-password',
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
       GoRoute(
-        path: '/auth/reset-password/confirm',
-        builder: (context, state) => const ResetPasswordConfirmScreen(),
+        path: '/auth/reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
 
       ShellRoute(
@@ -172,6 +186,51 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // ─── Rol Barman: tabs + operaciones del bar ──────────────────────────
+      ShellRoute(
+        builder: (context, state, child) =>
+            _OfflineShell(child: BarmanTabsLayout(child: child)),
+        routes: [
+          GoRoute(
+            path: '/barman',
+            builder: (context, state) => const BarmanHomeScreen(),
+          ),
+          GoRoute(
+            path: '/barman/asistencia',
+            builder: (context, state) => const AsistenciaScreen(),
+          ),
+          GoRoute(
+            path: '/barman/anticipos',
+            builder: (context, state) => const AnticiposScreen(),
+          ),
+          GoRoute(
+            path: '/barman/propinas',
+            builder: (context, state) => const PropinasScreen(),
+          ),
+          GoRoute(
+            path: '/barman/horas-extras',
+            builder: (context, state) => const HorasExtrasScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/barman/bar',
+        builder: (context, state) => const BarScreen(),
+      ),
+      GoRoute(
+        path: '/barman/ventas',
+        builder: (context, state) => const BarmanVentasScreen(),
+      ),
+      GoRoute(
+        path: '/barman/servicios',
+        builder: (context, state) => const BarmanServiciosScreen(),
+      ),
+      GoRoute(
+        path: '/barman/perfil',
+        builder: (context, state) =>
+            const PerfilScreen(roleLabel: 'Barman', avatarEmoji: '🍺'),
+      ),
+
       ShellRoute(
         builder: (context, state, child) =>
             _OfflineShell(child: CajeroTabsLayout(child: child)),

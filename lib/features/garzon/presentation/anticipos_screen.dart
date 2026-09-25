@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
+import '../../../core/refresh_bus.dart';
 import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/widgets/premium_fab.dart';
 import '../../../core/widgets/premium_header.dart';
@@ -29,11 +31,24 @@ class _AnticiposScreenState extends ConsumerState<AnticiposScreen> {
   double _montoComisiones = 0;
   double _montoPropinas = 0;
   bool _tieneSolicitudPendiente = false;
+  StreamSubscription<RefreshChannel>? _refreshSub;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => _fetchData());
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.anticipos ||
+          channel == RefreshChannel.dashboard) {
+        _fetchData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchData({bool isManual = false}) async {

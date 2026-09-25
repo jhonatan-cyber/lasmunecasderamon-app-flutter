@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/hooks/set_state_provider.dart';
+import '../../../core/refresh_bus.dart';
 import '../../../core/theme.dart';
 import '../../../core/timer_service.dart';
 import '../../../core/widgets/premium_fab.dart';
@@ -24,6 +25,7 @@ class VentasScreen extends ConsumerStatefulWidget {
 class _VentasScreenState extends ConsumerState<VentasScreen> {
   String _activeTab = 'historial'; 
   Timer? _tickTimer;
+  StreamSubscription<RefreshChannel>? _refreshSub;
   dynamic _activeVenta;
   
   String _montoAnulacion = '';
@@ -37,6 +39,11 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
     Future.microtask(
       () => ref.read(ventasListProvider.notifier).fetchData(),
     );
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.sales) {
+        ref.read(ventasListProvider.notifier).fetchData();
+      }
+    });
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -44,6 +51,7 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
 
   @override
   void dispose() {
+    _refreshSub?.cancel();
     _motivoController.dispose();
     _montoAnulacionController.dispose();
     _tickTimer?.cancel();

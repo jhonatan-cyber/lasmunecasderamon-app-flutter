@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
 import '../../../core/haptic_service.dart';
+import '../../../core/refresh_bus.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../../core/widgets/premium_header.dart';
@@ -20,6 +22,7 @@ class GarzonHomeScreen extends ConsumerStatefulWidget {
 
 class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
   DateTime _selectedDate = DateTime.now();
+  StreamSubscription<RefreshChannel>? _refreshSub;
 
   @override
   void initState() {
@@ -28,6 +31,18 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
     Future.microtask(() {
       ref.read(garzonDashboardProvider.notifier).fetchDashboardData();
     });
+    _refreshSub = RefreshBus.stream.listen((channel) {
+      if (channel == RefreshChannel.dashboard ||
+          channel == RefreshChannel.requests) {
+        ref.read(garzonDashboardProvider.notifier).fetchDashboardData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshSub?.cancel();
+    super.dispose();
   }
 
   @override

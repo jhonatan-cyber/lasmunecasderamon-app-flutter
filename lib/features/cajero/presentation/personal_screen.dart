@@ -159,13 +159,17 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
     try {
       final client = ref.read(apiClientProvider);
       final response = await client.dio.post(
-        '/users/generate-qr',
+        '/attendance/qr',
         data: {'userId': userId},
       );
 
-      if (response.data != null && response.data['success'] == true) {
-        final String newQrToken = response.data['qr_token']?.toString() ?? '';
-        
+      final body = response.data;
+      final challenge = body != null && body['data'] is Map
+          ? body['data'] as Map<String, dynamic>
+          : null;
+      final String newQrToken = challenge?['token']?.toString() ?? '';
+
+      if (body != null && body['success'] == true && newQrToken.isNotEmpty) {
         setState(() {
           _users = _users.map((u) => u.id == userId ? u.copyWith(qrToken: newQrToken) : u).toList();
           if (_selectedUser?.id == userId) {
@@ -173,11 +177,18 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
           }
           _isGenerating = false;
         });
-        if (mounted) AppSnackBar.showSuccess(context, 'CÃ³digo QR generado con Ã©xito');
+        if (mounted) {
+          final ttl = challenge?['ttlSegundos'] ?? challenge?['ttl'] ?? 120;
+          AppSnackBar.showSuccess(
+              context, 'Código QR generado · vence en ${ttl}s');
+        }
         _startPolling(userId);
       } else {
         setState(() => _isGenerating = false);
-        if (mounted) AppSnackBar.showError(context, response.data['message'] ?? 'Error al generar QR');
+        if (mounted) {
+          AppSnackBar.showError(
+              context, body?['message'] ?? 'Error al generar QR');
+        }
       }
     } catch (e) {
       setState(() => _isGenerating = false);
