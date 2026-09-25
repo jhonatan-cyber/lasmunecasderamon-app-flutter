@@ -64,8 +64,12 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
 
   FinancialNotifier(this._apiClient, this._type) : super(const FinancialState());
 
-  String get _endpoint =>
-      _type == 'comisiones' ? '/commissions/user' : '/tips?tipo=detalle';
+  // `?tipo=detalle` (paridad con Expo): filas por comisión — el default de
+  // /commissions/user es la fila agregada por usuario y no trae `tipo`, con
+  // lo que el filtro `tipo == 'venta'` descartaba todo y la lista quedaba vacía.
+  String get _endpoint => _type == 'comisiones'
+      ? '/commissions/user?tipo=detalle'
+      : '/tips?tipo=detalle';
 
   Future<void> fetchEvents({bool isManual = false}) async {
     state = state.copyWith(isLoading: true, error: null, hasChanges: false);

@@ -4,8 +4,12 @@
 
 class FinancialEvent {
   final String id;
-  final int? idComision;
-  final int? idDetallePropina;
+  // Los IDs de este dominio son varchar(36) (UUID) en el esquema del
+  // dashboard: `id_propina`, `id_detalle_propina`, `id_comision` y `venta_id`
+  // llegan como STRING. Castearlos con `as int?` lanzaba TypeError en cada
+  // fila y la pantalla de eventos quedaba en estado de error.
+  final String? idComision;
+  final String? idDetallePropina;
   final String? codigo;
   final String? codigoVenta;
   final double monto;
@@ -19,7 +23,7 @@ class FinancialEvent {
   final String? clienteNombre;
   final String? habitacionNombre;
   final dynamic productos;
-  final int? propinaId;
+  final String? propinaId;
 
   const FinancialEvent({
     required this.id,
@@ -44,8 +48,8 @@ class FinancialEvent {
   factory FinancialEvent.fromJson(Map<String, dynamic> json) {
     return FinancialEvent(
       id: (json['id'] ?? '').toString(),
-      idComision: json['id_comision'] as int?,
-      idDetallePropina: json['id_detalle_propina'] as int?,
+      idComision: json['id_comision']?.toString(),
+      idDetallePropina: json['id_detalle_propina']?.toString(),
       codigo: json['codigo'] as String?,
       codigoVenta: json['codigo_venta'] as String?,
       monto: (json['monto'] ?? 0).toDouble(),
@@ -53,13 +57,13 @@ class FinancialEvent {
       fechaCrea: json['fecha_crea'] as String? ?? '',
       fechaMod: json['fecha_mod'] as String?,
       propinaFechaCrea: json['propina_fecha_crea'] as String?,
-      estado: json['estado'] as int? ?? 1,
+      estado: (json['estado'] as num?)?.toInt() ?? 1,
       tipo: json['tipo'] as String? ?? 'otro',
       subType: json['subType'] as String?,
       clienteNombre: json['cliente_nombre'] as String?,
       habitacionNombre: json['habitacion_nombre'] as String?,
       productos: json['productos'],
-      propinaId: json['propina_id'] as int?,
+      propinaId: json['propina_id']?.toString(),
     );
   }
 

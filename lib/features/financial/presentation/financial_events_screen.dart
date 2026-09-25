@@ -427,14 +427,18 @@ class _FinancialEventsScreenState
 
     try {
       final apiClient = ref.read(apiClientProvider);
-      if (event.tipo == 'propina' && event.propinaId != null) {
+      // Como en Expo: la llamada se decide por el TIPO DE PANTALLA, no por
+      // `event.tipo` — las filas de `/tips?tipo=detalle` no traen el campo
+      // `tipo` (quedaría 'otro') y la rama nunca se ejecutaba.
+      if (widget.type == 'propinas' && event.propinaId != null) {
         final tipRes =
             await apiClient.dio.get('/tips/${event.propinaId}');
         final raw = tipRes.data['data'] ?? tipRes.data;
         parentPropina = raw is Map<String, dynamic> ? raw : null;
         if (parentPropina?['venta_id'] != null) {
-          saleDetail =
-              await _fetchSaleDetailData(parentPropina!['venta_id'] as int);
+          // venta_id es varchar(36) (UUID): interpolarlo, no castearlo a int.
+          saleDetail = await _fetchSaleDetailData(
+              parentPropina!['venta_id'].toString());
         }
       }
       // Igual que en Expo, si el evento no trae venta asociada el modal muestra
@@ -445,7 +449,7 @@ class _FinancialEventsScreenState
     return _DetailData(saleDetail: saleDetail, parentPropina: parentPropina);
   }
 
-  Future<Map<String, dynamic>?> _fetchSaleDetailData(int ventaId) async {
+  Future<Map<String, dynamic>?> _fetchSaleDetailData(String ventaId) async {
     try {
       final apiClient = ref.read(apiClientProvider);
       final res = await apiClient.dio.get('/ventas/$ventaId');
