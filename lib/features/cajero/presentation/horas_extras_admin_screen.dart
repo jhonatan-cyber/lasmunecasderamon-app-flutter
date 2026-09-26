@@ -8,8 +8,10 @@ import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
 
 class OvertimeRecord {
-  final int idHoraExtra;
-  final int usuarioId;
+  // varchar(36) en el dashboard: como int, el id y el usuario quedaban en 0 y
+  // el filtro por usuario no coincidía con ningún registro.
+  final String idHoraExtra;
+  final String usuarioId;
   final String usuario;
   final String? usuarioFoto;
   final DateTime fechaCrea;
@@ -34,8 +36,8 @@ class OvertimeRecord {
 
   factory OvertimeRecord.fromJson(Map<String, dynamic> json) {
     return OvertimeRecord(
-      idHoraExtra: int.tryParse(json['id_hora_extra']?.toString() ?? '') ?? 0,
-      usuarioId: int.tryParse(json['usuario_id']?.toString() ?? '') ?? 0,
+      idHoraExtra: (json['id_hora_extra'] ?? '').toString(),
+      usuarioId: (json['usuario_id'] ?? '').toString(),
       usuario: json['usuario'] ?? '',
       usuarioFoto: json['usuario_foto'],
       fechaCrea: DateTime.tryParse(json['fecha_crea'] ?? '') ?? DateTime.now(),
@@ -105,7 +107,7 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
 
   
   List<Map<String, dynamic>> get _employees {
-    final Map<int, String> map = {};
+    final Map<String, String> map = {};
     for (var r in _records) {
       map[r.usuarioId] = r.usuario;
     }
@@ -119,14 +121,14 @@ class _CajeroHorasExtrasAdminScreenState extends ConsumerState<CajeroHorasExtras
       result = result.where((r) => r.estado == targetEstado).toList();
     }
     if (_userFilter != 'all') {
-      final targetUserId = int.tryParse(_userFilter);
+      final targetUserId = _userFilter;
       result = result.where((r) => r.usuarioId == targetUserId).toList();
     }
     return result;
   }
 
   List<Map<String, dynamic>> get _perEmployeeStats {
-    final Map<int, Map<String, dynamic>> map = {};
+    final Map<String, Map<String, dynamic>> map = {};
     for (var r in _records) {
       if (map.containsKey(r.usuarioId)) {
         final current = map[r.usuarioId]!;

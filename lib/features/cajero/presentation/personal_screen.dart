@@ -1,6 +1,7 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../auth/data/auth_notifier.dart';
@@ -523,13 +524,77 @@ class _CajeroPersonalScreenState extends ConsumerState<CajeroPersonalScreen> {
             showBackButton: true,
             onBack: () => Navigator.pop(context),
             showRefreshButton: true,
-            isRefreshing: ref.watch(refreshProvider('personal')).isRefreshing,
-            onRefresh: () {
-              _fetchUsers(isManual: true);
-              _fetchCodigoAsistencia();
-            },
+            isRefreshing: ref.watch(refreshProvider('personal')).isRefreshing,              onRefresh: () {
+                _fetchUsers(isManual: true);
+                _fetchCodigoAsistencia();
+              },
 
-          ),
+            ),
+
+            // Enlace a Horas Extras (paridad con Expo: el mismo acceso existe
+            // en Personal y en Resumen Personal → /cajero/horas-extras).
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Material(
+                color: isDark
+                    ? AppTheme.darkSurfaceColor
+                    : AppTheme.lightSurfaceColor,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => context.push('/cajero/horas-extras'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.black.withValues(alpha: 0.05),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Horas Extras',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Control de jornada',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           
           Padding(

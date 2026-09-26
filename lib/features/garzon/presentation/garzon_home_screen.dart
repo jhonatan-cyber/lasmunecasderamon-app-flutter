@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import '../../../core/report_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/haptic_service.dart';
 import '../../../core/refresh_bus.dart';
+import '../../../core/widgets/liquidation_export.dart';
+import '../../../core/widgets/operations_calendar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../../core/widgets/premium_header.dart';
@@ -21,7 +23,8 @@ class GarzonHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
-  DateTime _selectedDate = DateTime.now();
+  /// Días (clave `yyyy-MM-dd`) marcados en el calendario operativo.
+  final Set<String> _selectedDates = {};
   StreamSubscription<RefreshChannel>? _refreshSub;
 
   @override
@@ -71,6 +74,9 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
     }
 
     final userDisplayName = user?.nombre ?? 'Garzón';
+    final events = dashboardState.events
+        .map(LiquidationEvent.fromJson)
+        .toList();
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBgColor : AppTheme.lightBgColor,
@@ -108,7 +114,15 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                     const SizedBox(height: 16),
 
                     
-                    _buildPayoutCard(isDark, dashboardState.payoutTotal),
+                    _buildPayoutCard(
+                      isDark,
+                      dashboardState.payoutTotal,
+                      events,
+                      liquidationUserLabel(
+                        user?.nombre ?? '',
+                        nick: user?.nick ?? '',
+                      ),
+                    ),
                     const SizedBox(height: 20),
 
                     
@@ -120,7 +134,30 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildCalendarCard(isDark, dashboardState.eventDays),
+                    OperationsCalendar(
+                      events: events,
+                      selectedDates: _selectedDates,
+                      onDateToggle: (dateKey) {
+                        HapticService.light();
+                        setState(() {
+                          if (!_selectedDates.remove(dateKey)) {
+                            _selectedDates.add(dateKey);
+                          }
+                        });
+                      },
+                    ),
+                    if (_selectedDates.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      SelectedDaysBar(
+                        count: _selectedDates.length,
+                        onDetails: () => showSelectedEventsSheet(
+                          context,
+                          events: events,
+                          selectedDates: _selectedDates,
+                          userRole: user?.role,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
 
                     
@@ -168,6 +205,21 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                             onTap: () {
                               HapticService.light();
                               context.push('/garzon/financieros');
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          // Ruta existente sin enlaces (auditoría de paridad):
+                          // /garzon/analytics era huérfana.
+                          child: _buildActionCard(
+                            title: 'ANALÍTICAS',
+                            subtitle: 'Métricas y ventas',
+                            icon: Icons.insights_rounded,
+                            color: AppTheme.secondaryColor,
+                            onTap: () {
+                              HapticService.light();
+                              context.push('/garzon/analytics');
                             },
                           ),
                         ),
@@ -312,7 +364,12 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
     );
   }
 
-  Widget _buildPayoutCard(bool isDark, double payoutTotal) {
+  Widget _buildPayoutCard(
+    bool isDark,
+    double payoutTotal,
+    List<LiquidationEvent> events,
+    String userLabel,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -360,174 +417,18 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                   color: Colors.white,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.account_balance_wallet_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Liquidación',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+              // El chip decorativo «Liquidación» pasó a ser el export real de
+              // la liquidación (paridad con el botón «Reportes» de
+              // PremiumLiquidationCard en Expo).
+              LiquidationExportButton(
+                dense: true,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                foregroundColor: Colors.white,
+                events: events,
+                userLabel: userLabel,
+                totalAmount: payoutTotal,
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarCard(bool isDark, Set<int> eventDays) {
-    final now = DateTime.now();
-    final year = now.year;
-    final month = now.month;
-
-    
-    final firstDayOfMonth = DateTime(year, month, 1);
-    final totalDays = DateTime(year, month + 1, 0).day;
-    final startWeekday = firstDayOfMonth.weekday; 
-
-    final monthName = DateFormat('MMMM yyyy', 'es_CL').format(now);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkSurfaceColor : AppTheme.lightSurfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            monthName.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: ['LU', 'MA', 'MI', 'JU', 'VI', 'SÁ', 'DO'].map((day) {
-              return SizedBox(
-                width: 32,
-                child: Text(
-                  day,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 8),
-          
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 35, 
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemBuilder: (context, index) {
-              final dayNumber = index - (startWeekday - 1) + 1;
-              final isValidDay = dayNumber > 0 && dayNumber <= totalDays;
-
-              if (!isValidDay) {
-                return const SizedBox(width: 32, height: 32);
-              }
-
-              final isToday = dayNumber == now.day;
-              final hasEvent = eventDays.contains(dayNumber);
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedDate = DateTime(year, month, dayNumber);
-                  });
-                },
-                child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isToday
-                        ? Theme.of(context).colorScheme.primary
-                        : (_selectedDate.day == dayNumber
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.15)
-                            : Colors.transparent),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        '$dayNumber',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: isToday || _selectedDate.day == dayNumber
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isToday
-                              ? Colors.white
-                              : (_selectedDate.day == dayNumber
-                                  ? Theme.of(context).colorScheme.primary
-                                  : (isDark
-                                      ? AppTheme.darkTextPrimary
-                                      : AppTheme.lightTextPrimary)),
-                        ),
-                      ),
-                      if (hasEvent)
-                        Positioned(
-                          bottom: 2,
-                          child: Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: isToday
-                                  ? Colors.white
-                                  : AppTheme.secondaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
           ),
         ],
       ),

@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/caja_status.dart';
 import '../../../core/theme.dart';
 import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../../../core/widgets/premium_fab.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/caja_closed_banner.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/premium_header.dart';
@@ -121,10 +123,23 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   bool _historyLoading = false;
   List<ClientHistory> _historyData = [];
 
+  // null = estado desconocido; false = caja cerrada (bloquea la recarga).
+  bool? _cajaAbierta;
+
+  /// Estado de caja para el banner y el guard de la carga prepago.
+  Future<void> _refreshCajaStatus() async {
+    final caja = await fetchCajaAbierta(ref.read(apiClientProvider));
+    if (!mounted || caja == null) return;
+    setState(() => _cajaAbierta = caja);
+  }
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => _fetchClients());
+    Future.microtask(() {
+      _fetchClients();
+      _refreshCajaStatus();
+    });
   }
 
   @override
@@ -215,6 +230,11 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
   }
 
   Future<void> _loadBalance(Client clientToLoad) async {
+    // La recarga prepago mueve efectivo: el backend responde NO_CAJA_ABIERTA.
+    if (_cajaAbierta == false) {
+      _showErrorSnackBar('No hay caja abierta. Abre una caja para recargar saldo.');
+      return;
+    }
     final rawAmountStr = _amountCtrl.text.replaceAll('.', '');
     final rawAmount = double.tryParse(rawAmountStr) ?? 0.0;
 
@@ -1163,7 +1183,12 @@ class _CajeroClientesScreenState extends ConsumerState<CajeroClientesScreen> {
 
           ),
 
-          
+          if (_cajaAbierta == false)
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 4.0),
+              child: CajaClosedBanner(onReturnedFromCaja: _refreshCajaStatus),
+            ),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Column(

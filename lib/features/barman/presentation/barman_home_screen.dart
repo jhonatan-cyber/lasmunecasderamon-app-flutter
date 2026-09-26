@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/report_service.dart';
 import '../../../core/refresh_bus.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/currency_text.dart';
+import '../../../core/widgets/liquidation_export.dart';
+import '../../../core/widgets/operations_calendar.dart';
 import '../../auth/data/auth_notifier.dart';
 
 /// Home del rol Barman, espejo de `HomeScreen role="barman"` de la app Expo:
@@ -24,6 +27,11 @@ class BarmanHomeScreen extends ConsumerStatefulWidget {
 
 class _BarmanHomeScreenState extends ConsumerState<BarmanHomeScreen> {
   Map<String, dynamic> _stats = {};
+  List<LiquidationEvent> _events = [];
+  double _payoutTotal = 0;
+
+  /// Días (clave `yyyy-MM-dd`) marcados en el calendario operativo.
+  final Set<String> _selectedDates = {};
   Map<String, dynamic>? _containers;
   StreamSubscription<RefreshChannel>? _refreshSub;
 
@@ -63,12 +71,35 @@ class _BarmanHomeScreenState extends ConsumerState<BarmanHomeScreen> {
         client.dio.get('/bar/containers/summary').catchError((e) => _emptyResponse()),
       ]);
 
-      final meStats = _dataOf(results[3].data);
+      // Paridad con Expo (useDashboardData rol barman): /events/stats es la
+      // fuente de totalEarnings/svcCount del resumen y /users/me/stats aporta
+      // el total a liquidar (montoAnticipoMaximo).
+      final eventsStats = _dataOf(results[4].data);
       final containers = _dataOf(results[5].data);
+      final meStats = _dataOf(results[3].data);
+
+      final meInnerStats = meStats?['stats'];
+      final payoutTotal = meInnerStats is Map
+          ? double.tryParse('${meInnerStats['montoAnticipoMaximo'] ?? 0}') ?? 0
+          : 0.0;
+
+      final List<LiquidationEvent> events = [];
+      final eventsBody = results[0].data;
+      if (eventsBody is Map &&
+          eventsBody['success'] == true &&
+          eventsBody['data'] is List) {
+        for (final raw in eventsBody['data'] as List) {
+          if (raw is Map) {
+            events.add(LiquidationEvent.fromJson(Map<String, dynamic>.from(raw)));
+          }
+        }
+      }
 
       if (!mounted) return;
       setState(() {
-        _stats = meStats ?? {};
+        _stats = eventsStats ?? {};
+        _events = events;
+        _payoutTotal = payoutTotal;
         _containers = containers;
       });
       notifier.endRefresh();
@@ -136,6 +167,15 @@ class _BarmanHomeScreenState extends ConsumerState<BarmanHomeScreen> {
     final double totalEarnings =
         double.tryParse('${_stats['totalEarnings'] ?? 0}') ?? 0;
     final int svcCount = int.tryParse('${_stats['svcCount'] ?? 0}') ?? 0;
+
+    // Suma de los ingresos de los últimos 7 días (/events/stats.weeklyIncome),
+    // igual que el «Esta Semana» de BarmanStats en Expo.
+    final double weeklyIncome = _stats['weeklyIncome'] is List
+        ? (_stats['weeklyIncome'] as List).fold<double>(
+            0,
+            (sum, value) => sum + (num.tryParse('$value') ?? 0),
+          )
+        : 0;
 
     final int pendientes =
         int.tryParse('${_containers?['pendientes'] ?? 0}') ?? 0;
@@ -342,7 +382,7 @@ class _BarmanHomeScreenState extends ConsumerState<BarmanHomeScreen> {
                                 child: _statCard(
                                   isDark: isDark,
                                   label: 'ESTA SEMANA',
-                                  value: formatCurrency(0),
+                                  value: formatCurrency(weeklyIncome),
                                   icon: Icons.trending_up_rounded,
                                   color: accent,
                                 ),
@@ -374,6 +414,47 @@ class _BarmanHomeScreenState extends ConsumerState<BarmanHomeScreen> {
                               color: envasesColor,
                               fullWidth: true,
                             ),
+                          const SizedBox(height: 12),
+                          // Total a cobrar + export a PDF (paridad con
+                          // PremiumLiquidationCard de Expo en el home barman).
+                          LiquidationExportCard(
+                            events: _events,
+                            userLabel: liquidationUserLabel(
+                              fullName,
+                              nick: nick,
+                            ),
+                            totalAmount: _payoutTotal,
+                          ),
+                          const SizedBox(height: 24),
+                          // Calendario operativo (paridad con PremiumCalendar de
+                          // Expo, que también se renderiza en el home barman).
+                          Text('Calendario Operativo',
+                              style: GoogleFonts.inter(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          OperationsCalendar(
+                            events: _events,
+                            selectedDates: _selectedDates,
+                            onDateToggle: (dateKey) {
+                              setState(() {
+                                if (!_selectedDates.remove(dateKey)) {
+                                  _selectedDates.add(dateKey);
+                                }
+                              });
+                            },
+                          ),
+                          if (_selectedDates.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            SelectedDaysBar(
+                              count: _selectedDates.length,
+                              onDetails: () => showSelectedEventsSheet(
+                                context,
+                                events: _events,
+                                selectedDates: _selectedDates,
+                                userRole: user?.role,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 24),
                           Text('Operaciones del Bar',
                               style: GoogleFonts.inter(

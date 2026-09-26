@@ -1,5 +1,6 @@
 class Servicio {
-  final int idServicio;
+  // varchar(36) en el dashboard (UUID): un int dejaba todo servicio en 0.
+  final String idServicio;
   final int estado;
   final String? roomName;
   final String? anfitrionaNombre;
@@ -17,7 +18,7 @@ class Servicio {
 
   factory Servicio.fromJson(Map<String, dynamic> json) {
     return Servicio(
-      idServicio: int.tryParse(json['id_servicio']?.toString() ?? json['id']?.toString() ?? '0') ?? 0,
+      idServicio: (json['id_servicio'] ?? json['id'] ?? '').toString(),
       estado: int.tryParse(json['estado']?.toString() ?? '0') ?? 0,
       roomName: json['room_name']?.toString() ?? json['habitacion_nombre']?.toString() ?? 'Sin Habitación',
       anfitrionaNombre: json['anfitriona_nombre']?.toString(),

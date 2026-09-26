@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
+import '../../../core/caja_status.dart';
 import '../../../core/theme.dart';
 import '../../../core/refresh_bus.dart';
+import '../../../core/widgets/caja_closed_banner.dart';
 import '../../../core/widgets/premium_fab.dart';
 import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
@@ -30,15 +32,27 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   
   final _tipController = TextEditingController();
   final _motivoAnulacionController = TextEditingController();
+  final _montoAnulacionController = TextEditingController();
   final _anulacionFormKey = GlobalKey<FormState>();
+
+  // null = estado desconocido; false = caja cerrada (bloquea el cobro).
+  bool? _cajaAbierta;
+
+  /// Estado de caja para el banner y el guard del cobro (un solo GET).
+  Future<void> _refreshCajaStatus() async {
+    final caja = await fetchCajaAbierta(ref.read(apiClientProvider));
+    if (!mounted || caja == null) return;
+    setState(() => _cajaAbierta = caja);
+  }
 
   @override
   void initState() {
     super.initState();
-    
-    Future.microtask(
-      () => ref.read(cuentasListProvider.notifier).fetchData(),
-    );
+
+    Future.microtask(() {
+      ref.read(cuentasListProvider.notifier).fetchData();
+      _refreshCajaStatus();
+    });
     _refreshSub = RefreshBus.stream.listen((channel) {
       if (channel == RefreshChannel.cuentas) {
         ref.read(cuentasListProvider.notifier).fetchData();
@@ -58,6 +72,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     _timer?.cancel();
     _tipController.dispose();
     _motivoAnulacionController.dispose();
+    _montoAnulacionController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -114,7 +129,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   
   
 
-  Future<void> _detenerTiempo(int idCuenta) async {
+  Future<void> _detenerTiempo(String idCuenta) async {
     final ok = await ref.read(cuentasListProvider.notifier).detenerTiempo(idCuenta);
     if (!mounted) return;
     if (ok) {
@@ -135,17 +150,31 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   }
 
   Future<void> _cobrarCuenta(
-    int idCuenta,
+    String idCuenta,
     String metodoPago,
     double propina,
     double cargoTarjeta,
+    double totalCobrado,
+    String? habitacionId,
   ) async {
+    // Cobrar sin caja abierta no queda registrada en el arqueo: el backend
+    // la crea igual pero no mueve caja (`if (idCaja)` en `CuentaQueries`).
+    if (_cajaAbierta == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede cobrar con la caja cerrada'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     final ok = await ref.read(cuentasListProvider.notifier).cobrarCuenta(
           idCuenta: idCuenta,
           metodoPago: metodoPago,
           propina: propina,
           cargoTarjeta: cargoTarjeta,
-          usuarioId: 1,
+          totalCobrado: totalCobrado,
+          habitacionId: habitacionId,
         );
     if (!mounted) return;
     if (ok) {
@@ -166,8 +195,18 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     }
   }
 
-  Future<void> _anularCuenta(int idCuenta, String motivo) async {
-    final ok = await ref.read(cuentasListProvider.notifier).anularCuenta(idCuenta, motivo);
+  Future<void> _anularCuenta({
+    required String idCuenta,
+    required String clienteNombre,
+    required String motivo,
+    required double monto,
+  }) async {
+    final ok = await ref.read(cuentasListProvider.notifier).anularCuenta(
+          idCuenta: idCuenta,
+          clienteNombre: clienteNombre,
+          motivo: motivo,
+          monto: monto,
+        );
     if (!mounted) return;
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -188,12 +227,11 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
 
   void _showCuentaActionSheet(dynamic cuenta) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final int idCuenta =
-        int.tryParse(cuenta['id_cuenta']?.toString() ?? '') ??
-        int.tryParse(cuenta['id']?.toString() ?? '') ??
-        0;
+    // IDs varchar(36): parsearlos como int dejaba el id en 0 y el action sheet
+    // ni siquiera se abría (`if (idCuenta == 0) return`).
+    final String idCuenta = (cuenta['id_cuenta'] ?? cuenta['id'] ?? '').toString();
 
-    if (idCuenta == 0) return;
+    if (idCuenta.isEmpty || idCuenta == 'null') return;
 
     showModalBottomSheet(
       context: context,
@@ -285,7 +323,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                 title: const Text('Anular / Cancelar Cuenta'),
                 onTap: () {
                   Navigator.pop(context);
-                  _showCuentaAnulacionModal(idCuenta);
+                  _showCuentaAnulacionModal(idCuenta, cuenta);
                 },
               ),
             ],
@@ -295,7 +333,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  Future<void> _showCuentaDetailModal(int idCuenta, dynamic cuentaShort) async {
+  Future<void> _showCuentaDetailModal(String idCuenta, dynamic cuentaShort) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
@@ -606,7 +644,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  void _showCuentaCobroModal(int idCuenta, dynamic cuenta) {
+  void _showCuentaCobroModal(String idCuenta, dynamic cuenta) {
     final double totalConsumo =
         double.tryParse(cuenta['total']?.toString() ?? '0') ?? 0.0;
     _tipController.clear();
@@ -814,6 +852,8 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                             cobroMetodoPago,
                             tipAmount,
                             cardFee,
+                            totalConsumo,
+                            cuenta['habitacion_id']?.toString(),
                           );
                           navigator.pop();
                         },
@@ -875,8 +915,13 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
     );
   }
 
-  void _showCuentaAnulacionModal(int idCuenta) {
+  void _showCuentaAnulacionModal(String idCuenta, dynamic cuenta) {
     _motivoAnulacionController.clear();
+    _montoAnulacionController.clear();
+    final String clienteNombre =
+        cuenta['cliente_nombre']?.toString() ?? 'Sin cliente registrado';
+    final double totalCuenta =
+        double.tryParse(cuenta['total']?.toString() ?? '0') ?? 0.0;
     showDialog(
       context: context,
       builder: (context) {
@@ -886,7 +931,7 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
               ? AppTheme.darkSurfaceColor
               : AppTheme.lightSurfaceColor,
           title: Text(
-            'AnulaciÃ³n de Cuenta',
+            'Anulación de Cuenta',
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           content: Form(
@@ -895,13 +940,46 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Â¿EstÃ¡s seguro de que deseas anular esta cuenta por completo? Esta acciÃ³n liberarÃ¡ la mesa.',
+                  'Se enviará una solicitud de anulación al administrador.',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     color: isDark
                         ? AppTheme.darkTextSecondary
                         : AppTheme.lightTextSecondary,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Cliente: $clienteNombre · Total: ${_formatCurrency(totalCuenta)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _montoAnulacionController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Monto a solicitar',
+                    hintText: 'Ej: 15000',
+                  ),
+                  validator: (val) {
+                    final monto = double.tryParse(
+                      (val ?? '').replaceAll(RegExp(r'[^0-9.,]'), ''),
+                    );
+                    if (monto == null || monto <= 0) {
+                      return 'Debes ingresar un monto mayor a 0';
+                    }
+                    if (monto > totalCuenta) {
+                      return 'El monto no puede superar el total de la cuenta';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -941,14 +1019,20 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                 if (_anulacionFormKey.currentState?.validate() == true) {
                   final navigator = Navigator.of(context);
                   await _anularCuenta(
-                    idCuenta,
-                    _motivoAnulacionController.text,
+                    idCuenta: idCuenta,
+                    clienteNombre: clienteNombre,
+                    motivo: _motivoAnulacionController.text.trim(),
+                    monto: double.tryParse(
+                          _montoAnulacionController.text
+                              .replaceAll(RegExp(r'[^0-9.,]'), ''),
+                        ) ??
+                        0,
                   );
                   navigator.pop();
                 }
               },
               child: Text(
-                'Confirmar AnulaciÃ³n',
+                'Confirmar Anulación',
                 style: GoogleFonts.inter(fontWeight: FontWeight.bold),
               ),
             ),
@@ -1001,6 +1085,10 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_cajaAbierta == false) ...[
+                        CajaClosedBanner(onReturnedFromCaja: _refreshCajaStatus),
+                        const SizedBox(height: 16),
+                      ],
                       if (state.error.isNotEmpty) ...[
                         Container(
                           padding: const EdgeInsets.all(12),

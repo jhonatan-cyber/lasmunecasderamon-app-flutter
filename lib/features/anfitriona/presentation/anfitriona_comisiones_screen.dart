@@ -30,16 +30,24 @@ class _AnfitrionaComisionesScreenState extends ConsumerState<AnfitrionaComisione
 
     try {
       final apiClient = ref.read(apiClientProvider);
-      final response = await apiClient.dio.get('/commissions/user');
+      // Paridad con Expo (tab «Ventas» = FinancialEventsScreen con
+      // type=comisiones): el default de /commissions/user devuelve UNA fila
+      // agregada por usuario (venta/servicio/total/status) sin campo `tipo`,
+      // por lo que el filtro de abajo descartaba todo y la lista salía vacía.
+      // Con ?tipo=detalle llegan las filas por comisión (id, fecha_crea,
+      // codigo, tipo, monto, estado numérico 1=Por pagar / 2=Pagado / 0=Anulado).
+      final response = await apiClient.dio.get('/commissions/user?tipo=detalle');
       final data = response.data;
 
       if (data != null && data['success'] == true) {
         final List<dynamic> rawList = data['data'] ?? [];
-        
-        final ventaComisiones = rawList.where((c) => c != null && c['tipo'] == 'venta').toList();
+
+        // Sin filtro por `tipo`: el repositorio devuelve comisiones de venta y
+        // de servicio, y Expo muestra todas en esta misma pestaña.
+        final detalle = rawList.where((c) => c != null).toList();
 
         if (!mounted) return;
-        setState(() => _comisiones = ventaComisiones);
+        setState(() => _comisiones = detalle);
         notifier.endRefresh();
       } else {
         if (!mounted) return;

@@ -115,7 +115,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
   }
 
   
-  Future<void> fetchDetail(int ventaId) async {
+  Future<void> fetchDetail(String ventaId) async {
     state = state.copyWith(loadingDetail: true, clearError: true);
 
     try {
@@ -143,7 +143,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
   }
 
   
-  Future<bool> finalizarVenta(int ventaId) async {
+  Future<bool> finalizarVenta(String ventaId) async {
     try {
       final response = await _apiClient.dio.patch(
         '/ventas/$ventaId',
@@ -162,7 +162,7 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
   }
 
   
-  Future<bool> anularVenta(int ventaId, String motivo, double monto) async {
+  Future<bool> anularVenta(String ventaId, String motivo, double monto) async {
     state = state.copyWith(anulandoVenta: true, clearError: true);
 
     try {
@@ -209,9 +209,9 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
 
   
 
-  void _updateLocalEstado(int ventaId, int newEstado) {
+  void _updateLocalEstado(String ventaId, int newEstado) {
     final updated = state.ventas.map((v) {
-      final id = int.tryParse(v['id_venta']?.toString() ?? '');
+      final id = v['id_venta']?.toString() ?? '';
       if (id == ventaId) {
         return {...v as Map<String, dynamic>, 'estado': newEstado};
       }

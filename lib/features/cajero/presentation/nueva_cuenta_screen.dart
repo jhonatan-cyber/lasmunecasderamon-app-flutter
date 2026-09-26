@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,7 +36,9 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
   dynamic _selectedCategory;
 
   
-  final Map<int, int> _cart = {};
+  // IDs varchar(36): con claves int todos los productos colisionaban en 0 y el
+  // carrito terminaba con un solo producto.
+  final Map<String, int> _cart = {};
 
   @override
   void initState() {
@@ -133,12 +137,10 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       _products = [];
     });
 
-    final int catId =
-        int.tryParse(category['id_categoria']?.toString() ?? '') ??
-        int.tryParse(category['id']?.toString() ?? '') ??
-        0;
+    final String catId =
+        (category['id_categoria'] ?? category['id'] ?? '').toString();
 
-    if (catId == 0) return;
+    if (catId.isEmpty || catId == 'null') return;
 
     try {
       final client = ref.read(apiClientProvider);
@@ -153,13 +155,13 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
     } catch (_) {}
   }
 
-  void _addToCart(int productId) {
+  void _addToCart(String productId) {
     setState(() {
       _cart[productId] = (_cart[productId] ?? 0) + 1;
     });
   }
 
-  void _removeFromCart(int productId) {
+  void _removeFromCart(String productId) {
     if (!_cart.containsKey(productId)) return;
     setState(() {
       if (_cart[productId] == 1) {
@@ -183,18 +185,21 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
     return total;
   }
 
-  dynamic _findProductById(int id) {
+  dynamic _findProductById(String id) {
     try {
       return _products.firstWhere(
-        (p) =>
-            (int.tryParse(p['id_producto']?.toString() ?? '') ??
-                int.tryParse(p['id']?.toString() ?? '') ??
-                0) ==
-            id,
+        (p) => (p['id_producto'] ?? p['id'] ?? '').toString() == id,
       );
     } catch (_) {
       return null;
     }
+  }
+
+  /// Mismo formato que Expo: 8 caracteres A-Z0-9.
+  String _generateCodigo() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return List.generate(8, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
   Future<void> _submitCuenta() async {
@@ -213,44 +218,65 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
     notifier.startSubmit();
 
     try {
-      final List<Map<String, dynamic>> itemsPayload = [];
+      double subTotal = 0;
+      double comisionTotal = 0;
+      final List<Map<String, dynamic>> detallesPayload = [];
       _cart.forEach((prodId, qty) {
         final product = _findProductById(prodId);
         if (product != null) {
           final double price =
               double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
-          itemsPayload.add({
+          final double comision =
+              (double.tryParse(product['comision']?.toString() ?? '0') ?? 0.0) *
+                  qty;
+          subTotal += price * qty;
+          comisionTotal += comision;
+          detallesPayload.add({
             'producto_id': prodId,
             'cantidad': qty,
             'precio': price,
+            'sub_total': price * qty,
+            'comision': comision,
           });
         }
       });
 
-      final int roomId =
-          int.tryParse(_selectedRoom['id_room']?.toString() ?? '') ??
-          int.tryParse(_selectedRoom['id']?.toString() ?? '') ??
-          0;
-
-      final int? anfitrionaId = _selectedAnfitriona != null
-          ? (int.tryParse(
-                  _selectedAnfitriona['id_anfitriona']?.toString() ?? '',
-                ) ??
-                int.tryParse(_selectedAnfitriona['id']?.toString() ?? ''))
+      final String? habitacionId = _selectedRoom != null
+          ? (_selectedRoom['id_room'] ?? _selectedRoom['id'] ?? '').toString()
           : null;
 
-      final int? clienteId = _selectedClient != null
-          ? (int.tryParse(_selectedClient['id_cliente']?.toString() ?? '') ??
-                int.tryParse(_selectedClient['id']?.toString() ?? ''))
+      final String? anfitrionaId = _selectedAnfitriona != null
+          ? (_selectedAnfitriona['id_anfitriona'] ??
+                    _selectedAnfitriona['id'] ??
+                    '')
+                .toString()
           : null;
 
+      final String? clienteId = _selectedClient != null
+          ? (_selectedClient['id_cliente'] ?? _selectedClient['id'] ?? '')
+              .toString()
+          : null;
+
+      final int tiempo =
+          int.tryParse(_selectedRoom?['tiempo']?.toString() ?? '') ?? 0;
+
+      // Contrato real de POST /cuentas (CuentaCreateSchema): `codigo`, los
+      // totales y `detalles` (producto_id/sub_total/comision) son obligatorios;
+      // el payload anterior (`room_id` + `items`) fallaba la validación.
       final response = await client.dio.post(
         '/cuentas',
         data: {
-          'room_id': roomId,
-          'anfitriona_id': anfitrionaId,
+          'codigo': _generateCodigo(),
           'cliente_id': clienteId,
-          'items': itemsPayload,
+          'habitacion_id': (habitacionId?.isEmpty ?? true) ? null : habitacionId,
+          'tiempo': tiempo,
+          'total_comision': comisionTotal,
+          'sub_total': subTotal,
+          'total': subTotal,
+          'detalles': detallesPayload,
+          'usuarios': (anfitrionaId?.isNotEmpty ?? false)
+              ? [anfitrionaId]
+              : <String>[],
         },
       );
 
@@ -615,10 +641,8 @@ class _NuevaCuentaScreenState extends ConsumerState<NuevaCuentaScreen> {
       itemCount: _products.length,
       itemBuilder: (context, index) {
         final product = _products[index];
-        final int id =
-            int.tryParse(product['id_producto']?.toString() ?? '') ??
-            int.tryParse(product['id']?.toString() ?? '') ??
-            0;
+        final String id =
+            (product['id_producto'] ?? product['id'] ?? '').toString();
         final double price =
             double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
         final int cartQty = _cart[id] ?? 0;

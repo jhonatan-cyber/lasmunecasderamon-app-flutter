@@ -30,7 +30,8 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
   dynamic _selectedCategory;
 
   
-  final Map<int, int> _addedCart = {};
+  // IDs varchar(36): con claves int los productos colisionaban en 0.
+  final Map<String, int> _addedCart = {};
 
   @override
   void initState() {
@@ -41,8 +42,9 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
   Future<void> _fetchDetailsAndAssets() async {
     ref.read(refreshProvider('agregar_cuenta').notifier).startRefresh(isManual: false);
 
-    final int? cuentaId = int.tryParse(widget.id);
-    if (cuentaId == null) {
+    // IDs varchar(36): int.tryParse devolvía null para cualquier cuenta real.
+    final String cuentaId = widget.id;
+    if (cuentaId.isEmpty || cuentaId == 'null') {
       ref.read(refreshProvider('agregar_cuenta').notifier).endRefresh(error: 'ID de cuenta no válido');
       return;
     }
@@ -90,10 +92,10 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
       _products = [];
     });
 
-    final int catId = int.tryParse(category['id_categoria']?.toString() ?? '') ??
-        int.tryParse(category['id']?.toString() ?? '') ?? 0;
+    final String catId =
+        (category['id_categoria'] ?? category['id'] ?? '').toString();
 
-    if (catId == 0) return;
+    if (catId.isEmpty || catId == 'null') return;
 
     try {
       final client = ref.read(apiClientProvider);
@@ -108,13 +110,13 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
     } catch (_) {}
   }
 
-  void _addToCart(int productId) {
+  void _addToCart(String productId) {
     setState(() {
       _addedCart[productId] = (_addedCart[productId] ?? 0) + 1;
     });
   }
 
-  void _removeFromCart(int productId) {
+  void _removeFromCart(String productId) {
     if (!_addedCart.containsKey(productId)) return;
     setState(() {
       if (_addedCart[productId] == 1) {
@@ -137,11 +139,10 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
     return total;
   }
 
-  dynamic _findProductById(int id) {
+  dynamic _findProductById(String id) {
     try {
       return _products.firstWhere((p) =>
-          (int.tryParse(p['id_producto']?.toString() ?? '') ??
-           int.tryParse(p['id']?.toString() ?? '') ?? 0) == id);
+          (p['id_producto'] ?? p['id'] ?? '').toString() == id);
     } catch (_) {
       return null;
     }
@@ -155,31 +156,49 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
       return;
     }
 
-    final int? idCuenta = int.tryParse(widget.id);
-    if (idCuenta == null) return;
+    final String idCuenta = widget.id;
+    if (idCuenta.isEmpty || idCuenta == 'null') return;
 
     final client = ref.read(apiClientProvider);
     final notifier = ref.read(setStateProvider('agregar_cuenta').notifier);
     notifier.startSubmit();
 
     try {
-      final List<Map<String, dynamic>> itemsPayload = [];
+      final List<Map<String, dynamic>> detallesPayload = [];
       _addedCart.forEach((prodId, qty) {
         final product = _findProductById(prodId);
         if (product != null) {
-          final double price = double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
-          itemsPayload.add({
+          final double price =
+              double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
+          final double comision =
+              (double.tryParse(product['comision']?.toString() ?? '0') ?? 0.0) *
+                  qty;
+          detallesPayload.add({
             'producto_id': prodId,
             'cantidad': qty,
             'precio': price,
+            'sub_total': price * qty,
+            'comision': comision,
           });
         }
       });
 
+      // La cuenta puede tener anfitrionas asignadas: se conservan para que el
+      // backend no anule las comisiones de los productos nuevos.
+      final List<String> usuarios = (_cuentaOriginal?['usuarios'] as List?)
+              ?.map((u) => (u is Map ? (u['usuario_id'] ?? u['id_usuario']) : u)
+                  .toString())
+              .where((id) => id.isNotEmpty && id != 'null')
+              .toList() ??
+          <String>[];
+
+      // Contrato real de PUT /cuentas/{id}: `detalles` (no `items`) con
+      // sub_total/comision; el payload anterior no agregaba nada.
       final response = await client.dio.put(
         '/cuentas/$idCuenta',
         data: {
-          'items': itemsPayload,
+          'detalles': detallesPayload,
+          'usuarios': usuarios,
         },
       );
 
@@ -433,8 +452,8 @@ class _AgregarCuentaScreenState extends ConsumerState<AgregarCuentaScreen> {
       itemCount: _products.length,
       itemBuilder: (context, index) {
         final product = _products[index];
-        final int id = int.tryParse(product['id_producto']?.toString() ?? '') ??
-            int.tryParse(product['id']?.toString() ?? '') ?? 0;
+        final String id =
+            (product['id_producto'] ?? product['id'] ?? '').toString();
         final double price = double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
         final int cartQty = _addedCart[id] ?? 0;
 

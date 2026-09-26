@@ -47,8 +47,9 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
         '/solicitudes-servicios/${widget.item.id}/aprobar',
         data: {
           'estado': 1,
+          // IDs varchar(36): castearlos a int dejaba el id en null/0.
           'anfitriona_id': _selectedAnfitriona.isNotEmpty
-              ? int.tryParse(_selectedAnfitriona)
+              ? _selectedAnfitriona
               : null,
         },
       );

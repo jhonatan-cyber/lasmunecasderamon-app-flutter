@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
+import '../../../core/caja_status.dart';
 import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/caja_closed_banner.dart';
 import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
@@ -25,7 +27,8 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
   List<dynamic> _anfitrionas = [];
   List<dynamic> _habitaciones = [];
   List<dynamic> _clientes = [];
-  bool _cajaAbierta = false;
+  // null = estado desconocido (aún sin cargar); false = caja cerrada.
+  bool? _cajaAbierta;
 
   
   dynamic _selectedRoom;
@@ -458,8 +461,19 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
     );
   }
 
+  /// Tras volver de la pantalla de Caja se refresca **solo** ese estado.
+  Future<void> _refreshCajaStatus() async {
+    try {
+      final caja = await fetchCajaAbierta(ref.read(apiClientProvider));
+      if (!mounted || caja == null) return;
+      setState(() => _cajaAbierta = caja);
+    } catch (_) {
+      // Sin conexión se conserva el último estado conocido.
+    }
+  }
+
   Future<void> _submitServicio() async {
-    if (!_cajaAbierta) {
+    if (_cajaAbierta == false) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Debe abrir la caja antes de registrar servicios.'),
@@ -1036,6 +1050,10 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_cajaAbierta == false) ...[
+                        CajaClosedBanner(onReturnedFromCaja: _refreshCajaStatus),
+                        const SizedBox(height: 16),
+                      ],
                       if (refreshState.error.isNotEmpty) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -1686,7 +1704,13 @@ class _NuevoServicioScreenState extends ConsumerState<NuevoServicioScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          style: AppTheme.getPrimaryButtonStyle(context),            onPressed: ref.watch(setStateProvider('nuevo_servicio')).isSubmitting ? null : _submitServicio,
+                          style: AppTheme.getPrimaryButtonStyle(context),
+                          onPressed:
+                              ref.watch(setStateProvider('nuevo_servicio'))
+                                      .isSubmitting ||
+                                  _cajaAbierta == false
+                              ? null
+                              : _submitServicio,
             child: ref.watch(setStateProvider('nuevo_servicio')).isSubmitting
                               ? const SizedBox(
                                   height: 20,

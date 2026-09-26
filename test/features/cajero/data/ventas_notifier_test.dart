@@ -298,7 +298,7 @@ void main() {
         _dioWithResponse(data: successDetail()),
       );
 
-      final future = notifier.fetchDetail(1);
+      final future = notifier.fetchDetail('1');
       expect(notifier.state.loadingDetail, true);
       await future;
 
@@ -312,7 +312,7 @@ void main() {
         _dioWithResponse(data: successDetail()),
       );
 
-      await notifier.fetchDetail(1);
+      await notifier.fetchDetail('1');
 
       expect(notifier.state.selectedVenta['id_venta'], 1);
       expect(notifier.state.selectedVenta['codigo'], 'V-001');
@@ -323,7 +323,7 @@ void main() {
     test('handles fetch failure', () async {
       final notifier = _buildNotifier(_dioWithError());
 
-      await notifier.fetchDetail(999);
+      await notifier.fetchDetail('999');
 
       expect(notifier.state.loadingDetail, false);
       expect(notifier.state.error, isNotEmpty);
@@ -344,7 +344,7 @@ void main() {
       );
       await notifier.fetchData();
 
-      final result = await notifier.finalizarVenta(1);
+      final result = await notifier.finalizarVenta('1');
 
       expect(result, true);
       final venta = notifier.state.ventas.firstWhere(
@@ -359,7 +359,7 @@ void main() {
         _dioWithResponse(data: failResponse()),
       );
 
-      final result = await notifier.finalizarVenta(1);
+      final result = await notifier.finalizarVenta('1');
 
       expect(result, false);
       notifier.dispose();
@@ -368,7 +368,7 @@ void main() {
     test('returns false on DioException', () async {
       final notifier = _buildNotifier(_dioWithError());
 
-      final result = await notifier.finalizarVenta(1);
+      final result = await notifier.finalizarVenta('1');
 
       expect(result, false);
       notifier.dispose();
@@ -381,7 +381,7 @@ void main() {
         _dioWithResponse(data: {'success': true}),
       );
 
-      final future = notifier.anularVenta(1, 'Cliente insatisfecho', 25000);
+      final future = notifier.anularVenta('1', 'Cliente insatisfecho', 25000);
       expect(notifier.state.anulandoVenta, true);
       final result = await future;
 
@@ -395,7 +395,7 @@ void main() {
         _dioWithResponse(data: failResponse()),
       );
 
-      final result = await notifier.anularVenta(1, 'Motivo', 1000);
+      final result = await notifier.anularVenta('1', 'Motivo', 1000);
 
       expect(result, false);
       expect(notifier.state.anulandoVenta, false);
@@ -409,7 +409,7 @@ void main() {
         ),
       );
 
-      await notifier.anularVenta(1, 'Motivo', 0);
+      await notifier.anularVenta('1', 'Motivo', 0);
 
       expect(notifier.state.error, isNotEmpty);
       notifier.dispose();
@@ -418,7 +418,7 @@ void main() {
     test('returns false on DioException', () async {
       final notifier = _buildNotifier(_dioWithError());
 
-      final result = await notifier.anularVenta(1, 'Motivo', 1000);
+      final result = await notifier.anularVenta('1', 'Motivo', 1000);
 
       expect(result, false);
       expect(notifier.state.anulandoVenta, false);
@@ -432,7 +432,7 @@ void main() {
         _dioWithResponse(data: successDetail()),
       );
 
-      await notifier.fetchDetail(1);
+      await notifier.fetchDetail('1');
       expect(notifier.state.selectedVenta, isNotNull);
 
       notifier.clearSelectedVenta();

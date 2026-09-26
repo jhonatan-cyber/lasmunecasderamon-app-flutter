@@ -8,6 +8,7 @@ import '../../../core/theme.dart';
 import '../../../core/hooks/set_state_provider.dart';
 import '../../../core/refresh_bus.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/caja_closed_banner.dart';
 import '../../../core/widgets/currency_text.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
@@ -68,6 +69,16 @@ class _CajeroSolicitudesScreenState
   
 
   Future<void> _handleAprobarAnticipo(SolicitudItem item) async {
+    // Entregar efectivo sin caja abierta descuadra el arqueo: el backend
+    // rechaza el anticipo con NO_CAJA_ABIERTA (mismo criterio que el checkout
+    // y la aprobación de servicios de esta pantalla).
+    if (!ref.read(solicitudesListProvider).cajaAbierta) {
+      AppSnackBar.showError(
+        context,
+        'No se pueden entregar anticipos con la caja cerrada.',
+      );
+      return;
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final requiereAprobacionAdmin = item.estado == 2;
     final approved = await showDialog<bool>(
@@ -304,6 +315,14 @@ class _CajeroSolicitudesScreenState
                 ),
                 child: Column(
                   children: [
+                    if (!state.isLoading && !state.cajaAbierta) ...[
+                      CajaClosedBanner(
+                        onReturnedFromCaja: () => ref
+                            .read(solicitudesListProvider.notifier)
+                            .fetchData(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -2036,8 +2055,9 @@ class _ServiceModalWidgetState extends ConsumerState<ServiceModalWidget> {
       final response = await client.dio.patch(
         '/solicitudes-servicios/${widget.item.id}/aprobar',
         data: {
+          // IDs varchar(36): castearlos a int dejaba el id en null/0.
           'anfitriona_id': _selectedAnfitriona.isNotEmpty
-              ? int.tryParse(_selectedAnfitriona)
+              ? _selectedAnfitriona
               : null,
         },
       );

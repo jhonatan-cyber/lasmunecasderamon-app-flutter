@@ -87,7 +87,7 @@ class ServiciosListNotifier extends StateNotifier<ServiciosListState> {
 
   
 
-  Future<bool> finalizarServicio(int idServicio) async {
+  Future<bool> finalizarServicio(String idServicio) async {
     try {
       final response = await _apiClient.dio.patch(
         '/servicios/$idServicio',
@@ -99,7 +99,7 @@ class ServiciosListNotifier extends StateNotifier<ServiciosListState> {
         state = state.copyWith(
           servicios: [
             for (final s in state.servicios)
-              if ((int.tryParse(s['id_servicio']?.toString() ?? s['id']?.toString() ?? '0') ?? 0) != idServicio)
+              if ((s['id_servicio'] ?? s['id'] ?? '').toString() != idServicio)
                 s,
           ],
         );

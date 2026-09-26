@@ -6,9 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../../core/api_client.dart';
+import '../../../core/report_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/hooks/refresh_provider.dart';
 import '../../../core/refresh_bus.dart';
+import '../../../core/widgets/liquidation_export.dart';
+import '../../../core/widgets/operations_calendar.dart';
 import '../../auth/data/auth_notifier.dart';
 import 'widgets/attendance_code_display.dart';
 import 'widgets/active_service_card.dart';
@@ -24,6 +27,11 @@ class AnfitrionaHomeScreen extends ConsumerStatefulWidget {
 
 class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
   Map<String, dynamic> _stats = {'totalEarnings': 0, 'svcCount': 0};
+  List<LiquidationEvent> _events = [];
+  double _payoutTotal = 0;
+
+  /// Días (clave `yyyy-MM-dd`) marcados en el calendario operativo.
+  final Set<String> _selectedDates = {};
   dynamic _activeService;
   int _userStatus = 1;
   StreamSubscription<RefreshChannel>? _refreshSub;
@@ -58,10 +66,15 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
 
       if (user == null) return;
 
+      // Mismos endpoints que useDashboardData (rol anfitriona) de Expo:
+      // /events/user + /events/stats alimentan la liquidación y el resumen,
+      // /users/me/stats aporta el total a cobrar (montoAnticipoMaximo).
       final responses = await Future.wait<Response<dynamic>>([
         apiClient.dio.get('/users/me/stats').catchError((e) => Response(requestOptions: RequestOptions(), data: {'success': false})),
         apiClient.dio.get('/servicios/user').catchError((e) => Response(requestOptions: RequestOptions(), data: {'success': false})),
         apiClient.dio.get('/users/status').catchError((e) => Response(requestOptions: RequestOptions(), data: {'success': false})),
+        apiClient.dio.get('/events/user').catchError((e) => Response(requestOptions: RequestOptions(), data: {'success': false})),
+        apiClient.dio.get('/events/stats').catchError((e) => Response(requestOptions: RequestOptions(), data: {'success': false})),
       ]);
 
       final statsRes = responses[0].data;
@@ -71,6 +84,34 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
       Map<String, dynamic> newStats = {'totalEarnings': 0, 'svcCount': 0};
       if (statsRes != null && statsRes['success'] == true && statsRes['data'] != null) {
         newStats = Map<String, dynamic>.from(statsRes['data']);
+      }
+
+      // Paridad con Expo: las tarjetas del resumen leen /events/stats
+      // (totalEarnings/svcCount); antes se leían del payload equivocado y
+      // quedaban siempre en cero.
+      final eventsStats = _dataMap(responses[4].data);
+      if (eventsStats != null) newStats = eventsStats;
+
+      double newPayoutTotal = 0;
+      final meInnerStats = _dataMap(statsRes)?['stats'];
+      if (meInnerStats is Map) {
+        newPayoutTotal =
+            double.tryParse('${meInnerStats['montoAnticipoMaximo'] ?? 0}') ??
+            0;
+      }
+
+      final List<LiquidationEvent> newEvents = [];
+      final eventsBody = responses[3].data;
+      if (eventsBody is Map &&
+          eventsBody['success'] == true &&
+          eventsBody['data'] is List) {
+        for (final raw in eventsBody['data'] as List) {
+          if (raw is Map) {
+            newEvents.add(
+              LiquidationEvent.fromJson(Map<String, dynamic>.from(raw)),
+            );
+          }
+        }
       }
 
       dynamic newActiveService;
@@ -90,6 +131,8 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
       if (mounted) {
         setState(() {
           _stats = newStats;
+          _events = newEvents;
+          _payoutTotal = newPayoutTotal;
           _activeService = newActiveService;
           _userStatus = newUserStatus;
         });
@@ -101,6 +144,13 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
         notifier.endRefresh(error: 'Error al conectar con el servidor');
       }
     }
+  }
+
+  static Map<String, dynamic>? _dataMap(dynamic body) {
+    if (body is Map && body['success'] == true && body['data'] is Map) {
+      return Map<String, dynamic>.from(body['data'] as Map);
+    }
+    return null;
   }
 
   Future<void> _solicitarServicio() async {
@@ -601,6 +651,68 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
 
                   const SizedBox(height: 12),
 
+                  // Resumen del total a cobrar + export a PDF (paridad con
+                  // PremiumLiquidationCard de Expo, que también se muestra en
+                  // el home de la anfitriona).
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: LiquidationExportCard(
+                      events: _events,
+                      userLabel: liquidationUserLabel(
+                        user?.nombre ?? '',
+                        nick: user?.nick ?? '',
+                      ),
+                      totalAmount: _payoutTotal,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Calendario operativo (paridad con PremiumCalendar de Expo,
+                  // que también se renderiza en el home de la anfitriona).
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Text(
+                      'Calendario Operativo',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: OperationsCalendar(
+                      events: _events,
+                      selectedDates: _selectedDates,
+                      onDateToggle: (dateKey) {
+                        setState(() {
+                          if (!_selectedDates.remove(dateKey)) {
+                            _selectedDates.add(dateKey);
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  if (_selectedDates.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: SelectedDaysBar(
+                        count: _selectedDates.length,
+                        onDetails: () => showSelectedEventsSheet(
+                          context,
+                          events: _events,
+                          selectedDates: _selectedDates,
+                          userRole: user?.role,
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 12),
+
                   // Enlace a Eventos Financieros (paridad con el tab
                   // «Ventas» de Expo, que ES esta pantalla).
                   Padding(
@@ -647,6 +759,71 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Mis comisiones y sus estados',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: textSecondary,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Enlace a Analytics (auditoría de paridad): la ruta
+                  // /anfitriona/analytics existía sin ningún acceso.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Card(
+                      color: cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        side: BorderSide(color: borderColor),
+                      ),
+                      elevation: 1,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () => context.push('/anfitriona/analytics'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: accentColor.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.insights_rounded,
+                                  color: accentColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Analíticas',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Métricas y tendencias',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
                                         color: textSecondary,

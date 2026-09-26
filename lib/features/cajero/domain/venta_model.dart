@@ -1,6 +1,8 @@
 
 class Venta {
-  final int idVenta;
+  // varchar(36) (UUID) en el dashboard: como int, toda venta valía 0 y
+  // detalle/finalizar/anular apuntaban a /ventas/0 (404).
+  final String idVenta;
   final String codigo;
   final int estado;
   final double total;
@@ -30,7 +32,7 @@ class Venta {
 
   factory Venta.fromJson(Map<String, dynamic> json) {
     return Venta(
-      idVenta: int.tryParse(json['id_venta']?.toString() ?? '') ?? 0,
+      idVenta: (json['id_venta'] ?? '').toString(),
       codigo: json['codigo']?.toString() ?? '',
       estado: int.tryParse(json['estado']?.toString() ?? '1') ?? 1,
       total: double.tryParse(json['total']?.toString() ?? '0') ?? 0.0,
@@ -61,7 +63,7 @@ class Venta {
       };
 
   Venta copyWith({
-    int? idVenta,
+    String? idVenta,
     String? codigo,
     int? estado,
     double? total,
@@ -117,7 +119,7 @@ class VentaDetalle {
 
 
 class ComisionDetalle {
-  final int usuarioId;
+  final String usuarioId;
   final String anfitrionaNombre;
   final double montoComision;
 
@@ -129,7 +131,7 @@ class ComisionDetalle {
 
   factory ComisionDetalle.fromJson(Map<String, dynamic> json) {
     return ComisionDetalle(
-      usuarioId: int.tryParse(json['usuario_id']?.toString() ?? '0') ?? 0,
+      usuarioId: (json['usuario_id'] ?? '').toString(),
       anfitrionaNombre: json['anfitriona_nombre']?.toString() ?? json['usuario_nombre']?.toString() ?? '',
       montoComision: double.tryParse(json['monto_comision']?.toString() ?? '0') ?? 0.0,
     );
@@ -138,7 +140,7 @@ class ComisionDetalle {
 
 
 class PropinaDetalle {
-  final int usuarioId;
+  final String usuarioId;
   final String usuarioNombre;
   final double montoPropina;
 
@@ -150,7 +152,7 @@ class PropinaDetalle {
 
   factory PropinaDetalle.fromJson(Map<String, dynamic> json) {
     return PropinaDetalle(
-      usuarioId: int.tryParse(json['usuario_id']?.toString() ?? '0') ?? 0,
+      usuarioId: (json['usuario_id'] ?? '').toString(),
       usuarioNombre: json['usuario_nombre']?.toString() ?? '',
       montoPropina: double.tryParse(json['monto_propina']?.toString() ?? '0') ?? 0.0,
     );
@@ -159,7 +161,7 @@ class PropinaDetalle {
 
 
 class VentaDetail {
-  final int idVenta;
+  final String idVenta;
   final String codigo;
   final int estado;
   final double total;
@@ -196,7 +198,7 @@ class VentaDetail {
   factory VentaDetail.fromJson(Map<String, dynamic> json) {
     final itemsRaw = json['items'] as List<dynamic>?;
     return VentaDetail(
-      idVenta: int.tryParse(json['id_venta']?.toString() ?? '') ?? 0,
+      idVenta: (json['id_venta'] ?? '').toString(),
       codigo: json['codigo']?.toString() ?? '',
       estado: int.tryParse(json['estado']?.toString() ?? '1') ?? 1,
       total: double.tryParse(json['total']?.toString() ?? '0') ?? 0.0,

@@ -95,7 +95,7 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
   }
 
   
-  Future<bool> detenerTiempo(int idCuenta) async {
+  Future<bool> detenerTiempo(String idCuenta) async {
     try {
       final response = await _apiClient.dio.patch('/cuentas/$idCuenta/stop');
       if (response.data != null && response.data['success'] == true) {
@@ -111,11 +111,14 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
 
   
   Future<bool> cobrarCuenta({
-    required int idCuenta,
+    required String idCuenta,
     required String metodoPago,
     required double propina,
     required double cargoTarjeta,
-    required int usuarioId,
+    // Base de la cuenta sin propina (paridad con Expo): el backend la usa como
+    // `montoFinal` y sin ella cobraría 0.
+    required double totalCobrado,
+    String? habitacionId,
   }) async {
     try {
       final response = await _apiClient.dio.post(
@@ -123,8 +126,9 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
         data: {
           'metodo_pago': metodoPago,
           'propina': propina,
+          'total_cobrado': totalCobrado,
+          'habitacion_id': ?habitacionId,
           'cargo_tarjeta': cargoTarjeta,
-          'usuario_id': usuarioId,
         },
       );
 
@@ -140,11 +144,24 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
   }
 
   
-  Future<bool> anularCuenta(int idCuenta, String motivo) async {
+  /// Solicita la anulación de una cuenta. El backend lee `cuentaId`, `motivo`,
+  /// `monto` y `clienteNombre`: con la clave antigua (`id_cuenta`) no encontraba
+  /// la cuenta y el monto quedaba en 0.
+  Future<bool> anularCuenta({
+    required String idCuenta,
+    required String clienteNombre,
+    required String motivo,
+    required double monto,
+  }) async {
     try {
       final response = await _apiClient.dio.post(
         '/cuentas/anulacion',
-        data: {'id_cuenta': idCuenta, 'motivo': motivo},
+        data: {
+          'cuentaId': idCuenta,
+          'clienteNombre': clienteNombre,
+          'motivo': motivo,
+          'monto': monto,
+        },
       );
 
       if (response.data != null && response.data['success'] == true) {
@@ -163,10 +180,9 @@ class CuentasListNotifier extends StateNotifier<CuentasListState> {
 
   
 
-  void _removeLocalCuenta(int idCuenta) {
+  void _removeLocalCuenta(String idCuenta) {
     final updated = state.cuentas.where((c) {
-      final id = int.tryParse(c['id_cuenta']?.toString() ?? '') ??
-          int.tryParse(c['id']?.toString() ?? '');
+      final id = (c['id_cuenta'] ?? c['id'] ?? '').toString();
       return id != idCuenta;
     }).toList();
     state = state.copyWith(cuentas: updated);

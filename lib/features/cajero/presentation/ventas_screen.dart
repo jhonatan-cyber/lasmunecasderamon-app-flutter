@@ -307,8 +307,8 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
   }
 
   Future<void> _executeFinalizarVenta(dynamic venta) async {
-    final ventaId = int.tryParse(venta['id_venta']?.toString() ?? '') ?? 0;
-    if (ventaId == 0) return;
+    final ventaId = venta['id_venta']?.toString() ?? '';
+    if (ventaId.isEmpty || ventaId == 'null') return;
 
     final ok = await ref.read(ventasListProvider.notifier).finalizarVenta(ventaId);
     if (!mounted) return;
@@ -353,13 +353,12 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
 
   Future<void> _handleAnularVenta() async {
     if (_activeVenta == null) return;
-    final ventaId =
-        int.tryParse(_activeVenta['id_venta']?.toString() ?? '') ?? 0;
+    final ventaId = _activeVenta['id_venta']?.toString() ?? '';
     final monto =
         double.tryParse(_montoAnulacion.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
     final motivo = _motivoController.text.trim();
 
-    if (ventaId == 0) {
+    if (ventaId.isEmpty || ventaId == 'null') {
       AppSnackBar.showError(context, 'No se pudo identificar la venta');
       return;
     }
@@ -402,9 +401,8 @@ class _VentasScreenState extends ConsumerState<VentasScreen> {
 
   
   Future<void> _showVentaDetailModal(dynamic ventaShort) async {
-    final int ventaId =
-        int.tryParse(ventaShort['id_venta']?.toString() ?? '') ?? 0;
-    if (ventaId == 0) return;
+    final String ventaId = ventaShort['id_venta']?.toString() ?? '';
+    if (ventaId.isEmpty || ventaId == 'null') return;
 
     ref.read(setStateProvider('ventas').notifier).setFlag('modalVisible', true);
     await ref.read(ventasListProvider.notifier).fetchDetail(ventaId);

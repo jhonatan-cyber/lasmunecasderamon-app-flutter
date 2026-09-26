@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/report_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/hooks/refresh_provider.dart';
+import '../../../core/widgets/event_detail_modal.dart';
+import '../../../core/widgets/liquidation_export.dart';
+import '../../../core/widgets/operations_calendar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
-import '../../auth/domain/user.dart';
 
 class Event {
   final String type;
@@ -45,6 +48,20 @@ class Event {
       subType: json['subType'] ?? json['sub_tipo'],
     );
   }
+
+  /// Normaliza el evento para el export de liquidación (misma regla de total
+  /// que la tarjeta de Expo: estado != 1 se ignora y los anticipos restan).
+  LiquidationEvent toLiquidationEvent() {
+    return LiquidationEvent(
+      id: id,
+      type: type,
+      subType: subType,
+      codigo: codigo,
+      date: date,
+      amount: amount,
+      estado: estado,
+    );
+  }
 }
 
 class CajeroAdministrativoScreen extends ConsumerStatefulWidget {
@@ -58,7 +75,9 @@ class CajeroAdministrativoScreen extends ConsumerStatefulWidget {
 class _CajeroAdministrativoScreenState
     extends ConsumerState<CajeroAdministrativoScreen> {
   List<Event> _events = [];
-  final List<String> _selectedDates = [];
+  // Multi-selección de días del calendario: misma forma que en los otros
+  // roles (`OperationsCalendar` trabaja con un Set de claves yyyy-MM-dd).
+  final Set<String> _selectedDates = {};
   DateTime _currentMonth = DateTime.now();
 
   @override
@@ -94,7 +113,7 @@ class _CajeroAdministrativoScreenState
         });
         notifier.endRefresh();
         if (isManual) {
-            notifier.showSuccessSnack(context, 'Resumen actualizado con éxito');
+          notifier.showSuccessSnack(context, 'Resumen actualizado con éxito');
         }
       } else {
         throw Exception(response.data?['message'] ?? 'Error al cargar datos');
@@ -103,19 +122,6 @@ class _CajeroAdministrativoScreenState
       if (!mounted) return;
       notifier.endRefresh(error: 'Error al cargar datos');
     }
-  }
-
-  Future<Map<String, dynamic>?> _fetchEventDetail(Event event) async {
-    try {
-      final client = ref.read(apiClientProvider);
-      final response = await client.dio.get(
-        '/events/detail/${event.id}?type=${event.type}',
-      );
-      if (response.data != null && response.data['success'] == true) {
-        return response.data['data'] as Map<String, dynamic>?;
-      }
-    } catch (_) {}
-    return null;
   }
 
   double get _totalCalculated {
@@ -133,45 +139,6 @@ class _CajeroAdministrativoScreenState
       decimalDigits: 0,
     );
     return format.format(amount);
-  }
-
-  String _getDateKey(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
-  Map<String, List<Event>> get _eventsByDate {
-    final Map<String, List<Event>> map = {};
-    for (var event in _events) {
-      final key = _getDateKey(event.date);
-      map.putIfAbsent(key, () => []).add(event);
-    }
-    return map;
-  }
-
-  List<DateTime> get _calendarDays {
-    final days = <DateTime>[];
-    final year = _currentMonth.year;
-    final month = _currentMonth.month;
-    final firstDay = DateTime(year, month, 1);
-
-    
-    final offset = firstDay.weekday % 7;
-    final prevMonthLast = DateTime(year, month, 0);
-    for (int i = offset - 1; i >= 0; i--) {
-      days.add(DateTime(year, month - 1, prevMonthLast.day - i));
-    }
-
-    final daysCount = DateTime(year, month + 1, 0).day;
-    for (int i = 1; i <= daysCount; i++) {
-      days.add(DateTime(year, month, i));
-    }
-
-    final remaining = 42 - days.length;
-    for (int i = 1; i <= remaining; i++) {
-      days.add(DateTime(year, month + 1, i));
-    }
-
-    return days;
   }
 
   String _getEventLabel(Event item) {
@@ -216,115 +183,14 @@ class _CajeroAdministrativoScreenState
     }
   }
 
-  String _getStatusLabel(int estado, String type) {
-    if (type == 'anticipo') {
-      if (estado == 0) return 'Pagado';
-      if (estado == 1) return 'Confirmado';
-      if (estado == 2) return 'Pendiente';
-      if (estado == 3) return 'Rechazado';
-    }
-    if (estado == 0) return 'Pagado';
-    if (estado == 1) return 'Por cobrar';
-    if (estado == 2) return 'Confirmado';
-    if (estado == 3) return 'Rechazado';
-    if (estado == 4) return 'Completado';
-    return estado.toString();
-  }
-
-  void _exportReportText(User? user) {
-    final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
-    final title = 'Las Muñecas de Ramón - Reporte de Liquidación';
-    final userLabel = 'Cajero: ${user?.nombre ?? ''} (${user?.email ?? ''})';
-
-    final buffer = StringBuffer();
-    buffer.writeln('==============================================');
-    buffer.writeln(title);
-    buffer.writeln('Generado el: $formattedDate');
-    buffer.writeln(userLabel);
-    buffer.writeln('==============================================\n');
-    buffer.writeln('DETALLE DE EVENTOS:');
-    buffer.writeln('----------------------------------------------');
-
-    for (var event in _events) {
-      final dateStr = DateFormat('dd/MM/yy HH:mm').format(event.date);
-      final typeLabel = _getEventLabel(event).toUpperCase();
-      final statusLabel = _getStatusLabel(
-        event.estado,
-        event.type,
-      ).toUpperCase();
-      final amountSign = event.type == 'anticipo' ? '-' : '+';
-      buffer.writeln(
-        '$dateStr | $typeLabel | Cod: ${event.codigo} | $statusLabel | $amountSign${_formatCurrency(event.amount)}',
-      );
-    }
-
-    buffer.writeln('----------------------------------------------');
-    buffer.writeln('TOTAL A COBRAR: ${_formatCurrency(_totalCalculated)}');
-    buffer.writeln('==============================================');
-
-    final textReport = buffer.toString();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkSurfaceColor,
-        title: Text(
-          'Previsualización del Reporte',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Text(
-              textReport,
-              style: GoogleFonts.robotoMono(
-                fontSize: 12,
-                color: AppTheme.darkTextPrimary,
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cerrar',
-              style: GoogleFonts.inter(color: Colors.white70),
-            ),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: textReport));
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Reporte copiado al portapapeles'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.copy_rounded, color: Colors.white, size: 18),
-            label: Text(
-              'Copiar Texto',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  /// Misma nomenclatura que el detalle de eventos y el reporte
+  /// (`liquidationStatusLabel`).
+  String _getStatusLabel(int estado, String type) =>
+      liquidationStatusLabel(estado, type);
 
   void _showEventsDetailsModal() {
     final selectedEvents = _events.where((e) {
-      final dateStr = _getDateKey(e.date);
+      final dateStr = calendarDateKey(e.date);
       return _selectedDates.contains(dateStr);
     }).toList()..sort((a, b) => b.date.compareTo(a.date));
 
@@ -449,7 +315,7 @@ class _CajeroAdministrativoScreenState
                             if (t == 'propina') return Icons.wallet_rounded;
                             if (t == 'comision') return Icons.star_rounded;
                             if (t == 'asistencia') {
-                                return Icons.calendar_today_rounded;
+                              return Icons.calendar_today_rounded;
                             }
                             return Icons.monetization_on_rounded;
                           }
@@ -457,69 +323,83 @@ class _CajeroAdministrativoScreenState
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
-                              color: AppTheme.darkSurfaceColor,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: 0.05),
                               ),
                             ),
-                            child: ListTile(
-                              onTap: () {
-                                Navigator.pop(context);
-                                _showEventDetailsDialog(event);
-                              },
-                              leading: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  getIcon(event.type),
-                                  color: color,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(
-                                '${_getEventLabel(event)} ${event.codigo.isNotEmpty && event.codigo != 'TIPS' ? '- ${event.codigo}' : ''}',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              subtitle: Text(
-                                DateFormat(
-                                  'dd/MM/yyyy HH:mm',
-                                ).format(event.date),
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: AppTheme.darkTextSecondary,
-                                ),
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${isAnticipo ? '-' : '+'}${_formatCurrency(event.amount)}',
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: isAnticipo
-                                          ? Colors.red
-                                          : Colors.green,
-                                    ),
+                            // El ListTile pinta fondo y splashes en el Material
+                            // más cercano: sin él Flutter avisa y el toque no
+                            // da feedback.
+                            child: Material(
+                              color: AppTheme.darkSurfaceColor,
+                              borderRadius: BorderRadius.circular(16),
+                              child: ListTile(
+                                onTap: () {
+                                  // Detalle compartido con los homes (mismo fetch
+                                  // de /events/detail y mismas claves reales);
+                                  // la hoja queda abierta debajo, como en Expo y
+                                  // en el calendario de garzón/anfitriona/barman.
+                                  showEventDetailModal(
+                                    context,
+                                    event.toLiquidationEvent(),
+                                    userRole: ref.read(authProvider).user?.role,
+                                    forceDark: true,
+                                  );
+                                },
+                                leading: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  Text(
-                                    _getStatusLabel(event.estado, event.type),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      color: AppTheme.darkTextSecondary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  child: Icon(
+                                    getIcon(event.type),
+                                    color: color,
+                                    size: 20,
                                   ),
-                                ],
+                                ),
+                                title: Text(
+                                  '${_getEventLabel(event)} ${event.codigo.isNotEmpty && event.codigo != 'TIPS' ? '- ${event.codigo}' : ''}',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  DateFormat(
+                                    'dd/MM/yyyy HH:mm',
+                                  ).format(event.date),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppTheme.darkTextSecondary,
+                                  ),
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${isAnticipo ? '-' : '+'}${_formatCurrency(event.amount)}',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: isAnticipo
+                                            ? Colors.red
+                                            : Colors.green,
+                                      ),
+                                    ),
+                                    Text(
+                                      _getStatusLabel(event.estado, event.type),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        color: AppTheme.darkTextSecondary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -534,201 +414,6 @@ class _CajeroAdministrativoScreenState
         );
       },
     );
-  }
-
-  void _showEventDetailsDialog(Event event) {
-    bool dialogLoading = true;
-    Map<String, dynamic>? dialogDetail;
-    void Function(VoidCallback)? triggerDialogRebuild;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            triggerDialogRebuild = setDialogState;
-
-            final isAnticipo = event.type == 'anticipo';
-            final color = _getEventTypeColor(event.type);
-
-            return AlertDialog(
-              backgroundColor: AppTheme.darkSurfaceColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              titlePadding: const EdgeInsets.all(16),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 10,
-              ),
-              actionsPadding: const EdgeInsets.all(12),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Detalle del Evento',
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 18,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: dialogLoading
-                    ? Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40.0),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: Theme.of(ctx).colorScheme.primary,
-                          ),
-                        ),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    event.type == 'venta'
-                                        ? Icons.fastfood_rounded
-                                        : event.type == 'propina'
-                                        ? Icons.wallet_rounded
-                                        : event.type == 'comision'
-                                        ? Icons.star_rounded
-                                        : Icons.monetization_on_rounded,
-                                    color: color,
-                                    size: 32,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _getEventLabel(event),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${isAnticipo ? '-' : '+'}${_formatCurrency(event.amount)}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                    color: isAnticipo
-                                        ? Colors.red
-                                        : Colors.green,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-                            ),
-                          ),
-                          _buildDetailRow(
-                            'Código',
-                            event.codigo.isNotEmpty ? event.codigo : 'N/A',
-                          ),
-                          _buildDetailRow(
-                            'Fecha',
-                            DateFormat('dd/MM/yyyy HH:mm').format(event.date),
-                          ),
-                          _buildDetailRow(
-                            'Estado',
-                            _getStatusLabel(event.estado, event.type),
-                          ),
-
-                          if (dialogDetail != null) ...[
-                            const Divider(color: Colors.white10, height: 24),
-                            Text(
-                              'Información Adicional',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (event.type == 'asistencia') ...[
-                              _buildDetailRow(
-                                'Hora Entrada',
-                                dialogDetail!['hora_entrada'] ?? 'N/A',
-                              ),
-                              _buildDetailRow(
-                                'Hora Salida',
-                                dialogDetail!['hora_salida'] ?? 'N/A',
-                              ),
-                              _buildDetailRow(
-                                'Observación',
-                                dialogDetail!['observaciones'] ?? 'Ninguna',
-                              ),
-                            ],
-                            if (event.type == 'anticipo') ...[
-                              _buildDetailRow(
-                                'Aprobado por',
-                                dialogDetail!['aprobado_por'] ?? 'N/A',
-                              ),
-                              _buildDetailRow(
-                                'Glosa',
-                                dialogDetail!['descripcion'] ?? 'N/A',
-                              ),
-                            ],
-                            if (event.type == 'comision' ||
-                                event.type == 'propina') ...[
-                              _buildDetailRow(
-                                'Detalle',
-                                dialogDetail!['descripcion'] ??
-                                    dialogDetail!['detalle'] ??
-                                    'N/A',
-                              ),
-                              _buildDetailRow(
-                                'Referencia',
-                                dialogDetail!['referencia'] ?? 'N/A',
-                              ),
-                            ],
-                          ],
-                          const SizedBox(height: 12),
-                        ],
-                      ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(
-                    'Cerrar',
-                    style: GoogleFonts.inter(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    _fetchEventDetail(event).then((result) {
-      if (!mounted) return;
-      dialogDetail = result;
-      dialogLoading = false;
-      triggerDialogRebuild?.call(() {});
-    });
   }
 
   Widget _buildSkeletonGrid() {
@@ -753,38 +438,10 @@ class _CajeroAdministrativoScreenState
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: AppTheme.darkTextSecondary,
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
-
-    final monthLabel = DateFormat('MMMM yyyy', 'es_ES').format(_currentMonth);
 
     final refresh = ref.watch(refreshProvider('administrativo'));
 
@@ -800,7 +457,6 @@ class _CajeroAdministrativoScreenState
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
-                
                 Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
@@ -861,6 +517,64 @@ class _CajeroAdministrativoScreenState
                   ),
                 ),
 
+                // Enlace a Horas Extras (paridad con Expo: mismo acceso en
+                // Resumen Personal → /cajero/horas-extras).
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Material(
+                    color: AppTheme.darkSurfaceColor,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => context.push('/cajero/horas-extras'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Horas Extras',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Control de jornada',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppTheme.darkTextSecondary,
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppTheme.darkTextSecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 20),
 
                 Padding(
@@ -904,29 +618,19 @@ class _CajeroAdministrativoScreenState
                             ],
                           ),
                         ),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                        // Export real a PDF (paridad con el botón «Reportes»
+                        // de PremiumLiquidationCard en Expo: mismo detalle de
+                        // eventos, mismo total y hoja de compartir).
+                        LiquidationExportButton(
+                          dense: true,
+                          events: _events
+                              .map((event) => event.toLiquidationEvent())
+                              .toList(),
+                          userLabel: liquidationUserLabel(
+                            user?.nombre ?? '',
+                            nick: user?.nick ?? '',
                           ),
-                          onPressed: () => _exportReportText(user),
-                          icon: const Icon(Icons.description_rounded, size: 16),
-                          label: Text(
-                            'Reportes',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
+                          totalAmount: _totalCalculated,
                         ),
                       ],
                     ),
@@ -1006,202 +710,39 @@ class _CajeroAdministrativoScreenState
                   const SizedBox(height: 16),
                 ],
 
-                
+                // Calendario operativo compartido: el mismo OperationsCalendar
+                // que usan garzón, anfitriona y barman (espejo de
+                // PremiumCalendar de Expo). Esta pantalla es dark-only, así que
+                // se fuerza la paleta oscura aunque el tema global esté en
+                // claro; el mes lo controla esta pantalla para refiltrar
+                // /events/user como en Expo.
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.darkSurfaceColor,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
+                  child: Theme(
+                    data: AppTheme.getTheme(
+                      Brightness.dark,
+                      Theme.of(context).colorScheme.primary,
                     ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              monthLabel[0].toUpperCase() +
-                                  monthLabel.substring(1),
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.chevron_left,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _currentMonth = DateTime(
-                                        _currentMonth.year,
-                                        _currentMonth.month - 1,
-                                      );
-                                      _selectedDates.clear();
-                                    });
-                                    _fetchData();
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.chevron_right,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _currentMonth = DateTime(
-                                        _currentMonth.year,
-                                        _currentMonth.month + 1,
-                                      );
-                                      _selectedDates.clear();
-                                    });
-                                    _fetchData();
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: ['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((
-                            day,
-                          ) {
-                            return SizedBox(
-                              width: 40,
-                              child: Text(
-                                day,
-                                style: GoogleFonts.inter(
-                                  color: AppTheme.darkTextSecondary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 10),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: 42,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 7,
-                                mainAxisSpacing: 8,
-                                crossAxisSpacing: 8,
-                              ),
-                          itemBuilder: (context, index) {
-                            final day = _calendarDays[index];
-                            final isCurrentMonth =
-                                day.month == _currentMonth.month;
-                            final isToday =
-                                DateFormat('yyyymmdd').format(day) ==
-                                DateFormat('yyyymmdd').format(DateTime.now());
-                            final dateStr = _getDateKey(day);
-                            final isSelected = _selectedDates.contains(dateStr);
-
-                            final dayEvents = _eventsByDate[dateStr] ?? [];
-                            final uniqueTypes = dayEvents
-                                .map((e) => e.type)
-                                .toSet()
-                                .toList();
-                            final visibleTypes = uniqueTypes.take(3).toList();
-
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedDates.remove(dateStr);
-                                  } else {
-                                    _selectedDates.add(dateStr);
-                                  }
-                                });
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isToday && !isSelected
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.transparent,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      day.day.toString(),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : isCurrentMonth
-                                            ? Colors.white
-                                            : AppTheme.darkTextSecondary
-                                                  .withValues(alpha: 0.4),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    if (uniqueTypes.isNotEmpty)
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: visibleTypes.map((type) {
-                                          return Container(
-                                            width: 4,
-                                            height: 4,
-                                            margin: const EdgeInsets.symmetric(
-                                              horizontal: 0.5,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : _getEventTypeColor(type),
-                                              shape: BoxShape.circle,
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          children: [
-                            _buildLegendItem('Asistencia', Colors.blue),
-                            _buildLegendItem('Anticipo', Colors.red),
-                            _buildLegendItem('Propina', Colors.amber),
-                            _buildLegendItem('Hora extra', Colors.purple),
-                            _buildLegendItem('Comisión', Colors.green),
-                            _buildLegendItem(
-                              'Servicio',
-                              Theme.of(context).colorScheme.primary,
-                            ),
-                          ],
-                        ),
-                      ],
+                    child: OperationsCalendar(
+                      events: _events
+                          .map((event) => event.toLiquidationEvent())
+                          .toList(),
+                      selectedDates: _selectedDates,
+                      onDateToggle: (dateKey) {
+                        setState(() {
+                          if (!_selectedDates.remove(dateKey)) {
+                            _selectedDates.add(dateKey);
+                          }
+                        });
+                      },
+                      currentMonth: _currentMonth,
+                      onMonthChange: (date) {
+                        setState(() {
+                          _currentMonth = date;
+                          _selectedDates.clear();
+                        });
+                        _fetchData();
+                      },
                     ),
                   ),
                 ),
@@ -1212,28 +753,6 @@ class _CajeroAdministrativoScreenState
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLegendItem(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: AppTheme.darkTextSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }

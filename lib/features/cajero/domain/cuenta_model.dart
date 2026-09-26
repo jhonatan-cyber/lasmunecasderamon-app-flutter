@@ -1,6 +1,8 @@
 
 class Cuenta {
-  final int idCuenta;
+  // Los IDs de este dominio son varchar(36) (UUID) en el dashboard: parsearlos
+  // como int devolvía 0 para toda cuenta real y rompía cobro/stop/anulación.
+  final String idCuenta;
   final String codigo;
   final int estado;
   final double total;
@@ -30,7 +32,7 @@ class Cuenta {
 
   factory Cuenta.fromJson(Map<String, dynamic> json) {
     return Cuenta(
-      idCuenta: int.tryParse(json['id_cuenta']?.toString() ?? json['id']?.toString() ?? '0') ?? 0,
+      idCuenta: (json['id_cuenta'] ?? json['id'] ?? '').toString(),
       codigo: json['codigo']?.toString() ?? '',
       estado: int.tryParse(json['estado']?.toString() ?? '1') ?? 1,
       total: double.tryParse(json['total']?.toString() ?? '0') ?? 0.0,
@@ -72,7 +74,7 @@ class CuentaDetalle {
 
 
 class CuentaDetail {
-  final int idCuenta;
+  final String idCuenta;
   final String? roomName;
   final String? clienteNombre;
   final String? anfitrionaNombre;
@@ -99,7 +101,7 @@ class CuentaDetail {
   factory CuentaDetail.fromJson(Map<String, dynamic> json) {
     final itemsRaw = json['items'] as List<dynamic>?;
     return CuentaDetail(
-      idCuenta: int.tryParse(json['id_cuenta']?.toString() ?? json['id']?.toString() ?? '0') ?? 0,
+      idCuenta: (json['id_cuenta'] ?? json['id'] ?? '').toString(),
       roomName: json['room_name']?.toString() ?? json['room_number']?.toString(),
       clienteNombre: json['cliente_nombre']?.toString(),
       anfitrionaNombre: json['anfitriona_nombre']?.toString(),

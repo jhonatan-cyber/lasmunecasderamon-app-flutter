@@ -238,7 +238,7 @@ void main() {
         ),
       );
 
-      final result = await notifier.detenerTiempo(1);
+      final result = await notifier.detenerTiempo('1');
 
       expect(result, true);
       notifier.dispose();
@@ -249,7 +249,7 @@ void main() {
         _dioWithResponse(data: failResponse()),
       );
 
-      final result = await notifier.detenerTiempo(1);
+      final result = await notifier.detenerTiempo('1');
 
       expect(result, false);
       notifier.dispose();
@@ -258,7 +258,7 @@ void main() {
     test('returns false on DioException', () async {
       final notifier = _buildNotifier(_dioWithError());
 
-      final result = await notifier.detenerTiempo(1);
+      final result = await notifier.detenerTiempo('1');
 
       expect(result, false);
       notifier.dispose();
@@ -280,11 +280,11 @@ void main() {
       expect(notifier.state.cuentas.length, 2);
 
       final result = await notifier.cobrarCuenta(
-        idCuenta: 1,
+        idCuenta: '1',
         metodoPago: 'efectivo',
         propina: 4500,
         cargoTarjeta: 0,
-        usuarioId: 1,
+        totalCobrado: 10000,
       );
 
       expect(result, true);
@@ -304,11 +304,11 @@ void main() {
       );
 
       final result = await notifier.cobrarCuenta(
-        idCuenta: 1,
+        idCuenta: '1',
         metodoPago: 'efectivo',
         propina: 0,
         cargoTarjeta: 0,
-        usuarioId: 1,
+        totalCobrado: 10000,
       );
 
       expect(result, false);
@@ -319,11 +319,11 @@ void main() {
       final notifier = _buildNotifier(_dioWithError());
 
       final result = await notifier.cobrarCuenta(
-        idCuenta: 1,
+        idCuenta: '1',
         metodoPago: 'tarjeta',
         propina: 0,
         cargoTarjeta: 100,
-        usuarioId: 1,
+        totalCobrado: 10000,
       );
 
       expect(result, false);
@@ -345,7 +345,12 @@ void main() {
       await notifier.fetchData();
       expect(notifier.state.cuentas.length, 2);
 
-      final result = await notifier.anularCuenta(1, 'Cliente se retiró');
+      final result = await notifier.anularCuenta(
+        idCuenta: '1',
+        clienteNombre: 'Cliente General',
+        motivo: 'Cliente se retiró',
+        monto: 5000,
+      );
 
       expect(result, true);
       expect(notifier.state.cuentas.length, 1);
@@ -357,7 +362,12 @@ void main() {
         _dioWithResponse(data: failResponse()),
       );
 
-      final result = await notifier.anularCuenta(1, 'Motivo');
+      final result = await notifier.anularCuenta(
+        idCuenta: '1',
+        clienteNombre: 'Cliente General',
+        motivo: 'Motivo',
+        monto: 5000,
+      );
 
       expect(result, false);
       expect(notifier.state.error, isNotEmpty);
@@ -367,7 +377,12 @@ void main() {
     test('returns false on DioException', () async {
       final notifier = _buildNotifier(_dioWithError());
 
-      final result = await notifier.anularCuenta(1, 'Motivo');
+      final result = await notifier.anularCuenta(
+        idCuenta: '1',
+        clienteNombre: 'Cliente General',
+        motivo: 'Motivo',
+        monto: 5000,
+      );
 
       expect(result, false);
       notifier.dispose();

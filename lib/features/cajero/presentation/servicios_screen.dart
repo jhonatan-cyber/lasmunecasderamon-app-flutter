@@ -56,7 +56,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     }
   }
 
-  Future<void> _handleFinalizar(int idServicio, String roomName) async {
+  Future<void> _handleFinalizar(String idServicio, String roomName) async {
     final ok = await ref.read(serviciosListProvider.notifier).finalizarServicio(idServicio);
     if (!mounted) return;
     if (ok) {
@@ -79,7 +79,7 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
     }
   }
 
-  void _showFinalizarDialog(int idServicio, String roomName) {
+  void _showFinalizarDialog(String idServicio, String roomName) {
     showDialog(
       context: context,
       builder: (context) {
@@ -255,14 +255,9 @@ class _ServiciosScreenState extends ConsumerState<ServiciosScreen> {
                           itemCount: activeServicios.length,
                           itemBuilder: (context, index) {
                             final servicio = activeServicios[index];
-                            final int id =
-                                int.tryParse(
-                                  servicio['id_servicio']?.toString() ?? '',
-                                ) ??
-                                int.tryParse(
-                                  servicio['id']?.toString() ?? '',
-                                ) ??
-                                0;
+                            final String id =
+                                (servicio['id_servicio'] ?? servicio['id'] ?? '')
+                                    .toString();
                             final roomName =
                                 servicio['room_name'] ?? 'Sin Habitación';
 

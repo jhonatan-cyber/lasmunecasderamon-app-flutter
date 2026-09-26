@@ -47,4 +47,21 @@ void main() {
     expect(find.text('FINANCIERO'), findsOneWidget);
     expect(find.text('Eventos y propinas'), findsOneWidget);
   });
+
+  testWidgets('ANALÍTICAS action card is rendered (enlace a Analytics)',
+      (WidgetTester tester) async {
+    await pumpHomeScreen(tester);
+
+    // El GridView renderiza con shrinkWrap dentro del scroll del home: basta
+    // con desplazar el primer scrollable para que la 10ª tarjeta esté en árbol.
+    final scrollable = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(
+      find.text('ANALÍTICAS'),
+      200,
+      scrollable: scrollable,
+    );
+
+    expect(find.text('ANALÍTICAS'), findsOneWidget);
+    expect(find.text('Métricas y ventas'), findsOneWidget);
+  });
 }

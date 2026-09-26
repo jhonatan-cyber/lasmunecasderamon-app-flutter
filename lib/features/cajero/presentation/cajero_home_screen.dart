@@ -733,6 +733,15 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
         route: '/cajero/financieros',
         color: Theme.of(context).colorScheme.primary,
       ),
+      // Ruta existente sin enlaces (auditoría de paridad): /cajero/analytics
+      // era huérfana.
+      _ActionData(
+        title: 'ANALÍTICAS',
+        desc: 'Métricas y ventas',
+        icon: Icons.insights_rounded,
+        route: '/cajero/analytics',
+        color: Theme.of(context).colorScheme.primary,
+      ),
     ];
 
     return GridView.builder(

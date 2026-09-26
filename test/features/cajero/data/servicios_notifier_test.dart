@@ -155,7 +155,7 @@ void main() {
         expect(notifier.state.servicios.length, 2);
 
         
-        final result = await notifier.finalizarServicio(1);
+        final result = await notifier.finalizarServicio('1');
         expect(result, true);
         expect(notifier.state.servicios.length, 1);
         expect(notifier.state.servicios.first['id_servicio'], 2);
@@ -169,7 +169,7 @@ void main() {
           {'id_servicio': 1, 'room_name': 'A', 'estado': 0},
         ]);
 
-        final result = await notifier.finalizarServicio(1);
+        final result = await notifier.finalizarServicio('1');
         expect(result, false);
         expect(notifier.state.servicios.length, 1); 
         expect(notifier.state.error, isNotEmpty);
@@ -192,7 +192,7 @@ void main() {
           {'id_servicio': 1, 'room_name': 'A', 'estado': 0},
         ]);
 
-        final result = await notifier.finalizarServicio(1);
+        final result = await notifier.finalizarServicio('1');
         expect(result, false);
         expect(notifier.state.error, isNotEmpty);
       });
