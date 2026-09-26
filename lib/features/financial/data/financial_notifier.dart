@@ -48,8 +48,16 @@ class FinancialState {
   
   List<FinancialEvent> get filteredEvents {
     if (filter == 'all') return events;
-    final target = filter == 'pagado' ? 0 : 1;
-    return events.where((e) => e.estado == target).toList();
+    // Pendiente = estado 1. Pagado/cobrado es todo lo demás: 0 en propinas
+    // (PayrollRepository) y 2 en comisiones (CommissionRepository). Filtrar
+    // `estado == 0` dejaba fuera toda comisión pagada del chip «Pagado».
+    if (filter == 'pendiente') {
+      return events.where((e) => e.estado == 1).toList();
+    }
+    if (filter == 'pagado') {
+      return events.where((e) => e.estado != 1).toList();
+    }
+    return events;
   }
 }
 

@@ -503,6 +503,12 @@ class _BarmanHomeScreenState extends ConsumerState<BarmanHomeScreen> {
         icon: Icons.hotel_rounded,
         route: '/barman/servicios',
       ),
+      (
+        title: 'FINANCIERO',
+        desc: 'Eventos y propinas',
+        icon: Icons.payments_rounded,
+        route: '/barman/financieros',
+      ),
     ];
 
     return GridView.builder(

@@ -128,8 +128,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/garzon/financieros',
             builder: (context, state) => const FinancialEventsScreen(
               title: 'Eventos Financieros',
-              subtitle: 'Comisiones y propinas',
-              type: 'comisiones',
+              // Paridad con Expo: el tab «Propinas» del garzón es la pantalla
+              // financiera con type=propinas (las propinas se reparten a
+              // cajero/garzón/barman, nunca a anfitrionas).
+              subtitle: 'Propinas',
+              type: 'propinas',
             ),
           ),
           GoRoute(
@@ -176,8 +179,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/anfitriona/financieros',
             builder: (context, state) => const FinancialEventsScreen(
               title: 'Eventos Financieros',
-              subtitle: 'Propinas',
-              type: 'propinas',
+              // Paridad con Expo: el tab «Ventas» de la anfitriona es la
+              // pantalla financiera con type=comisiones (las comisiones van
+              // siempre a anfitrionas).
+              subtitle: 'Comisiones',
+              type: 'comisiones',
             ),
           ),
           GoRoute(
@@ -210,6 +216,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/barman/horas-extras',
             builder: (context, state) => const HorasExtrasScreen(),
+          ),
+          GoRoute(
+            path: '/barman/financieros',
+            builder: (context, state) => const FinancialEventsScreen(
+              title: 'Eventos Financieros',
+              // Paridad con Expo: las propinas se reparten a
+              // cajero/garzón/barman (nunca a anfitrionas).
+              subtitle: 'Propinas',
+              type: 'propinas',
+            ),
           ),
         ],
       ),
@@ -259,8 +275,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/cajero/financieros',
             builder: (context, state) => const FinancialEventsScreen(
               title: 'Eventos Financieros',
-              subtitle: 'Comisiones y propinas',
-              type: 'comisiones',
+              // Un cajero NO recibe comisiones (van a anfitrionas): su vista
+              // financiera son las propinas, igual que garzón y barman.
+              subtitle: 'Propinas',
+              type: 'propinas',
             ),
           ),
           GoRoute(

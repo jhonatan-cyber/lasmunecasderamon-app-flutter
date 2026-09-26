@@ -599,6 +599,73 @@ class _AnfitrionaHomeScreenState extends ConsumerState<AnfitrionaHomeScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+
+                  // Enlace a Eventos Financieros (paridad con el tab
+                  // «Ventas» de Expo, que ES esta pantalla).
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Card(
+                      color: cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        side: BorderSide(color: borderColor),
+                      ),
+                      elevation: 1,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () => context.push('/anfitriona/financieros'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: accentColor.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.payments_rounded,
+                                  color: accentColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Eventos Financieros',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Mis comisiones y sus estados',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: textSecondary,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
                   if (refresh.error.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     Center(

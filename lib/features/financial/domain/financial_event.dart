@@ -87,10 +87,14 @@ class FinancialEvent {
       };
 
   
-  String get estadoLabel => estado == 0 ? 'Pagado' : 'Pendiente';
+  // La convención del backend (PayrollRepository.pay y
+  // CommissionRepository.getDetails) es: pendiente = 1; pagado/cobrado = 0 en
+  // propinas y 2 en comisiones. Etiquetar por `estado == 0` marcaba como
+  // «Pendiente» toda comisión pagada (estado 2), en contra de Expo.
+  String get estadoLabel => isPendiente ? 'Pendiente' : 'Pagado';
 
   
-  bool get isPagado => estado == 0;
+  bool get isPagado => !isPendiente;
 
   
   bool get isPendiente => estado == 1;

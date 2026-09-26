@@ -153,6 +153,26 @@ class _GarzonHomeScreenState extends ConsumerState<GarzonHomeScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+
+                    // Enlace a Eventos Financieros (paridad con el tab
+                    // «Propinas» de Expo, que ES esta pantalla).
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionCard(
+                            title: 'FINANCIERO',
+                            subtitle: 'Eventos y propinas',
+                            icon: Icons.payments_rounded,
+                            color: AppTheme.successColor,
+                            onTap: () {
+                              HapticService.light();
+                              context.push('/garzon/financieros');
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 32),
                   ],
                 ),

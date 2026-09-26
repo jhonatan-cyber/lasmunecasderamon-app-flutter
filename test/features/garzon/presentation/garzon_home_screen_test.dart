@@ -137,4 +137,13 @@ void main() {
     expect(find.text('SERVICIOS'), findsOneWidget);
     expect(find.text('Registro de Atención'), findsOneWidget);
   });
+
+  testWidgets('FINANCIERO action card is rendered (enlace a Eventos Financieros)', (
+    WidgetTester tester,
+  ) async {
+    await pumpHomeScreen(tester);
+
+    expect(find.text('FINANCIERO'), findsOneWidget);
+    expect(find.text('Eventos y propinas'), findsOneWidget);
+  });
 }

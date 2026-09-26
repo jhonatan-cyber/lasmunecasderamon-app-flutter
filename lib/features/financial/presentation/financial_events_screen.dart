@@ -37,6 +37,17 @@ class _FinancialEventsScreenState
   final _timeFormat = DateFormat('HH:mm', 'es');
 
   @override
+  void initState() {
+    super.initState();
+    // Carga inicial al montar (equivale al useFocusEffect de Expo): sin esto
+    // la única vía de fetch era el pull-to-refresh y la pantalla quedaba en
+    // «Sin eventos» aunque hubiera datos.
+    Future.microtask(
+      () => ref.read(financialProvider(widget.type).notifier).fetchEvents(),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = ref.watch(financialProvider(widget.type));
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -410,14 +421,28 @@ class _FinancialEventsScreenState
     );
 
     
-    _fetchDetailData(event).then((result) {
+    _fetchDetailData(event).then((result) async {
       if (!mounted) return;
-      triggerRebuild?.call(() {
+      // El builder del sheet asigna `triggerRebuild` en su primer frame. Una
+      // respuesta SIN awaits (comisiones no hace ninguna llamada) resuelve en
+      // un microtask ANTES de que el sheet se monte: el `?.call` sobre null no
+      // hacía nada y el modal se quedaba girando para siempre. Esperamos (con
+      // tope) a que el StatefulBuilder exista antes de aplicar el resultado.
+      var waited = Duration.zero;
+      const step = Duration(milliseconds: 16);
+      const maxWait = Duration(seconds: 3);
+      while (triggerRebuild == null &&
+          mounted &&
+          waited < maxWait) {
+        await Future<void>.delayed(step);
+        waited += step;
+      }
+      if (!mounted || triggerRebuild == null) return;
+      triggerRebuild!.call(() {
         detailLoading = false;
         detailSale = result.saleDetail;
         detailPropina = result.parentPropina;
       });
-
     });
   }
 

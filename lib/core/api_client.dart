@@ -15,7 +15,41 @@ CacheOptions _defaultCacheOptions(CacheStore store) => CacheOptions(
   policy: CachePolicy.forceCache,
   maxStale: Duration(minutes: 5),
   priority: CachePriority.normal,
+  // La clave de caché incluye el token de autorización: cada sesión tiene su
+  // propio espacio de claves, así un cambio de usuario jamás lee las
+  // respuestas cacheadas de la anterior (ni siquiera si una petición en vuelo
+  // puebla la caché justo después del logout).
+  keyBuilder: _sessionCacheKey,
 );
+
+/// Clave de caché aislada por sesión.
+///
+/// El token se usa hasheado (FNV-1a) para no escribir el bearer en claro en
+/// la caja Hive `dio_cache`; las peticiones sin token comparten la clave
+/// normal de la URI (son públicas o previas al login).
+String _sessionCacheKey(RequestOptions request) {
+  final uri = request.uri.toString();
+  String? auth;
+  for (final key in request.headers.keys) {
+    if (key.toLowerCase() == 'authorization') {
+      auth = request.headers[key]?.toString();
+      break;
+    }
+  }
+  if (auth == null || auth.isEmpty) return uri;
+  return '$uri#${_fnv1a(auth)}';
+}
+
+/// Hash FNV-1a de 32 bits: determinístico entre invocaciones y sin
+/// dependencias externas.
+String _fnv1a(String input) {
+  var hash = 0x811c9dc5;
+  for (final unit in input.codeUnits) {
+    hash ^= unit;
+    hash = (hash * 0x01000193) & 0xffffffff;
+  }
+  return hash.toRadixString(16).padLeft(8, '0');
+}
 
 class ApiClient {
   /// Dominio del backend. El default es el entorno desplegado; para correr
@@ -26,6 +60,7 @@ class ApiClient {
   );
   static const String baseUrl = '$baseDomain/api';
   final Dio _dio;
+  final CacheStore? _cacheStore;
   final _secureStorage = const FlutterSecureStorage();
 
   /// Invocado cuando el refresh token falla: la sesión ya no es válida y hay que
@@ -42,7 +77,8 @@ class ApiClient {
       path.contains('/auth/logout');
 
   ApiClient({Dio? dio, CacheStore? cacheStore, OfflineSyncManager? offlineSync})
-      : _dio = dio ??
+      : _cacheStore = cacheStore,
+        _dio = dio ??
             Dio(
               BaseOptions(
                 baseUrl: baseUrl,
@@ -106,6 +142,21 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
+
+  /// Limpia por completo la caché HTTP (caja Hive `dio_cache`).
+  ///
+  /// Se invoca al cambiar de sesión (logout, sesión vencida y login) para que
+  /// la cuenta siguiente jamás lea respuestas cacheadas de la anterior, aunque
+  /// además la clave de caché ya está aislada por token.
+  Future<void> clearCache() async {
+    final store = _cacheStore;
+    if (store == null) return;
+    try {
+      await store.clean();
+    } catch (_) {
+      // Caja Hive cerrada u otro error: no hay nada que limpiar.
+    }
+  }
 
   /// Renueva el access token con el refresh token almacenado (rotación incluida).
   /// Devuelve false si no hay refresh token o si el servidor lo rechaza.

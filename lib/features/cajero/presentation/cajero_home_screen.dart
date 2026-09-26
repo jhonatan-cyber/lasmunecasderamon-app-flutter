@@ -726,6 +726,13 @@ class _CajeroHomeScreenState extends ConsumerState<CajeroHomeScreen> {
         route: '/cajero/gratificaciones',
         color: Theme.of(context).colorScheme.primary,
       ),
+      _ActionData(
+        title: 'FINANCIERO',
+        desc: 'Eventos y propinas',
+        icon: Icons.payments_rounded,
+        route: '/cajero/financieros',
+        color: Theme.of(context).colorScheme.primary,
+      ),
     ];
 
     return GridView.builder(

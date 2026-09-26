@@ -60,6 +60,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _secureStorage.delete(key: 'auth_token');
     _secureStorage.delete(key: 'refresh_token');
     SharedPreferences.getInstance().then((prefs) => prefs.remove('user'));
+    _apiClient.clearCache();
     state = AuthState();
   }
 
@@ -144,6 +145,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         }
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user', jsonEncode(userJson));
+        // Sesión nueva: descarta cualquier respuesta cacheada de la cuenta
+        // anterior antes de que las pantallas empiecen a consultar datos.
+        await _apiClient.clearCache();
 
         state = state.copyWith(
           token: token,
@@ -217,6 +221,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _secureStorage.delete(key: 'refresh_token');
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user');
+    await _apiClient.clearCache();
 
     state = AuthState(); 
   }
