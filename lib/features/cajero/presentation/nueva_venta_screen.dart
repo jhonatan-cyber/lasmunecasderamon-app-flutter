@@ -14,6 +14,7 @@ import '../../../core/widgets/caja_closed_banner.dart';
 import '../../../core/widgets/premium_header.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/data/auth_notifier.dart';
+import '../domain/sale_choice.dart';
 
 class NuevaVentaScreen extends ConsumerStatefulWidget {
   const NuevaVentaScreen({super.key});
@@ -50,7 +51,12 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
   dynamic _selectedCategory;
 
   // IDs varchar(36): con claves int todos los productos colisionaban en 0.
+  // La clave lleva la forma de venta (`presentación` o `presentación|shot…`):
+  // una misma presentación vendida como botella y como shot son líneas aparte.
   final Map<String, int> _cart = {};
+  // Forma de venta elegida por presentación (Botella / Shot cliente /
+  // Shot anfitriona), espejo del `tiposVenta` del dashboard.
+  final Map<String, SaleChoice> _saleChoices = {};
   String _paymentMethod = 'efectivo';
 
   // Estado de la caja (paridad con `CajaStatusCheck` del dashboard y el check
@@ -351,40 +357,74 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
               '')
           .toString();
 
-  void _addToCart(String productId) {
+  /// Forma de venta elegida para una presentación (por defecto botella).
+  SaleChoice _choiceOf(String productId) =>
+      _saleChoices[productId] ?? SaleChoice.botella;
+
+  /// Clave de línea: misma presentación con distinta forma de venta son
+  /// líneas separadas (botella y shot no se mezclan en el carrito ni en el
+  /// reporte). La botella conserva la clave simple por compatibilidad.
+  String _lineKey(String productId, SaleChoice choice) => choice == SaleChoice.botella
+      ? productId
+      : '$productId|${choice.id}';
+
+  String _productIdOfLine(String key) => key.split('|').first;
+
+  SaleChoice _choiceOfLine(String key) {
+    final List<String> parts = key.split('|');
+    return parts.length > 1 ? SaleChoice.byId(parts[1]) : SaleChoice.botella;
+  }
+
+  /// Unidades de esa presentación en la forma de venta elegida ahora.
+  int _cartQtyFor(String productId) =>
+      _cart[_lineKey(productId, _choiceOf(productId))] ?? 0;
+
+  /// Precio, comisión y tope según la forma de venta elegida.
+  VentaResuelta _ventaDe(dynamic product, [SaleChoice? choice]) =>
+      resolverVentaProducto(product, choice);
+
+  void _setSaleChoice(String productId, SaleChoice choice) {
+    if (_saleChoices[productId] == choice) return;
     setState(() {
-      _cart[productId] = (_cart[productId] ?? 0) + 1;
+      _saleChoices[productId] = choice;
+    });
+  }
+
+  void _addToCart(String productId) {
+    final String key = _lineKey(productId, _choiceOf(productId));
+    setState(() {
+      _cart[key] = (_cart[key] ?? 0) + 1;
     });
   }
 
   void _removeFromCart(String productId) {
-    if (!_cart.containsKey(productId)) return;
+    final String key = _lineKey(productId, _choiceOf(productId));
+    if (!_cart.containsKey(key)) return;
     setState(() {
-      if (_cart[productId] == 1) {
-        _cart.remove(productId);
+      if (_cart[key] == 1) {
+        _cart.remove(key);
       } else {
-        _cart[productId] = _cart[productId]! - 1;
+        _cart[key] = _cart[key]! - 1;
       }
     });
   }
 
   double _calculateTotal() {
     double total = 0;
-    _cart.forEach((prodId, qty) {
-      final product = _findProductById(prodId);
+    _cart.forEach((lineKey, qty) {
+      final product = _findProductById(lineKey);
       if (product != null) {
-        final double price =
-            double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
-        total += price * qty;
+        final VentaResuelta venta = _ventaDe(product, _choiceOfLine(lineKey));
+        total += venta.precio * qty;
       }
     });
     return total;
   }
 
-  /// Busca en el catálogo acumulado: el carrito no depende de la categoría
-  /// que esté activa.
-  dynamic _findProductById(String id) {
-    return _catalog[id];
+  /// Busca en el catálogo acumulado: recibe la clave de línea del carrito
+  /// (`presentación` o `presentación|shot…`).
+  dynamic _findProductById(String key) {
+    return _catalog[_productIdOfLine(key)];
   }
 
   Future<void> _submitVenta() async {
@@ -432,24 +472,29 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
 
       double comisionTotal = 0;
       final List<Map<String, dynamic>> detallesPayload = [];
-      _cart.forEach((prodId, qty) {
-        final product = _findProductById(prodId);
+      _cart.forEach((lineKey, qty) {
+        final product = _findProductById(lineKey);
         if (product != null) {
-          final double price =
-              double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
-          final double comision =
-              (double.tryParse(product['comision']?.toString() ?? '0') ?? 0.0) *
-              qty;
+          // Precio, comisión y forma de venta salen de la opción elegida: un
+          // shot no hereda la comisión de la botella (regla del dashboard).
+          final VentaResuelta venta = _ventaDe(product, _choiceOfLine(lineKey));
+          final SaleChoice choice = _choiceOfLine(lineKey);
+          final double price = venta.precio;
+          final double comision = venta.comision * qty;
           comisionTotal += comision;
           detallesPayload.add({
             // FK real del producto + presentación vendida (paridad con el
-            // payload del dashboard: consume stock en el bar) y venta por
-            // botella por defecto, igual que `mapForSaleToCartItem`.
+            // payload del dashboard: consume stock en el bar).
             'producto_id':
-                (product['producto_id'] ?? product['id_producto'] ?? prodId)
+                (product['producto_id'] ??
+                        product['id_producto'] ??
+                        _productIdOfLine(lineKey))
                     .toString(),
             'presentacion_id': product['presentacion_id']?.toString(),
-            'tipo_venta': 'botella',
+            'tipo_venta': venta.esShot ? 'shot' : 'botella',
+            // Solo un shot distingue audiencia: así lo guarda SaleService.
+            if (venta.esShot)
+              'shot_anfitriona': choice == SaleChoice.shotAnfitriona,
             'cantidad': qty,
             'precio': price,
             'sub_total': price * qty,
@@ -913,6 +958,87 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
 
   /// Resultados de la búsqueda (mismos estados que `NewSaleSearch` del
   /// dashboard: «Buscando...» y «No hay resultados»).
+  /// Selector de forma de venta (Botella / Shot cliente / Shot anfitriona),
+  /// espejo de los chips de `SaleProductDetails` del dashboard. Solo se pinta
+  /// cuando la presentación ofrece más de una forma de venta.
+  Widget _buildSaleTypeChips(dynamic product, bool isDark) {
+    final String id = _itemKey(product);
+    final SaleChoice actual = _choiceOf(id);
+    final VentaResuelta venta = _ventaDe(product, actual);
+    if (venta.opciones.length <= 1) return const SizedBox.shrink();
+
+    final Color primary = Theme.of(context).colorScheme.primary;
+    final Color secondaryColor = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final Color borderColor = isDark
+        ? AppTheme.darkBorderColor
+        : AppTheme.lightBorderColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final opcion in venta.opciones)
+            Builder(
+              builder: (context) {
+                final SaleChoice choice = SaleChoice.byId(opcion.tipo);
+                final bool selected = actual == choice;
+                return GestureDetector(
+                  onTap: () => _setSaleChoice(id, choice),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected ? primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9999),
+                      border: Border.all(
+                        color: selected ? primary : borderColor,
+                      ),
+                    ),
+                    child: Text(
+                      '${choice.nombre} · ${_formatCurrency(opcion.precio)}',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: selected ? Colors.white : secondaryColor,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Etiqueta de forma de venta para una línea del carrito (null = botella).
+  Widget _saleTypeBadge(SaleChoice choice) {
+    if (choice == SaleChoice.botella) return const SizedBox.shrink();
+    final Color primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9999),
+        border: Border.all(color: primary),
+      ),
+      child: Text(
+        choice.nombre,
+        style: GoogleFonts.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: primary,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchResults(bool isDark) {
     final Color secondaryColor = isDark
         ? AppTheme.darkTextSecondary
@@ -946,15 +1072,19 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
       itemBuilder: (context, index) {
         final product = _searchResults[index];
         final String id = _itemKey(product);
-        final double price =
-            double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
-        final double comision =
-            double.tryParse(product['comision']?.toString() ?? '0') ?? 0.0;
-        final int cartQty = _cart[id] ?? 0;
-        // Tope de stock en el bar (igual que en el grid de categoría).
+        // Precio, comisión y tope según la forma de venta elegida (espejo del
+        // buscador del dashboard).
+        final SaleChoice choice = _choiceOf(id);
+        final VentaResuelta venta = _ventaDe(product, choice);
+        final double price = venta.precio;
+        final double comision = venta.comision;
+        final int cartQty = _cartQtyFor(id);
+        // Tope de stock en el bar (igual que en el grid de categoría); el shot
+        // sale de la botella abierta y no gasta botellas.
         final int stockBar =
             int.tryParse(product['stock_bar']?.toString() ?? '') ?? 999999;
-        final bool canAdd = cartQty < stockBar;
+        final int maxUnidades = venta.esShot ? 99 : stockBar;
+        final bool canAdd = cartQty < maxUnidades;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -995,6 +1125,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                         color: secondaryColor,
                       ),
                     ),
+                    _buildSaleTypeChips(product, isDark),
                   ],
                 ),
               ),
@@ -1081,15 +1212,19 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
       itemBuilder: (context, index) {
         final product = _products[index];
         final String id = _itemKey(product);
-        final double price =
-            double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
-        final int cartQty = _cart[id] ?? 0;
+        // Precio y tope según la forma de venta elegida para esta presentación.
+        final SaleChoice choice = _choiceOf(id);
+        final VentaResuelta venta = _ventaDe(product, choice);
+        final double price = venta.precio;
+        final int cartQty = _cartQtyFor(id);
         // Tope de stock en el bar (máximo que acepta el dashboard): con
         // `presentacion_id` el backend consume unidades y revierte la venta
-        // entera si no alcanza (INSUFFICIENT_BAR_STOCK).
+        // entera si no alcanza (INSUFFICIENT_BAR_STOCK). El shot no gasta
+        // botellas, así que su tope es 99.
         final int stockBar =
             int.tryParse(product['stock_bar']?.toString() ?? '') ?? 999999;
-        final bool canAdd = cartQty < stockBar;
+        final int maxUnidades = venta.esShot ? 99 : stockBar;
+        final bool canAdd = cartQty < maxUnidades;
 
         return Container(
           padding: const EdgeInsets.all(12),
@@ -1132,6 +1267,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                       color: Colors.green,
                     ),
                   ),
+                  _buildSaleTypeChips(product, isDark),
                 ],
               ),
               Row(
@@ -1254,8 +1390,11 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
         final product = _findProductById(entry.key);
         if (product == null) return const SizedBox();
 
-        final double price =
-            double.tryParse(product['precio']?.toString() ?? '0') ?? 0.0;
+        // Precio de la forma de venta de esta línea + su etiqueta (un shot de
+        // anfitriona cobra distinto y hay que poder distinguirlo).
+        final SaleChoice choice = _choiceOfLine(entry.key);
+        final VentaResuelta venta = _ventaDe(product, choice);
+        final double price = venta.precio;
         final int qty = entry.value;
 
         return Padding(
@@ -1274,14 +1413,21 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      '$qty x ${_formatCurrency(price)}',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '$qty x ${_formatCurrency(price)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ),
+                        _saleTypeBadge(choice),
+                      ],
                     ),
                   ],
                 ),

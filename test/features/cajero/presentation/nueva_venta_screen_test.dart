@@ -84,6 +84,27 @@ void main() {
           'comision': 5000,
           'stock_bar': 10,
         },
+        // Presentación con venta por ml a precio de cliente y de anfitriona:
+        // es la que habilita el selector Botella / Shot cliente / Shot anfitriona.
+        {
+          'presentacion_id': 'p750',
+          'presentacion_nombre': '750 ml',
+          'producto_id': 'prodw',
+          'producto_nombre': 'Whisky Black',
+          'categoria_nombre': 'Whisky',
+          'precio_venta': 180000,
+          'comision': 5000,
+          'stock_bar': 2,
+          'opciones_venta': [
+            {'tipo': 'botella', 'precio': 180000, 'comision': 5000},
+            {
+              'tipo': 'shot',
+              'precio': 6000,
+              'comision': 0,
+              'precio_anfitriona': 3500,
+            },
+          ],
+        },
       ],
     },
     '/products?for_sale=1&category_id=cat2': {
@@ -553,5 +574,135 @@ void main() {
       catalogCallsBefore,
       reason: 'el catálogo no debe recargarse',
     );
+  });
+
+  // Presentación del catálogo que sí ofrece las tres formas de venta.
+  const String whisky = 'Whisky Black 750 ml';
+
+  /// Toca algo dentro de la tarjeta del producto (hace visible si hace falta).
+  Future<void> tapInCard(
+    WidgetTester tester,
+    String productName,
+    Finder target,
+  ) async {
+    final card = find
+        .ancestor(of: find.text(productName), matching: find.byType(Container))
+        .first;
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: card, matching: target).first);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('elige shot de anfitriona y manda precio y audiencia al '
+      'payload', (WidgetTester tester) async {
+    final urls = <String>[];
+    final bodies = <dynamic>[];
+    await pumpScreen(
+      tester,
+      dio: makeRecordingDio(urls, bodies),
+      withRouter: true,
+    );
+
+    // Solo quien ofrece venta por ml pinta el selector (espejo del dashboard).
+    expect(find.text('Botella · ${formatCurrency(180000)}'), findsOneWidget);
+    expect(find.text('Shot cliente · ${formatCurrency(6000)}'), findsOneWidget);
+    expect(find.text('Shot anfitriona · ${formatCurrency(3500)}'), findsOneWidget);
+    expect(
+      find.text('Botella · ${formatCurrency(5000)}'),
+      findsNothing,
+      reason: 'sin opciones de venta no se pinta ningún chip',
+    );
+
+    // Elige shot de anfitriona: la tarjeta pasa a cobrar su precio.
+    await tapInCard(
+      tester,
+      whisky,
+      find.text('Shot anfitriona · ${formatCurrency(3500)}'),
+    );
+    expect(find.text(formatCurrency(3500)), findsWidgets);
+
+    await tapInCard(tester, whisky, find.byIcon(Icons.add_circle));
+
+    // El carrito etiqueta la línea: un shot no se confunde con la botella.
+    expect(find.text('Shot anfitriona'), findsOneWidget);
+    expect(find.text('1 x ${formatCurrency(3500)}'), findsOneWidget);
+    expect(find.text(formatCurrency(186000)), findsNothing);
+
+    final registrarBtn = find.widgetWithText(ElevatedButton, 'Registrar Venta');
+    await tester.tap(registrarBtn);
+    await tester.pumpAndSettle();
+
+    final salesIdx = urls.indexWhere((u) => u.endsWith('/sales'));
+    expect(salesIdx, greaterThanOrEqualTo(0), reason: 'debe registrar: $urls');
+    final payload = bodies[salesIdx] as Map;
+    final detalles = (payload['detalles'] as List).cast<Map>();
+
+    expect(detalles, hasLength(1));
+    expect(detalles[0]['presentacion_id'], 'p750');
+    expect(detalles[0]['tipo_venta'], 'shot');
+    expect(detalles[0]['shot_anfitriona'], isTrue);
+    expect(detalles[0]['precio'], 3500);
+    expect(detalles[0]['sub_total'], 3500);
+    expect(detalles[0]['comision'], 0, reason: 'el shot no hereda comisión');
+    expect(payload['total'], 3500);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('la botella y el shot de la misma presentación son líneas '
+      'separadas en el carrito', (WidgetTester tester) async {
+    final urls = <String>[];
+    final bodies = <dynamic>[];
+    await pumpScreen(
+      tester,
+      dio: makeRecordingDio(urls, bodies),
+      withRouter: true,
+    );
+
+    // Botella primero (por defecto) y luego shot de cliente: antes ambas
+    // entraban con la misma clave y pisaban precio, comisión y cantidad.
+    await tapInCard(tester, whisky, find.byIcon(Icons.add_circle));
+    await tapInCard(
+      tester,
+      whisky,
+      find.text('Shot cliente · ${formatCurrency(6000)}'),
+    );
+    await tapInCard(tester, whisky, find.byIcon(Icons.add_circle));
+
+    expect(find.text('1 x ${formatCurrency(180000)}'), findsOneWidget);
+    expect(find.text('1 x ${formatCurrency(6000)}'), findsOneWidget);
+    expect(find.text('Shot cliente'), findsOneWidget);
+    expect(
+      find.text(formatCurrency(186000)),
+      findsOneWidget,
+      reason: 'total = botella + shot',
+    );
+
+    final registrarBtn = find.widgetWithText(ElevatedButton, 'Registrar Venta');
+    await tester.tap(registrarBtn);
+    await tester.pumpAndSettle();
+
+    final salesIdx = urls.indexWhere((u) => u.endsWith('/sales'));
+    expect(salesIdx, greaterThanOrEqualTo(0), reason: 'debe registrar: $urls');
+    final payload = bodies[salesIdx] as Map;
+    final detalles = (payload['detalles'] as List).cast<Map>();
+
+    expect(detalles, hasLength(2));
+    final botella = detalles.firstWhere((d) => d['tipo_venta'] == 'botella');
+    final shot = detalles.firstWhere((d) => d['tipo_venta'] == 'shot');
+
+    expect(botella['precio'], 180000);
+    expect(botella['sub_total'], 180000);
+    expect(botella.containsKey('shot_anfitriona'), isFalse);
+    expect(shot['precio'], 6000);
+    expect(shot['shot_anfitriona'], isFalse);
+    expect(shot['comision'], 0, reason: 'shot: comisión 0, no la de botella');
+    expect(botella['comision'], 5000);
+    expect(payload['total'], 186000);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
   });
 }
