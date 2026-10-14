@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -52,11 +53,13 @@ String _fnv1a(String input) {
 }
 
 class ApiClient {
-  /// Dominio del backend. El default es el entorno desplegado; para correr
-  /// contra un backend local se pasa `--dart-define=API_BASE_DOMAIN=http://localhost:3000`.
+  /// En debug conecta al dashboard por la IP LAN del equipo de desarrollo.
+  /// Se puede cambiar con `--dart-define=API_BASE_DOMAIN=http://IP:3000`.
   static const String baseDomain = String.fromEnvironment(
     'API_BASE_DOMAIN',
-    defaultValue: 'https://dashboard.xn--lasmuecasderamon-bub.com',
+    defaultValue: kDebugMode
+        ? 'http://192.168.0.7:3000'
+        : 'https://dashboard.xn--lasmuecasderamon-bub.com',
   );
   static const String baseUrl = '$baseDomain/api';
   final Dio _dio;

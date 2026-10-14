@@ -212,6 +212,8 @@ void main() {
     await tester.tap(dayCell);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Detalles'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Detalles'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Comisión de Venta'));
@@ -240,6 +242,8 @@ void main() {
 
     expect(find.text('1 día seleccionado'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Detalles'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Detalles'));
     await tester.pumpAndSettle();
 
