@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../auth/data/auth_notifier.dart';
@@ -143,7 +144,13 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
   }
 
   
+  /// Finaliza una venta en proceso (estado 1). Al fallar deja el motivo en
+  /// `state.error` (mensaje del backend si existe) para que la UI lo muestre
+  /// en vez de un genérico sin causa.
   Future<bool> finalizarVenta(String ventaId) async {
+    if (!mounted) return false;
+    state = state.copyWith(clearError: true);
+
     try {
       final response = await _apiClient.dio.patch(
         '/ventas/$ventaId',
@@ -151,13 +158,47 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
       );
 
       if (response.data != null && response.data['success'] == true) {
-        
         _updateLocalEstado(ventaId, 1);
+        await _refreshResumen();
         return true;
       }
+
+      if (!mounted) return false;
+      state = state.copyWith(
+        error: _serverMessage(response.data) ?? 'No se pudo finalizar la venta',
+      );
       return false;
     } catch (e) {
+      if (!mounted) return false;
+      final serverMessage = e is DioException ? _serverMessage(e.response?.data) : null;
+      state = state.copyWith(
+        error: serverMessage ?? 'Error al finalizar la venta',
+      );
       return false;
+    }
+  }
+
+  /// Extrae `message` de una respuesta del backend cuando la trae.
+  String? _serverMessage(dynamic data) {
+    if (data is Map && data['message']?.toString().isNotEmpty == true) {
+      return data['message'].toString();
+    }
+    return null;
+  }
+
+  /// Refresca solo el resumen tras finalizar: el total del día lo calcula el
+  /// backend y ajustarlo localmente podía desviarse del real.
+  Future<void> _refreshResumen() async {
+    try {
+      final response = await _apiClient.dio.get('/sales?tipo=resumen');
+      if (!mounted) return;
+      if (response.data != null && response.data['success'] == true) {
+        state = state.copyWith(
+          resumen: Map<String, dynamic>.from(response.data['data'] ?? {}),
+        );
+      }
+    } catch (_) {
+      // Sin conexión se conserva el último resumen conocido.
     }
   }
 
@@ -213,11 +254,23 @@ class VentasListNotifier extends StateNotifier<VentasListState> {
     final updated = state.ventas.map((v) {
       final id = v['id_venta']?.toString() ?? '';
       if (id == ventaId) {
-        return {...v as Map<String, dynamic>, 'estado': newEstado};
+        return {...Map<String, dynamic>.from(v), 'estado': newEstado};
       }
       return v;
     }).toList();
-    state = state.copyWith(ventas: updated);
+
+    // El detalle abierto no debe quedar con el estado viejo.
+    final selected = state.selectedVenta;
+    dynamic updatedSelected = selected;
+    if (selected != null &&
+        (selected['id_venta']?.toString() ?? '') == ventaId) {
+      updatedSelected = {
+        ...Map<String, dynamic>.from(selected),
+        'estado': newEstado,
+      };
+    }
+
+    state = state.copyWith(ventas: updated, selectedVenta: updatedSelected);
   }
 }
 

@@ -354,7 +354,7 @@ void main() {
       notifier.dispose();
     });
 
-    test('returns false on API failure', () async {
+    test('returns false on API failure and sets the server message', () async {
       final notifier = _buildNotifier(
         _dioWithResponse(data: failResponse()),
       );
@@ -362,15 +362,55 @@ void main() {
       final result = await notifier.finalizarVenta('1');
 
       expect(result, false);
+      expect(notifier.state.error, 'Error de servidor');
       notifier.dispose();
     });
 
-    test('returns false on DioException', () async {
+    test('returns false on DioException and sets a cause error', () async {
       final notifier = _buildNotifier(_dioWithError());
 
       final result = await notifier.finalizarVenta('1');
 
       expect(result, false);
+      expect(notifier.state.error, 'Error al finalizar la venta');
+      notifier.dispose();
+    });
+
+    test('updates selectedVenta estado when it matches', () async {
+      final notifier = _buildNotifier(
+        _dioWithConditionalResponse(
+          routeToData: {
+            '/ventas/1': successDetail(),
+            '/sales?tipo=resumen': successSummary(),
+          },
+        ),
+      );
+      await notifier.fetchDetail('1');
+      expect(notifier.state.selectedVenta['estado'], 2);
+
+      final result = await notifier.finalizarVenta('1');
+
+      expect(result, true);
+      expect(notifier.state.selectedVenta['estado'], 1);
+      notifier.dispose();
+    });
+
+    test('refreshes the resumen after a successful finalize', () async {
+      final notifier = _buildNotifier(
+        _dioWithConditionalResponse(
+          routeToData: {
+            '/ventas/1': {'success': true},
+            '/sales?tipo=resumen': successSummary(),
+          },
+        ),
+      );
+      expect(notifier.state.resumen, {});
+
+      final result = await notifier.finalizarVenta('1');
+
+      expect(result, true);
+      expect(notifier.state.resumen['total_ventas'], 85000);
+      expect(notifier.state.resumen['cantidad_anuladas'], 1);
       notifier.dispose();
     });
   });
